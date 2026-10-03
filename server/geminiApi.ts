@@ -25,7 +25,7 @@ import type { GroundingSourceItem } from './textbookKnowledgeService.ts';
 dotenv.config();
 
 export function isVertexAiEnabled(): boolean {
-  return process.env.USE_VERTEX_AI === 'true';
+  return true;
 }
 
 let vertexCredentialsError: string | null = null;
@@ -79,18 +79,22 @@ function configureVertexCredentials(): void {
       }
     }
 
-    if (process.env.GOOGLE_APPLICATION_CREDENTIALS && !process.env.GOOGLE_APPLICATION_CREDENTIALS.trimStart().startsWith('{')) {
-      const candidatePaths = [
-        path.resolve(process.cwd(), process.env.GOOGLE_APPLICATION_CREDENTIALS),
-        path.resolve(process.cwd(), 'gcp-key.json'),
-      ];
-      const found = candidatePaths.find((p) => fs.existsSync(p));
-      if (found) {
-        process.env.GOOGLE_APPLICATION_CREDENTIALS = found;
-        try {
-          const parsed = JSON.parse(fs.readFileSync(found, 'utf8'));
-          vertexProjectFromCredentials ||= parsed.project_id;
-        } catch {}
+    const candidatePaths = [
+      path.resolve(process.cwd(), 'service-account.json'),
+      path.resolve(process.cwd(), './service-account.json'),
+      process.env.GOOGLE_APPLICATION_CREDENTIALS ? path.resolve(process.cwd(), process.env.GOOGLE_APPLICATION_CREDENTIALS) : '',
+      path.resolve(process.cwd(), 'gcp-key.json'),
+    ].filter(Boolean);
+
+    const found = candidatePaths.find((p) => fs.existsSync(p));
+    if (found) {
+      process.env.GOOGLE_APPLICATION_CREDENTIALS = found;
+      try {
+        const parsed = JSON.parse(fs.readFileSync(found, 'utf8'));
+        vertexProjectFromCredentials ||= parsed.project_id;
+        console.log(`[Vertex Credentials] Loaded service account from file: ${found} (Project: ${parsed.project_id}, Email: ${parsed.client_email})`);
+      } catch (e) {
+        console.warn(`[Vertex Credentials] Error reading ${found}:`, e);
       }
     }
   } catch (globalErr) {
@@ -100,47 +104,44 @@ function configureVertexCredentials(): void {
 
 configureVertexCredentials();
 
+function resolveVertexProject(): string {
+  if (vertexProjectFromCredentials) return vertexProjectFromCredentials;
+  if (process.env.VERTEX_PROJECT) return process.env.VERTEX_PROJECT;
+  if (process.env.VERTEX_PROJECT_ID) return process.env.VERTEX_PROJECT_ID;
+  if (process.env.GOOGLE_CLOUD_PROJECT && process.env.GOOGLE_CLOUD_PROJECT !== 'gen-lang-client-0392854940') {
+    return process.env.GOOGLE_CLOUD_PROJECT;
+  }
+  return 'starlit-brand-510516-j6';
+}
+
+function resolveVertexLocation(): string {
+  // Note: Cloud Run automatically injects GOOGLE_CLOUD_LOCATION=europe-west2 based on the compute cluster.
+  // We strictly override this with us-central1 (the primary Vertex AI region) unless an explicit non-europe-west2
+  // VERTEX_LOCATION is set.
+  if (process.env.VERTEX_LOCATION && process.env.VERTEX_LOCATION !== 'europe-west2') {
+    return process.env.VERTEX_LOCATION;
+  }
+  return 'us-central1';
+}
+
 let aiClient: GoogleGenAI | null = null;
 
 export function getAiClient(): GoogleGenAI {
   if (!aiClient) {
-    const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
-    const explicitVertex = process.env.USE_VERTEX_AI === 'true';
-    const hasVertexCreds = !!(
-      process.env.GOOGLE_APPLICATION_CREDENTIALS ||
-      vertexProjectFromCredentials
-    );
+    const project = resolveVertexProject();
+    const location = resolveVertexLocation();
 
-    if (explicitVertex && hasVertexCreds) {
-      const project = process.env.VERTEX_PROJECT || 
-        process.env.VERTEX_PROJECT_ID || 
-        process.env.GOOGLE_CLOUD_PROJECT || 
-        process.env.GCLOUD_PROJECT ||
-        vertexProjectFromCredentials;
-      const location = process.env.VERTEX_LOCATION || process.env.GOOGLE_CLOUD_LOCATION || 'us-central1';
-
-      aiClient = new GoogleGenAI({
-        vertexai: true,
-        project,
-        location,
-        httpOptions: {
-          headers: {
-            'User-Agent': 'aistudio-build-vertex',
-          },
+    aiClient = new GoogleGenAI({
+      vertexai: true,
+      project,
+      location,
+      httpOptions: {
+        headers: {
+          'User-Agent': 'aistudio-build-vertex-exclusive',
         },
-      });
-      console.log(`[AI Gateway] Initialized Google Cloud Vertex AI client (Project: ${project}, Location: ${location})`);
-    } else {
-      aiClient = new GoogleGenAI({
-        apiKey: apiKey || '',
-        httpOptions: {
-          headers: {
-            'User-Agent': 'aistudio-build',
-          },
-        },
-      });
-      console.log(`[AI Gateway] Initialized standard Google Gemini API client (API Key Mode)`);
-    }
+      },
+    });
+    console.log(`[AI Gateway] EXCLUSIVE MODE: Google Cloud Vertex AI client initialized (Project: ${project}, Location: ${location})`);
   }
   return aiClient;
 }
@@ -598,7 +599,7 @@ export async function callGeminiSafeJson(
           modelBackoffUntil.set(model, Date.now() + backoffSec * 1000);
           console.log(`[AI Gateway] Model "${model}" temporarily busy (${isUnavailable ? '503 high demand' : '429 quota'}). Switching to next candidate model.`);
         } else {
-          console.log(`[AI Gateway] Model "${model}" transient response, continuing to candidate.`);
+          console.log(`[AI Gateway] Model "${model}" response notice: ${errMsg.slice(0, 150)}, switching to next candidate.`);
         }
 
         // Proceed to next candidate model
@@ -1963,35 +1964,34 @@ ${
     });
     if (result && Array.isArray(result.questions) && result.questions.length >= 2) {
       const enrichedQuestions = result.questions.map((q: any, idx: number) => {
-        const matchingSource = groundingSources[idx % (groundingSources.length || 1)];
-        const citationRef = q.citationRef || `[${idx + 1}]`;
-        let groundedSource = q.groundedSource;
-        if (!groundedSource && matchingSource) {
-          groundedSource = {
-            title: matchingSource.title,
-            authors: matchingSource.authors || 'Рецензируемый академический совет',
-            year: matchingSource.year || 2024,
-            sourceLabel: matchingSource.sourceLabel || 'OpenStax Textbook',
-            chapterOrSection: matchingSource.chapterOrSection || `Раздел ${idx + 1}`,
-            snippet: matchingSource.snippet,
-            verifiableQuote: matchingSource.verifiableQuote,
-            doiOrIsbn: matchingSource.doiOrIsbn,
-            badgeColor: matchingSource.badgeColor || 'emerald',
-            url: matchingSource.url,
+        const matchingSource = groundingSources && groundingSources.length > 0 ? groundingSources[idx % groundingSources.length] : null;
+        if (matchingSource) {
+          return {
+            ...q,
+            citationRef: `[${idx + 1}]`,
+            groundedSource: {
+              title: matchingSource.title,
+              authors: matchingSource.authors || 'Редакционная коллегия',
+              year: matchingSource.year || 2024,
+              sourceLabel: matchingSource.sourceLabel || 'Академический каталог',
+              chapterOrSection: matchingSource.chapterOrSection || `Раздел ${idx + 1}`,
+              snippet: matchingSource.snippet,
+              verifiableQuote: matchingSource.verifiableQuote,
+              doiOrIsbn: matchingSource.doiOrIsbn,
+              badgeColor: matchingSource.badgeColor || 'emerald',
+              url: matchingSource.url,
+            },
           };
         }
-        return {
-          ...q,
-          citationRef,
-          groundedSource,
-        };
+        const { groundedSource, citationRef, ...cleanQ } = q;
+        return cleanQ;
       });
 
       return {
         ...randomizeDiagnosticQuestions({ ...result, questions: enrichedQuestions }),
-        groundingSources,
-        isGroundedOnTextbooks: true,
-        groundingStatus: 'verified_academic_apis',
+        groundingSources: groundingSources || [],
+        isGroundedOnTextbooks: groundingSources.length > 0,
+        groundingStatus: groundingSources.length > 0 ? 'verified_academic_apis' : 'direct_standard_theory',
         retrievalTimestamp: new Date().toISOString(),
       };
     }
@@ -2001,114 +2001,26 @@ ${
 
   // Adaptive stack-aware and level-aware fallback
   const fallback = getAdaptiveFallbackQuestions(goal, background, userLevel, skillDomain);
-  const groundedFallbackQuestions = attachAcademicGroundingToQuestions(
-    fallback.questions || [],
-    `${goal} ${background} ${skillDomain || ''}`.toLowerCase()
-  );
+  const groundedFallbackQuestions = (fallback.questions || []).map((q: any, idx: number) => {
+    if (groundingSources && groundingSources.length > 0) {
+      const matchingSource = groundingSources[idx % groundingSources.length];
+      return {
+        ...q,
+        citationRef: `[${idx + 1}]`,
+        groundedSource: matchingSource,
+      };
+    }
+    const { groundedSource, citationRef, ...cleanQ } = q;
+    return cleanQ;
+  });
 
   return {
     ...randomizeDiagnosticQuestions({ ...fallback, questions: groundedFallbackQuestions }),
-    groundingSources: groundingSources.length > 0 ? groundingSources : groundedFallbackQuestions.map((q: any) => q.groundedSource).filter(Boolean),
-    isGroundedOnTextbooks: true,
-    groundingStatus: 'verified_academic_cache',
+    groundingSources: groundingSources || [],
+    isGroundedOnTextbooks: groundingSources.length > 0,
+    groundingStatus: groundingSources.length > 0 ? 'verified_academic_apis' : 'direct_standard_theory',
     retrievalTimestamp: new Date().toISOString(),
   };
-}
-
-function attachAcademicGroundingToQuestions(rawQuestions: any[], domainText: string) {
-  return rawQuestions.map((q, idx) => {
-    if (q.groundedSource) return q;
-    let sourceLabel = 'OpenStax Textbook';
-    let title = 'OpenStax: Foundations of Applied Sciences';
-    let authors = 'Rice University Academic Board';
-    let badgeColor = 'emerald';
-    let chapterOrSection = `Глава ${idx + 1}. Фундаментальные принципы`;
-    let quote = '«Основополагающие законы дисциплины выводятся из проверяемых аксиом и воспроизводимой практики.»';
-
-    if (
-      domainText.includes('account') ||
-      domainText.includes('бухгалтер') ||
-      domainText.includes('учет') ||
-      domainText.includes('проводк') ||
-      domainText.includes('дебет') ||
-      domainText.includes('кредит') ||
-      domainText.includes('баланс')
-    ) {
-      sourceLabel = 'Wikibooks / OpenStax (Category:Accounting / Category:Financial_accounting)';
-      title = 'OpenStax: Principles of Accounting, Volume 1: Financial Accounting';
-      authors = 'Mitchell Franklin, Patty Graybeal, Dixon Cooper';
-      badgeColor = 'purple';
-      quote = '«Under the double-entry accounting system, every transaction affects at least two accounts with total debits equaling total credits.»';
-    } else if (
-      domainText.includes('микроэконом') ||
-      domainText.includes('эконом') ||
-      domainText.includes('microeconomic') ||
-      domainText.includes('спрос') ||
-      domainText.includes('предложен')
-    ) {
-      sourceLabel = 'OpenStax / DOAB (Principles of Microeconomics / Category:Microeconomics)';
-      title = 'OpenStax: Principles of Microeconomics 3e';
-      authors = 'David Shapiro, Steven A. Greenlaw';
-      badgeColor = 'sky';
-      quote = '«Market equilibrium is determined where the quantity demanded equals quantity supplied at a clearing market price.»';
-    } else if (
-      domainText.includes('excel') ||
-      domainText.includes('эксель') ||
-      domainText.includes('таблиц') ||
-      domainText.includes('формул') ||
-      domainText.includes('spreadsheet') ||
-      domainText.includes('vlookup')
-    ) {
-      sourceLabel = 'Wikibooks / DOAB (Category:Microsoft_Excel / Excel formulas)';
-      title = 'Wikibooks: Microsoft Excel Spreadsheets & Advanced Formulas';
-      authors = 'Wikimedia Open Educational Community';
-      badgeColor = 'emerald';
-      quote = '«Dynamic array formulas and lookup functions compute dependent models across dimensional grids without destructive mutation.»';
-    } else if (domainText.includes('lang') || domainText.includes('язык') || domainText.includes('speech') || domainText.includes('речь')) {
-      sourceLabel = 'Cambridge Applied Linguistics';
-      title = 'Principles of Language Learning and Teaching';
-      authors = 'H. Douglas Brown';
-      badgeColor = 'purple';
-      quote = '«Automaticity in target language requires bypassing mother-tongue translation pipelines in working memory through prefabricated chunk retrieval.»';
-    } else if (domainText.includes('design') || domainText.includes('дизайн') || domainText.includes('ui') || domainText.includes('ux')) {
-      sourceLabel = 'MIT Press / Interaction Design';
-      title = 'The Design of Everyday Things';
-      authors = 'Don Norman';
-      badgeColor = 'sky';
-      quote = '«Affordances and signifiers provide immediate visual cues to the operation of things without explanatory text.»';
-    } else if (domainText.includes('biz') || domainText.includes('бизнес') || domainText.includes('менедж') || domainText.includes('стартап')) {
-      sourceLabel = 'Harvard Business Review Press';
-      title = 'Strategic Decision Making and Unit Economics';
-      authors = 'Harvard Business School Faculty';
-      badgeColor = 'amber';
-      quote = '«Value creation is demonstrated through validated unit economics and customer retention loops.»';
-    } else {
-      sourceLabel = 'ACM / IEEE Computing Standards';
-      title = 'Computer Science Curricula & System Foundations';
-      authors = 'ACM/IEEE Joint Curricula Task Force';
-      badgeColor = 'emerald';
-      quote = '«System reliability requires isolation of failure domains and strict boundary contracts.»';
-    }
-
-    return {
-      ...q,
-      citationRef: `[${idx + 1}]`,
-      groundedSource: {
-        id: `fb-src-${idx + 1}-${Date.now()}`,
-        sourceType: badgeColor === 'emerald' ? 'openstax' : badgeColor === 'sky' ? 'academic_paper' : 'academic_book',
-        sourceLabel,
-        title,
-        authors,
-        year: 2024,
-        chapterOrSection,
-        snippet: `Верифицированный академический первоисточник по теме: "${q.topic}".`,
-        verifiableQuote: quote,
-        doiOrIsbn: 'ISBN 978-1-951693-21-3',
-        badgeColor,
-        url: 'https://openstax.org',
-      }
-    };
-  });
 }
 
 function randomizeDiagnosticQuestions(payload: any) {
@@ -7463,7 +7375,7 @@ ${existingTheory.slice(0, 1000) || 'Используй фундаменталь�
     const result = await callGeminiSafeJson(prompt, {
       systemInstruction,
       temperature: 0.35,
-      models: ['gemini-3.8-flash', 'gemini-3.1-flash-lite', 'gemini-flash-latest'],
+      models: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash', 'gemini-1.5-flash'],
       skipCache: false,
       agentName: 'AI-GroundedLessonBuilder',
       taskGoal: `Построение интерактивного урока «${unitTitle}»`,
@@ -7787,61 +7699,18 @@ export function getFallbackGroundedAdaptedBlock(
   const is10BlockMilestone = blockIndex > 0 && blockIndex % 10 === 0;
   const cat = detectDomainCategory(category, unitTitle, targetRole);
 
-  // Minimum 3 high-quality academic sources
-  const safeSources: GroundingSourceItem[] = sources.length >= 3 ? sources : [
-    {
-      id: `src-openstax-${Date.now()}`,
-      sourceType: 'openstax',
-      sourceLabel: 'Академический первоисточник (OpenStax / University Textbook)',
-      title: `Foundations of ${unitTitle}`,
-      authors: 'Academic Editorial Board',
-      year: 2024,
-      url: 'https://openstax.org/subjects',
-      chapterOrSection: 'Глава 3. Системные принципы и фундаментальные законы',
-      snippet: `Фундаментальные принципы и доказательная база по дисциплине «${unitTitle}». Исключение домыслов через проверенные методы.`,
-      verifiableQuote: `«Любая сложная система декомпозируется на базовые принципы; понимание ограничений предшествует успешному применению.»`,
-      doiOrIsbn: 'ISBN 978-1-951693-21-3',
-      badgeColor: 'emerald',
-    },
-    {
-      id: `src-paper-${Date.now()}`,
-      sourceType: 'academic_paper',
-      sourceLabel: 'Рецензируемое научное исследование',
-      title: `Applied Methodologies and Practice in ${unitTitle}`,
-      authors: 'Research Consortium (Anthology)',
-      year: 2023,
-      url: 'https://openalex.org',
-      chapterOrSection: 'Секция 2. Доказательная эффективность и компромиссы',
-      snippet: `Рецензируемое научное исследование формализует методы декомпозиции и практической надежности для предметной области.`,
-      verifiableQuote: `«Корректность метода предшествует оптимизации: ключевые правила сохраняют силу в любых контекстах.»`,
-      doiOrIsbn: 'DOI 10.1145/3377811.3380321',
-      badgeColor: 'sky',
-    },
-    {
-      id: `src-monograph-${Date.now()}`,
-      sourceType: 'academic_book',
-      sourceLabel: 'Профильная монография / Руководство эксперта',
-      title: `Mastering ${unitTitle}: Professional Standards and Patterns`,
-      authors: 'Leading Domain Specialists',
-      year: 2023,
-      url: 'https://link.springer.com',
-      chapterOrSection: 'Часть II. Практическое мастерство и разбор типичных ошибок',
-      snippet: `Классическое профессиональное руководство по ключевым техникам, методикам анализа и стандартам качества.`,
-      verifiableQuote: `«Профессионализм строится на системном мышлении, контроле качества и внимании к деталям.»`,
-      doiOrIsbn: 'ISBN 978-1-491-90306-3',
-      badgeColor: 'purple',
-    },
-  ];
+  // Real verified sources only
+  const safeSources: GroundingSourceItem[] = Array.isArray(sources) && sources.length > 0 ? sources : [];
 
   const visualDiagram = `\`\`\`mermaid
 graph TD
-  A[1. Постановка задачи & Анализ ограничений [1]] --> B[2. Декомпозиция на фундаментальные инварианты [2]]
+  A[1. Постановка задачи & Анализ ограничений] --> B[2. Декомпозиция на фундаментальные инварианты]
   B --> C[3. Выбор оптимальной структуры & протокола]
   C --> D{4. Валидация граничных условий?}
-  D -->|Соответствует норме| E[5. Исполнение в стресс-режиме [3]]
+  D -->|Соответствует норме| E[5. Исполнение в боевом режиме]
   D -->|Дефект / Гонка / Утечка| F[6. Локализация аномалии & Снижение рисков]
   F --> C
-  E --> G[7. Устойчивый production-результат]
+  E --> G[7. Устойчивый практический результат]
 \`\`\``;
 
   const visualChart = `\`\`\`chart
@@ -7856,23 +7725,27 @@ unit: %
 
   const comparisonTable = `| Критерий оценки | Наивный / Поверхностный подход | Индустриальный стандарт от первых принципов |
 | :--- | :--- | :--- |
-| **Устойчивость к стрессу** | Падает при нестандартном вводе или пиковой нагрузке [1] | Гарантирует изоляцию сбоев и предсказуемое поведение [2] |
-| **Контроль инвариантов** | Проверки разрознены или отсутствуют | Строгое соблюдение пред- и постусловий на границах [3] |
+| **Устойчивость к стрессу** | Падает при нестандартном вводе или пиковой нагрузке | Гарантирует изоляцию сбоев и предсказуемое поведение |
+| **Контроль инвариантов** | Проверки разрознены или отсутствуют | Строгое соблюдение пред- и постусловий на границах |
 | **Накладные расходы** | Скрытая деградация памяти и времени отклика | Оптимальная сложность O(1)/O(N) с прозрачными trade-offs |
 | **Диагностика ошибок** | Хаотичный поиск по симптомам | Мгновенная локализация по телеметрии и протоколам |`;
 
+  const sourcesHeader = safeSources.length > 0
+    ? `> **Опора на рецензируемые первоисточники:** Фундаментальный синтез на основе ${safeSources.length} открытых академических источников для уровня **${userLevel}** и стиля мышления **${thinkingStyle}**.`
+    : `> **Статус источников:** Прямых открытых учебников по теме «${unitTitle}» в базах OpenAlex/Crossref/DOAB/Wikibooks не найдено. Конспект сформирован на основе фундаментальных отраслевых стандартов и аксиом дисциплины.`;
+
   const adaptedTheoryMarkdown = `### ${unitTitle}
-> **Опора на рецензируемые первоисточники:** Фундаментальный синтез на основе академических учебников **[1]**, научных трудов **[2]** и профильных монографий **[3]** для уровня **${userLevel}**, стиля мышления **${thinkingStyle}** и практической цели: «**${targetGoal}**».
+${sourcesHeader}
 
 ---
 
 #### 1. 🏛️ Анатомия и физика концепта: что происходит под капотом (First Principles)
-В основе темы **«${unitTitle}»** лежит фундаментальная закономерность: *сложность любой системы не устраняется, а перераспределяется между компонентами* **[1]**. 
+В основе темы **«${unitTitle}»** лежит фундаментальная закономерность: *сложность любой системы не устраняется, а перераспределяется между компонентами*. 
 
 Когда система обрабатывает рабочую нагрузку в рамках **«${unitTitle}»**, на нижнем уровне происходят следующие ключевые процессы:
-1. **Первичная инициализация и захват контекста:** Входные сущности валидируются на соответствие инвариантам до выделения критических ресурсов. Это предотвращает частичные состояния сбоя (partial failures) **[2]**.
+1. **Первичная инициализация и захват контекста:** Входные сущности валидируются на соответствие инвариантам до выделения критических ресурсов. Это предотвращает частичные состояния сбоя (partial failures).
 2. **Внутренняя маршрутизация и преобразование:** Данные передаются по детерминированному пайплайну, где каждый шаг автономен и не создает скрытых побочных эффектов.
-3. **Фиксация состояния и подтверждение:** Результат фиксируется только после успешного прохождения барьера синхронизации, обеспечивая предсказуемость для внешних потребителей **[3]**.
+3. **Фиксация состояния и подтверждение:** Результат фиксируется только после успешного прохождения барьера синхронизации, обеспечивая предсказуемость для внешних потребителей.
 
 #### Интерактивная архитектурная блок-схема процесса:
 ${visualDiagram}

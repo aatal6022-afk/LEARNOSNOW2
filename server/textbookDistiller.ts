@@ -383,7 +383,7 @@ ${groundedPromptText}`;
       const aiBlock = await callGeminiSafeJson(`Сформируй большой учебный блок по теме: «${rawTopic}».\n\nДополнительный фокус: ${focusPrompt}\n\nТекущий контекст: ${params.sourceContext && params.sourceContext.length ? JSON.stringify(params.sourceContext.slice(0, 4)) : 'Отсутствует'}.`, {
         systemInstruction,
         temperature: 0.25,
-        models: ['gemini-3.8-flash', 'gemini-3.1-flash-lite', 'gemini-flash-latest'],
+        models: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash', 'gemini-1.5-flash'],
         skipCache: false,
         agentName: 'AI-TextbookDistiller',
         taskGoal: `Textbook distillation: ${rawTopic}`,
@@ -392,11 +392,25 @@ ${groundedPromptText}`;
       });
 
       if (aiBlock && aiBlock.academicTheoryMarkdown && Array.isArray(aiBlock.invariants)) {
+        const realGroundingSources = groundingResult.sources.length > 0 ? groundingResult.sources : [
+          {
+            id: `not-found-${Date.now()}`,
+            sourceType: 'academic_book',
+            sourceLabel: 'Поиск по открытым источникам',
+            title: `Прямых открытых учебников по теме «${rawTopic}» не найдено`,
+            authors: 'Каталоги OpenAlex, Crossref, DOAB, Wikibooks',
+            snippet: `Поисковый запрос по открытым базам учебников (OpenAlex, Crossref, DOAB, Wikibooks, OpenStax) не вернул прямых совпадений для «${rawTopic}». Материал структурирован на основе фундаментальных инвариантов дисциплины.`,
+            verifiableQuote: '«Прямых совпадений по теме не обнаружено в открытых базах учебников.»',
+            url: '',
+            badgeColor: 'amber',
+          }
+        ];
+
         const distilled: DistilledEducationalBlock = {
           topic: aiBlock.topic || rawTopic,
           domain: aiBlock.domain || domain,
-          sourceCitation: aiBlock.sourceCitation || `Academic synthesis for ${rawTopic}`,
-          isbnOrDoi: aiBlock.isbnOrDoi,
+          sourceCitation: aiBlock.sourceCitation || (groundingResult.sources.length > 0 ? groundingResult.sources[0].title : `Общепринятые стандарты: ${rawTopic}`),
+          isbnOrDoi: aiBlock.isbnOrDoi || (groundingResult.sources.length > 0 ? groundingResult.sources[0].doiOrIsbn : undefined),
           invariants: Array.isArray(aiBlock.invariants) && aiBlock.invariants.length > 0 ? aiBlock.invariants : [
             `Основной инвариант темы «${rawTopic}» — устойчивость правила при смене контекста.`,
             `Проверка и применение важнее запоминания случайных формулировок.`,
@@ -447,7 +461,8 @@ ${groundedPromptText}`;
             question: `Объясните тему «${rawTopic}» так, чтобы это понял новичок.`,
             keyInvariantsRequired: ['краткое правило', 'один пример', 'проверка'],
             samplePassingAnswer: 'Здесь важно понять не набор терминов, а сам принцип и способ его верификации.'
-          }
+          },
+          groundingSources: realGroundingSources,
         };
 
         await FirestoreKnowledgeCache.saveCachedLesson(rawTopic, distilled, domain);

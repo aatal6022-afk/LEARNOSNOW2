@@ -445,10 +445,14 @@ async function scrapeOpenStax(query: string, timeoutMs: number = 8000): Promise<
 
   // Fallback to verified direct OpenStax curriculum catalog
   const lowerQuery = query.toLowerCase();
-  const matched = OPENSTAX_LIBRARY.filter((b) => b.keywords.some((k) => lowerQuery.includes(k)));
-  const listToUse = matched.length > 0 ? matched : [OPENSTAX_LIBRARY[3]]; // default to computer science / logic
+  const matched = OPENSTAX_LIBRARY.filter((b) => b.keywords.some((k) => {
+    const rx = new RegExp(`\\b${k}`, 'i');
+    return rx.test(lowerQuery);
+  }));
 
-  return listToUse.slice(0, 2).map((book, idx) => ({
+  if (matched.length === 0) return [];
+
+  return matched.slice(0, 2).map((book, idx) => ({
     id: `openstax-direct-${idx}-${Date.now()}`,
     sourceType: 'openstax',
     sourceLabel: 'OpenStax Peer-Reviewed Core (Rice University)',
@@ -1088,8 +1092,133 @@ export async function scrapeWikibooks(query: string, timeoutMs: number = 8000): 
 }
 
 /**
+ * 7. OpenLibrary Live Public Book Search (https://openlibrary.org)
+ * Provides instant live access to 30M+ published textbooks, monographs, and academic books
+ */
+export async function scrapeOpenLibraryBooks(query: string, timeoutMs: number = 5000): Promise<GroundingSourceItem[]> {
+  const cleanQ = query.trim();
+  if (!cleanQ) return [];
+  try {
+    const url = `https://openlibrary.org/search.json?q=${encodeURIComponent(cleanQ)}&limit=4`;
+    const res = await fetch(url, {
+      headers: { Accept: 'application/json', 'User-Agent': 'LearningOS-BookSearch/1.0' },
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (res.ok) {
+      const data: any = await res.json();
+      const docs = Array.isArray(data.docs) ? data.docs : [];
+      if (docs.length > 0) {
+        return docs.slice(0, 3).map((doc: any, idx: number) => {
+          const title = sanitizeAcademicText(doc.title || `Учебное издание: ${cleanQ}`);
+          const authors = Array.isArray(doc.author_name)
+            ? doc.author_name.slice(0, 3).join(', ')
+            : (doc.author_name || 'Академический автор');
+          const year = doc.first_publish_year || (Array.isArray(doc.publish_year) ? doc.publish_year[0] : 2023);
+          const isbn = Array.isArray(doc.isbn) ? `ISBN ${doc.isbn[0]}` : undefined;
+          const url = doc.key ? `https://openlibrary.org${doc.key}` : `https://openlibrary.org/search?q=${encodeURIComponent(cleanQ)}`;
+          
+          return {
+            id: `openlibrary-${idx}-${Date.now()}`,
+            sourceType: 'academic_book' as GroundingSourceType,
+            sourceLabel: 'OpenLibrary (Internet Archive Academic Catalog)',
+            title,
+            authors: sanitizeAcademicText(authors),
+            year,
+            url,
+            chapterOrSection: doc.subject && Array.isArray(doc.subject) ? `Раздел: ${doc.subject.slice(0, 2).join(', ')}` : 'Учебное книжное издание',
+            snippet: `Печатное издание из открытого библиотечного каталога OpenLibrary по направлению «${cleanQ}».`,
+            verifiableQuote: `«Материал зарегистрирован в международном каталоге OpenLibrary.»`,
+            doiOrIsbn: isbn,
+            badgeColor: 'sky',
+          };
+        });
+      }
+    }
+  } catch (err: any) {}
+  return [];
+}
+
+/**
+ * 8. Google Books Live API (Public Volume Search)
+ */
+export async function scrapeGoogleBooks(query: string, timeoutMs: number = 5000): Promise<GroundingSourceItem[]> {
+  const cleanQ = query.trim();
+  if (!cleanQ) return [];
+  try {
+    const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(cleanQ)}&maxResults=4&printType=books`;
+    const res = await fetch(url, {
+      headers: { Accept: 'application/json' },
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (res.ok) {
+      const data: any = await res.json();
+      const items = Array.isArray(data.items) ? data.items : [];
+      if (items.length > 0) {
+        return items.slice(0, 3).map((item: any, idx: number) => {
+          const v = item.volumeInfo || {};
+          const title = sanitizeAcademicText(v.title || `Книга: ${cleanQ}`);
+          const authors = Array.isArray(v.authors) ? v.authors.slice(0, 3).join(', ') : (v.publisher || 'Издательство');
+          const year = v.publishedDate ? v.publishedDate.slice(0, 4) : 2023;
+          let isbn: string | undefined;
+          if (Array.isArray(v.industryIdentifiers)) {
+            const isbnObj = v.industryIdentifiers.find((i: any) => i.type?.includes('ISBN'));
+            if (isbnObj) isbn = `ISBN ${isbnObj.identifier}`;
+          }
+          const bookUrl = v.infoLink || v.canonicalVolumeLink || `https://books.google.com`;
+          const snippet = v.description ? v.description.slice(0, 260) : `Официальное печатное издание из каталога Google Books: «${title}».`;
+
+          return {
+            id: `gbooks-${idx}-${Date.now()}`,
+            sourceType: 'academic_book' as GroundingSourceType,
+            sourceLabel: v.publisher ? `Google Books: ${v.publisher}` : 'Google Books Academic',
+            title,
+            authors: sanitizeAcademicText(authors),
+            year,
+            url: bookUrl,
+            chapterOrSection: v.categories ? `Категория: ${v.categories.join(', ')}` : 'Печатное издание',
+            snippet,
+            verifiableQuote: v.description ? `«${v.description.slice(0, 200)}...»` : `«Издание зарегистрировано в Google Books.»`,
+            doiOrIsbn: isbn,
+            badgeColor: 'blue',
+          };
+        });
+      }
+    }
+  } catch (err: any) {}
+  return [];
+}
+
+export function isSourceTopicallyRelevant(source: GroundingSourceItem, query: string): boolean {
+  if (!source || !query) return false;
+  const stopWords = new Set([
+    'как', 'что', 'для', 'или', 'это', 'все', 'при', 'над', 'под', 'без', 'про', 'курс', 'урок', 'тема', 'блок',
+    'the', 'and', 'for', 'with', 'from', 'into', 'book', 'textbook', 'chapter', 'guide', 'study', 'applied', 'principles'
+  ]);
+  const qTokens = query
+    .toLowerCase()
+    .replace(/[^a-zа-я0-9\s]/gi, ' ')
+    .split(/\s+/)
+    .map((w) => w.trim())
+    .filter((w) => w.length >= 3 && !stopWords.has(w));
+
+  if (qTokens.length === 0) return true;
+
+  const title = (source.title || '').toLowerCase();
+  const snippet = (source.snippet || '').toLowerCase();
+  const quote = (source.verifiableQuote || '').toLowerCase();
+  const section = (source.chapterOrSection || '').toLowerCase();
+  const combined = `${title} ${section} ${snippet} ${quote}`;
+
+  // Match at least one core domain stem
+  return qTokens.some((t) => {
+    const stem = t.length > 5 ? t.slice(0, t.length - 2) : (t.length > 4 ? t.slice(0, t.length - 1) : t);
+    return combined.includes(stem);
+  });
+}
+
+/**
  * Multi-threaded, parallel retrieval across all live knowledge APIs:
- * OpenAlex, Crossref, DOAB, Wikibooks, OpenStax, DjVu Conspects
+ * OpenLibrary, Google Books, OpenAlex, Crossref, DOAB, Wikibooks, OpenStax, DjVu Conspects
  */
 export async function retrieveMultiSourceGrounding(query: string): Promise<GroundedKnowledgeResult> {
   const normalizedKey = (query || 'general_study').trim().toLowerCase();
@@ -1101,7 +1230,9 @@ export async function retrieveMultiSourceGrounding(query: string): Promise<Groun
   }
 
   // Multi-threaded parallel scrape across real open access databases
-  const [openalexRes, crossrefRes, doabRes, wikibooksRes, openstaxRes, djvuRes] = await Promise.allSettled([
+  const [openLibraryRes, googleBooksRes, openalexRes, crossrefRes, doabRes, wikibooksRes, openstaxRes, djvuRes] = await Promise.allSettled([
+    scrapeOpenLibraryBooks(query, 5000),
+    scrapeGoogleBooks(query, 5000),
     scrapeScientificWorks(query, 5000),
     scrapeCrossrefBooks(query, 5000),
     scrapeDOAB(query, 5000),
@@ -1112,6 +1243,12 @@ export async function retrieveMultiSourceGrounding(query: string): Promise<Groun
 
   const allSources: GroundingSourceItem[] = [];
 
+  if (openLibraryRes.status === 'fulfilled' && openLibraryRes.value.length > 0) {
+    allSources.push(...openLibraryRes.value);
+  }
+  if (googleBooksRes.status === 'fulfilled' && googleBooksRes.value.length > 0) {
+    allSources.push(...googleBooksRes.value);
+  }
   if (crossrefRes.status === 'fulfilled' && crossrefRes.value.length > 0) {
     allSources.push(...crossrefRes.value);
   }
@@ -1131,12 +1268,14 @@ export async function retrieveMultiSourceGrounding(query: string): Promise<Groun
     allSources.push(...djvuRes.value);
   }
 
-  const hasRealSources = allSources.length > 0;
+  // Strict relevance check: discard any random books that don't match the specific query
+  const strictlyRelevantSources = allSources.filter((s) => isSourceTopicallyRelevant(s, query));
+
   const result: GroundedKnowledgeResult = {
     query,
-    sources: allSources.slice(0, 6),
+    sources: strictlyRelevantSources.slice(0, 5),
     retrievalTimestamp: new Date().toISOString(),
-    groundingStatus: hasRealSources ? 'live_scraped' : 'verified_academic_cache',
+    groundingStatus: strictlyRelevantSources.length > 0 ? 'live_scraped' : 'verified_academic_cache',
   };
 
   knowledgeCache.set(cacheKey, {
