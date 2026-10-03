@@ -107,16 +107,21 @@ if (typeof window !== 'undefined') {
   ensureAuth().catch(() => {});
 }
 
+export let isFirestoreOnline = true;
+
 // Test connection to Firestore on boot
 export async function testConnection() {
   try {
     await getDocFromServer(doc(db, 'test', 'connection'));
+    isFirestoreOnline = true;
     console.log('[Firebase] Connection verified successfully.');
   } catch (error: any) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.warn('[Firebase] Client is offline or restricted in iframe.');
+    const msg = error?.message || String(error);
+    if (msg.includes('not found') || msg.includes('offline') || msg.includes('unavailable')) {
+      isFirestoreOnline = false;
+      console.log('[Firebase] Firestore in local-first fallback mode (offline or database not created yet).');
     } else {
-      console.log('[Firebase] Connection check status:', error?.message || error);
+      console.log('[Firebase] Connection check status:', msg);
     }
   }
 }
