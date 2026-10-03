@@ -32,45 +32,75 @@ let vertexCredentialsError: string | null = null;
 let vertexProjectFromCredentials: string | undefined;
 
 function configureVertexCredentials(): void {
-  const credentialsJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON ||
-    process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON ||
-    (process.env.GOOGLE_APPLICATION_CREDENTIALS?.trimStart().startsWith('{')
-      ? process.env.GOOGLE_APPLICATION_CREDENTIALS
-      : undefined);
+  try {
+    let raw = (
+      process.env.GOOGLE_SERVICE_ACCOUNT_JSON ||
+      process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON ||
+      (process.env.GOOGLE_APPLICATION_CREDENTIALS?.trimStart().startsWith('{')
+        ? process.env.GOOGLE_APPLICATION_CREDENTIALS
+        : undefined)
+    )?.trim();
 
-  if (credentialsJson) {
-    try {
-      const credentials = JSON.parse(credentialsJson);
-      if (credentials.type !== 'service_account' || !credentials.client_email || !credentials.private_key) {
-        throw new Error('Invalid service account fields');
+    // Check if raw is Base64 encoded JSON
+    if (raw && !raw.startsWith('{') && raw.length > 50) {
+      try {
+        const decoded = Buffer.from(raw, 'base64').toString('utf8');
+        if (decoded.trim().startsWith('{')) {
+          raw = decoded.trim();
+        }
+      } catch {}
+    }
+
+    if (raw && raw.startsWith('{')) {
+      try {
+        let credentials: any;
+        try {
+          credentials = JSON.parse(raw);
+        } catch {
+          // Handle potential unescaped newlines in private_key
+          const sanitized = raw.replace(/\r/g, '').replace(/(\r?\n)+/g, '\\n');
+          try {
+            credentials = JSON.parse(sanitized);
+          } catch {}
+        }
+
+        if (credentials && credentials.type === 'service_account' && credentials.client_email && credentials.private_key) {
+          // Ensure private key newlines are proper
+          if (typeof credentials.private_key === 'string') {
+            credentials.private_key = credentials.private_key.replace(/\\n/g, '\n');
+          }
+          const credentialPath = path.join(os.tmpdir(), `learning-os-vertex-${process.pid}.json`);
+          fs.writeFileSync(credentialPath, JSON.stringify(credentials, null, 2), { mode: 0o600 });
+          process.env.GOOGLE_APPLICATION_CREDENTIALS = credentialPath;
+          vertexProjectFromCredentials = credentials.project_id;
+          console.log(`[Vertex Credentials] Successfully configured service account: ${credentials.client_email} (Project: ${credentials.project_id})`);
+          return;
+        }
+      } catch (err: any) {
+        vertexCredentialsError = `Failed to process GOOGLE_SERVICE_ACCOUNT_JSON: ${err?.message || err}`;
+        console.warn('[Vertex Credentials Warning]', vertexCredentialsError);
       }
-
-      const credentialPath = path.join(os.tmpdir(), `learning-os-vertex-${process.pid}.json`);
-      fs.writeFileSync(credentialPath, JSON.stringify(credentials), { mode: 0o600 });
-      process.env.GOOGLE_APPLICATION_CREDENTIALS = credentialPath;
-      vertexProjectFromCredentials = credentials.project_id;
-    } catch {
-      vertexCredentialsError = 'Invalid Vertex service account JSON. Set GOOGLE_SERVICE_ACCOUNT_JSON to the complete service-account JSON.';
     }
-  }
 
-  const configuredPath = process.env.GOOGLE_APPLICATION_CREDENTIALS || 'gcp-key.json';
-  if (configuredPath.trimStart().startsWith('{')) return;
-
-  const credentialPaths = [
-    path.resolve(process.cwd(), configuredPath),
-    path.resolve(process.cwd(), 'gcp-key.json'),
-    path.resolve(process.cwd(), '..', 'gcp-key.json'),
-  ];
-  const credentialPath = credentialPaths.find((candidate) => fs.existsSync(candidate));
-
-  if (credentialPath) {
-    process.env.GOOGLE_APPLICATION_CREDENTIALS = credentialPath;
-    try {
-      vertexProjectFromCredentials ||= JSON.parse(fs.readFileSync(credentialPath, 'utf8')).project_id;
-    } catch {
-      // Google auth reports malformed credential files when the client is created.
+    const configuredPath = process.env.GOOGLE_APPLICATION_CREDENTIALS || 'gcp-key.json';
+    if (configuredPath && !configuredPath.trimStart().startsWith('{')) {
+      const candidatePaths = [
+        path.resolve(process.cwd(), configuredPath),
+        path.resolve(process.cwd(), 'gcp-key.json'),
+        path.resolve(process.cwd(), '..', 'gcp-key.json'),
+      ];
+      const found = candidatePaths.find((p) => fs.existsSync(p));
+      if (found) {
+        process.env.GOOGLE_APPLICATION_CREDENTIALS = found;
+        try {
+          const parsed = JSON.parse(fs.readFileSync(found, 'utf8'));
+          vertexProjectFromCredentials ||= parsed.project_id;
+          console.log(`[Vertex Credentials] Loaded credentials from file: ${found}`);
+        } catch {}
+      }
     }
+  } catch (globalErr) {
+    console.warn('[Vertex Credentials] Error during initialization:', globalErr);
   }
 }
 

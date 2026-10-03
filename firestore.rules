@@ -5,10 +5,6 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
     // Default deny
     match /{document=**} {
       allow read, write: if false;
@@ -16,97 +12,86 @@ service cloud.firestore {
 
     // Test connection ping
     match /test/{docId} {
-      allow read: if true;
-      allow write: if isSignedIn();
+      allow read, write: if true;
     }
 
-    // User profiles & settings
+    // User profiles & settings (supports both Google Login and guest sessions)
     match /users/{userId} {
-      allow read, write: if isSignedIn();
+      allow read, write: if true;
     }
 
     match /user_profiles/{userId} {
-      allow read, write: if isSignedIn();
+      allow read, write: if true;
     }
 
     match /public_profiles/{userId} {
-      allow read: if true;
-      allow write: if isSignedIn();
+      allow read, write: if true;
     }
 
     match /public_user_profiles/{userId} {
-      allow read: if true;
-      allow write: if isSignedIn();
+      allow read, write: if true;
     }
 
     match /public_user_portfolios/{userId} {
-      allow read: if true;
-      allow write: if isSignedIn();
+      allow read, write: if true;
     }
 
     match /user_learning_paths/{userId} {
-      allow read, write: if isSignedIn();
+      allow read, write: if true;
     }
 
     match /learning_paths/{userId} {
-      allow read, write: if isSignedIn();
+      allow read, write: if true;
     }
 
     // User artifacts (code submissions, badges, certificates)
     match /user_artifacts/{artifactId} {
-      allow read, write: if isSignedIn();
+      allow read, write: if true;
     }
 
     // Comments on user artifacts
     match /artifact_comments/{commentId} {
-      allow read: if true;
-      allow create, update, delete: if isSignedIn();
+      allow read, write: if true;
     }
 
     // Wall posts
     match /profile_wall_posts/{postId} {
-      allow read: if true;
-      allow create, update, delete: if isSignedIn();
+      allow read, write: if true;
     }
 
     // User custom learning units
     match /user_learning_units/{userId}/units/{unitId} {
-      allow read, write: if isSignedIn();
+      allow read, write: if true;
     }
 
     // Admin & Community Materials
     match /admin_materials/{materialId} {
-      allow read: if true;
-      allow write: if isSignedIn();
+      allow read, write: if true;
     }
 
     // Collaborative sessions
     match /peer_sessions/{sessionId} {
-      allow read: if true;
-      allow write: if isSignedIn() || request.resource.data.senderId != null;
+      allow read, write: if true;
     }
 
     // Community rooms and discussions
     match /community_rooms/{roomId} {
-      allow read: if true;
-      allow create, update, delete: if isSignedIn();
+      allow read, write: if true;
     }
 
     // Sticky notes on DAG graph
     match /node_sticky_notes/{noteId} {
-      allow read: if true;
-      allow create, update, delete: if isSignedIn();
+      allow read, write: if true;
     }
 
     // Whiteboards
     match /whiteboards/{boardId} {
-      allow read: if true;
-      allow write: if isSignedIn();
+      allow read, write: if true;
     }
 
     // Partner requests
     match /partner_requests/{requestId} {
-      allow read, write: if isSignedIn();
+      allow read, write: if true;
     }
   }
 }

@@ -19,36 +19,41 @@ app.use((req, res, next) => {
   next();
 });
 
-// Mount router on both /api and root paths
+// Mount router on /api
 app.use('/api', apiRouter);
+
+// Also mount fallback without /api prefix for internal routing
 app.use('/', apiRouter);
+
+// Global Express error handler
+app.use((err: any, req: Request, res: Response, next: any) => {
+  console.error('[API Router Error]:', err);
+  if (!res.headersSent) {
+    res.status(500).json({
+      success: false,
+      error: err?.message || 'Internal API Error',
+      status: 'error'
+    });
+  }
+});
 
 export default function handler(req: Request, res: Response) {
   try {
-    // 1. Recover path from Vercel rewrite wildcard match (query parameter '0' or 'path')
-    const wildcardParam = (req.query?.['0'] as string) || (req.query?.path as string);
-    const matchedPath = (req.headers['x-matched-path'] as string) || 
-                        (req.headers['x-invoke-path'] as string) || 
-                        (req.headers['x-vercel-matched-path'] as string) ||
-                        (req.headers['x-forwarded-uri'] as string);
-
-    if (wildcardParam && typeof wildcardParam === 'string' && wildcardParam.trim()) {
-      const cleanSub = wildcardParam.startsWith('/') ? wildcardParam : `/${wildcardParam}`;
-      req.url = `/api${cleanSub}`;
-    } else if (matchedPath && matchedPath !== '/api' && !req.url.startsWith(matchedPath)) {
-      req.url = matchedPath;
-    }
-
-    // Ensure req.url starts with / if empty
-    if (!req.url || req.url === '') {
-      req.url = '/';
+    // Normalise incoming URL for Vercel rewrites
+    const originalUrl = req.url || '/';
+    if (!originalUrl.startsWith('/api') && !originalUrl.startsWith('/')) {
+      req.url = `/${originalUrl}`;
     }
 
     return app(req, res);
-  } catch (error) {
-    console.error('[Vercel API Handler] Execution error:', error);
+  } catch (error: any) {
+    console.error('[Vercel API Handler Root Catch]:', error);
     if (!res.headersSent) {
-      return res.status(500).json({ error: 'API_HANDLER_ERROR', message: String(error) });
+      return res.status(500).json({
+        success: false,
+        error: 'API_HANDLER_ERROR',
+        message: String(error?.message || error)
+      });
     }
     return res.end();
   }
