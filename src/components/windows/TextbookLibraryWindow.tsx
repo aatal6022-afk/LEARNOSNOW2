@@ -43,7 +43,20 @@ type DistilledBlock = {
   exercises?: Array<{ id: string; title: string; instruction: string; starterSnippet?: string; expectedOutputOrSolution?: string; verificationCriteria?: string[] }>;
   expressQuiz?: Array<{ id: string; question: string; scenario?: string; options: string[]; correctIndex?: number; explanation?: string; gapRemediationTip?: string }>;
   blankPagePrompt?: { question?: string; keyInvariantsRequired?: string[]; samplePassingAnswer?: string };
-  groundingSources?: Array<{ sourceLabel?: string; title?: string; url?: string; snippet?: string }>;
+  groundingSources?: Array<{
+    id?: string;
+    sourceType?: string;
+    sourceLabel?: string;
+    title?: string;
+    authors?: string;
+    year?: string | number;
+    url?: string;
+    chapterOrSection?: string;
+    snippet?: string;
+    verifiableQuote?: string;
+    doiOrIsbn?: string;
+    badgeColor?: string;
+  }>;
 };
 
 const mapNodesToChapters = (nodes: Array<{ id: string; title: string; unitId?: string; summary?: string; phase?: number; phaseTitle?: string }> = []): TextbookLibraryEntry[] => {
@@ -219,24 +232,10 @@ export const TextbookLibraryWindow: React.FC<TextbookLibraryWindowProps> = ({
     const currentDomain = selectedChapter.domain || 'Инженерия';
 
     try {
-      // 1. Concurrently query live textbook knowledge APIs for real verified books
-      let realApiSources: any[] = [];
-      try {
-        const sourcesRes = await fetch(`/api/grounding/sources?query=${encodeURIComponent(targetTopic)}`);
-        if (sourcesRes.ok) {
-          const sourcesData = await sourcesRes.json();
-          if (Array.isArray(sourcesData.sources)) {
-            realApiSources = sourcesData.sources;
-          }
-        }
-      } catch (e) {
-        console.warn('[TextbookLibrary] Live sources search error:', e);
-      }
-
-      // 2. Check if we already have an AI generated quiz in cache for this chapter/topic
+      // 1. Check if we already have an AI generated quiz in cache for this chapter/topic
       const cachedQuiz = chapterQuizzesCache[selectedChapter.id] || chapterQuizzesCache[targetTopic];
 
-      // 3. Dynamic synthesis or matched unit
+      // 2. Check if unit has pre-baked content and we aren't forcing an AI re-synthesis
       const matchedUnit = selectedChapter.unitId ? units[selectedChapter.unitId] : undefined;
       if (matchedUnit && !forceApiRefresh) {
         let quizList = cachedQuiz;
@@ -286,9 +285,7 @@ export const TextbookLibraryWindow: React.FC<TextbookLibraryWindowProps> = ({
         setPage({
           topic: matchedUnit.title,
           domain: currentDomain,
-          sourceCitation: realApiSources.length > 0
-            ? `Проверено по каталогам API (${realApiSources[0].title || 'OpenLibrary / Google Books / Crossref'})`
-            : `Программа курса: ${matchedUnit.title} (${matchedUnit.category || 'Архитектура'})`,
+          sourceCitation: `Программа курса: ${matchedUnit.title} (${matchedUnit.category || 'Архитектура'})`,
           academicTheoryMarkdown: matchedUnit.summaryMarkdown || `### 1. Основы\n${matchedUnit.aiEssence || 'Изучение ключевой темы модуля.'}\n\n### 2. Практика\n${matchedUnit.projectTask?.description || 'Прикладная разработка по модулю.'}`,
           whyItMattersInRealWorld: matchedUnit.aiEssence || 'Позволяет уверенно решать профильные задачи на производстве.',
           invariants: invariantList,
@@ -313,13 +310,12 @@ export const TextbookLibraryWindow: React.FC<TextbookLibraryWindowProps> = ({
             keyInvariantsRequired: invariantList.slice(0, 3),
             samplePassingAnswer: 'Освоенный модуль позволяет строить надёжные компоненты с гарантией работоспособности.',
           },
-          groundingSources: realApiSources,
         });
-        setGenerationNote(realApiSources.length > 0 ? `Загружено из каталогов API (найдено книг: ${realApiSources.length})` : 'Загружено из программы курса');
+        setGenerationNote('Загружено из программы курса');
         return;
       }
 
-      // 4. Dynamic synthesis through backend API (with topic-grounded questions)
+      // 3. Dynamic synthesis through backend API (with topic-grounded questions)
       const res = await fetch('/api/gemini/distill-block', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -337,22 +333,15 @@ export const TextbookLibraryWindow: React.FC<TextbookLibraryWindowProps> = ({
           if (!fetchedBlock.expressQuiz || fetchedBlock.expressQuiz.length === 0) {
             fetchedBlock.expressQuiz = buildTopicFallbackQuiz(targetTopic, currentDomain);
           }
-          if (realApiSources.length > 0) {
-            fetchedBlock.groundingSources = realApiSources;
-          }
           setPage(fetchedBlock);
-          setGenerationNote(realApiSources.length > 0 ? `Синтезировано ИИ на основе ${realApiSources.length} реальных книг из API` : 'Синтезировано от первых принципов');
+          setGenerationNote('Синтезировано ИИ на основе академических первоисточников');
           return;
         }
       }
 
-      // 5. Fallback block strictly tailored to the requested topic
-      const fallbackBlock = buildFallbackBlock(targetTopic, currentDomain);
-      if (realApiSources.length > 0) {
-        fallbackBlock.groundingSources = realApiSources;
-      }
-      setPage(fallbackBlock);
-      setGenerationNote(realApiSources.length > 0 ? `Опирается на ${realApiSources.length} книг из каталогов API` : 'Синтезировано от первых принципов темы');
+      // 4. Fallback block strictly tailored to the requested topic
+      setPage(buildFallbackBlock(targetTopic, currentDomain));
+      setGenerationNote('Синтезировано от первых принципов темы');
     } catch {
       setPage(buildFallbackBlock(targetTopic, currentDomain));
       setGenerationNote('Офлайн-конспект');
@@ -708,57 +697,6 @@ export const TextbookLibraryWindow: React.FC<TextbookLibraryWindowProps> = ({
                   </div>
                 </section>
 
-                {/* Real Verified Books from Live APIs */}
-                {currentPage.groundingSources && currentPage.groundingSources.length > 0 && (
-                  <section className="rounded-xl border border-[#DADCE0] bg-white p-5 shadow-none">
-                    <div className="flex items-center justify-between gap-2 border-b border-[#F1F3F4] pb-2.5">
-                      <div className="flex items-center gap-2 text-xs font-semibold text-[#1A73E8] uppercase tracking-wider">
-                        <BookOpenText className="w-4 h-4 text-[#1A73E8]" />
-                        <span>Реальные учебники и издания из API ({currentPage.groundingSources.length})</span>
-                      </div>
-                      <span className="text-[10px] text-[#5F6368]">
-                        OpenLibrary • Google Books • Crossref • Wikibooks
-                      </span>
-                    </div>
-
-                    <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {currentPage.groundingSources.map((source, sIdx) => (
-                        <div key={sIdx} className="rounded-lg border border-[#DADCE0] bg-[#F8F9FA] p-3.5 flex flex-col justify-between hover:border-[#1A73E8]/50 transition">
-                          <div>
-                            <div className="flex items-center justify-between gap-2 text-[10px] text-[#5F6368]">
-                              <span className="px-2 py-0.5 rounded bg-[#E8F0FE] text-[#1A73E8] font-medium truncate max-w-[220px]">
-                                {source.sourceLabel || 'Каталог книг'}
-                              </span>
-                            </div>
-                            <h4 className="mt-1.5 text-xs font-bold text-[#202124] line-clamp-2">
-                              {source.title}
-                            </h4>
-                            {source.snippet && (
-                              <p className="mt-1 text-[11px] text-[#5F6368] line-clamp-2 leading-relaxed">
-                                {source.snippet}
-                              </p>
-                            )}
-                          </div>
-
-                          {source.url && source.url !== '#' && (
-                            <div className="mt-2.5 pt-2 border-t border-[#DADCE0]/60 flex items-center justify-between">
-                              <a
-                                href={source.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 text-[11px] font-medium text-[#1A73E8] hover:underline"
-                              >
-                                <span>Открыть первоисточник</span>
-                                <ExternalLink className="w-3 h-3" />
-                              </a>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                )}
-
                 {/* Invariants & Why it matters Grid (Google Green and Amber Callouts) */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="rounded-xl border border-[#CEEAD6] bg-[#E6F4EA] p-4">
@@ -880,6 +818,65 @@ export const TextbookLibraryWindow: React.FC<TextbookLibraryWindowProps> = ({
                           <span className="font-semibold text-[#1A73E8]">Эталон ответа:</span> {currentPage.blankPagePrompt.samplePassingAnswer}
                         </div>
                       )}
+                    </div>
+                  </section>
+                )}
+
+                {/* Grounding Sources & Academic Citations (OpenAlex / Crossref / OpenStax / DOAB / Wikibooks) */}
+                {currentPage.groundingSources && currentPage.groundingSources.length > 0 && (
+                  <section className="rounded-xl border border-[#DADCE0] bg-white p-5 space-y-3">
+                    <div className="flex items-center justify-between border-b border-[#F1F3F4] pb-2.5">
+                      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[#1A73E8]">
+                        <BookOpenText className="w-4 h-4 text-[#1A73E8]" />
+                        <span>Первоисточники и академические издания ({currentPage.groundingSources.length})</span>
+                      </div>
+                      <span className="text-[11px] text-[#5F6368] font-mono">OpenAlex / Crossref / DOAB / OpenStax</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {currentPage.groundingSources.map((src, sIdx) => (
+                        <div
+                          key={src.id || sIdx}
+                          className="rounded-lg border border-[#DADCE0] bg-[#F8F9FA] p-3.5 space-y-2 text-xs flex flex-col justify-between"
+                        >
+                          <div>
+                            <div className="flex items-center justify-between text-[10px] text-[#5F6368]">
+                              <span className="px-2 py-0.5 rounded-full bg-[#E8F0FE] text-[#1A73E8] font-semibold truncate max-w-[200px]">
+                                {src.sourceLabel || 'Рецензируемое издание'}
+                              </span>
+                              {src.year && <span className="font-mono">{src.year}</span>}
+                            </div>
+                            <h4 className="mt-1.5 font-bold text-[#202124] line-clamp-2">
+                              {src.title}
+                            </h4>
+                            {src.authors && (
+                              <p className="mt-0.5 text-[11px] text-[#5F6368]">
+                                {src.authors}
+                              </p>
+                            )}
+                            <p className="mt-2 text-[11px] text-[#3C4043] italic leading-relaxed line-clamp-3 bg-white p-2 rounded border border-[#DADCE0]/60">
+                              «{src.verifiableQuote || src.snippet}»
+                            </p>
+                          </div>
+
+                          {src.url && src.url.startsWith('http') && (
+                            <div className="pt-2 border-t border-[#DADCE0]/40 flex items-center justify-between">
+                              <span className="text-[10px] text-[#5F6368] truncate max-w-[150px] font-mono">
+                                {src.doiOrIsbn || 'DOI/ISBN'}
+                              </span>
+                              <a
+                                href={src.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[11px] font-semibold text-[#1A73E8] hover:underline flex items-center gap-1"
+                              >
+                                <span>Открыть источник</span>
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                      ))}
                     </div>
                   </section>
                 )}

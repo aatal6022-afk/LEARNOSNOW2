@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "starlit-brand-510516-j6",
+  "private_key_id": "386f7b7aa035f65da081b6a85311bac8afcd6525",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCkA1ea/uTGeQBV\n+3n+bIfJos6IBp2TDv7v0mD94+d3AWJLdcN5aOU2JrXRNTbMlpV+6I1i2/V5xZHx\nwFnBiJXKRtg7nboaA9NT+KT49ql0pE7281g1P1ic/JvuegaVkFs2BRoFMbTfMFHx\nOGXpb10h7wbbHkiroLz5ogqfQolVZQz9+QI/WU1upGhKP8fhMXKjT/X8Ck11ODm5\nAD9hHwT9QTj85sSiooEnELfXRCj428U2wMdWTopHFbqHIaQWxqcaZl8sQeYxRXbn\nZnxmH8sPUlO4gIl1Ma+XTfY0HR0xKkf0DhHabHIk+UM+2ZdNT/o5y/AW/wKZ8Upt\nyLk7ih5ZAgMBAAECggEABWuF2t2nBkcL44uEr8t63kc2z4h2bxxtANRhN6qvJL/j\nNW6uF8ZHYtd7JS9+wNqOFKxPNc/iiBRnGwfZ/3sJxi46qZewBXmQY4NBQmf2WCAw\n6tjGVrYh8cgoSAR40Lr9RKb9AeRvX3vLjW7pcUIon/0z6wxQZvmQHSjFdJdgjfWU\nIV7gR8SYkXbvkSa5UUEf1c+ouLvrQDVV4bMW3RaOti+l3Fpf0wYMBlg+gE2VZ306\n2D2oQILdld2Vyz0OCIS71zG7uVcg7UeI1nMKVgaitqOsBogfu6tDx3CplTNXE/9R\nsxvzjLCUiZrIw1dkkf0nyy8cY3MR/ri+Ujhw6i6jHQKBgQDRBJ/aYmbJeIc3/f7d\n0/kPWUegk2Zzckw/uiD7nq2WiYD00PljB60gxzENQtOeXcK79VCAx84jonVBilTj\n5IyQTLKVcA67ZYi273sgvOGOJLBXOS+3/8gFZnSF5/jIo6nadxr6L1o12atJm+72\nQgbzD9v2KV6TqtEqLCHZ+AU75QKBgQDI4QbtVcu8AyzRQG2oewndMc0rMWwXOdjJ\njrM57XqG+u8KONfCMJ6rEAZWUxAXlbu0TNDCppnr6479OCfxRY0dSKAlc+BklC+h\nU3P/XZiTlij8NRDl0G4S9E5tn95wWZAvQyFKmPDvLIEGeekxB8WFuFNCSplRb/CD\nq4+hC125ZQKBgDlAWgS4VU00DV2h3dCnAh5ZJwxts29FzGrcMbKaKRQFv+PO5bBh\nZuOGjAIE3vAO4IsZS56qm+UY16NHH694Z6QSzguusOpVilgJSqGR+vozRHXvvQla\nL1CDWsFe478ZTSoA28vRcpUzdP5pjs+3EC49ltNbS4OJE1fI1NDeZZidAoGAaZyl\nn7Iz4y1oKrvM63+EuB6u176sLankKFQ2NoZ8nOrhMmagSSB2y0kpi8kv9LZscWbR\newVMd5TpIIidt2PxxSuhxw8dMsQWJqNRoTj8NtwDwFXGBI2I0b5QXaJnuHneLHsG\nzcmLIrQrQdRmnbiQSLWYUIoYAZDwyskwQmNPa2ECgYEAgsd+qDBc79tyi4uJAO2L\nwJyNArEXeiSokGaSWOwokP6TDqkxD02v6MARgo5G07LkcLjPVxC2HKTSGMTTLnZk\nzt0vaopKWJHEAdMXxd22jVDOF/6awWjDqUOST6C31KhRc91YCM0jJkY3IbbQ8hgP\nA2k0x1/Z61qUr4Kyj3L7Sys=\n-----END PRIVATE KEY-----\n",
+  "client_email": "vertex-ai-app-runner@starlit-brand-510516-j6.iam.gserviceaccount.com",
+  "client_id": "107985231940857412229",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/vertex-ai-app-runner%40starlit-brand-510516-j6.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

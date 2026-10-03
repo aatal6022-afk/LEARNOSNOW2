@@ -562,9 +562,10 @@ export const AiOperatorWindow: React.FC<AiOperatorWindowProps> = ({
   };
 
   const quickPrompts = [
+    { label: '📚 Учебник: Базы данных', prompt: 'Найди мне рецензируемые учебники и статьи по базам данных, B-Tree и транзакциям' },
+    { label: '📖 Литература: Микроэкономика', prompt: 'Поищи учебники и первоисточники по микроэкономике и рыночному равновесию' },
+    { label: '📑 Книги: Бухгалтерский учет', prompt: 'Найди учебные материалы и книги по бухгалтерскому учету и балансу' },
     { label: '🎬 Видео: Индексы Postgres', prompt: 'Найди мне в магазине материалов видео про индексы PostgreSQL и структуру страниц' },
-    { label: '⚡ Видео: Консенсус Raft', prompt: 'Поищи в магазине обучающее видео про распределенный консенсус Raft и выборы лидера' },
-    { label: '🧵 Видео: Lock-Free', prompt: 'Найди видео из магазина по Lock-Free структурам данных и атомарным операциям' },
     { label: '🔍 Как устроен WAL в Postgres?', prompt: 'Объясни подробно, как устроен WAL (Write-Ahead Logging) в PostgreSQL и как работает механизм Checkpoints.' },
     { label: '💼 Дай боевой проект по теме', prompt: 'Дай боевой проект из реального продакшена по текущей теме курса.' },
     { label: '⏱️ Фокус-таймер на 25 мин', prompt: 'Поставь таймер глубокого фокуса на 25 минут.' },
@@ -583,7 +584,7 @@ export const AiOperatorWindow: React.FC<AiOperatorWindowProps> = ({
               <h3 className="font-bold text-slate-900 text-xs">ИИ-Системный Оператор</h3>
               <span className="text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full font-mono font-semibold flex items-center space-x-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span>Gemini Online</span>
+                <span>Vertex AI Online</span>
               </span>
             </div>
           </div>
@@ -892,6 +893,107 @@ export const AiOperatorWindow: React.FC<AiOperatorWindowProps> = ({
                                 <span className="hidden sm:inline">Конспект</span>
                               </button>
                             </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Academic Textbook & Literature Search Result Cards */}
+                {m.action && m.action.type === 'FIND_TEXTBOOK' && m.action.payload && (
+                  <div className="mt-3 space-y-2.5">
+                    <div className="flex items-center justify-between text-[11px] text-slate-500 font-medium px-0.5">
+                      <div className="flex items-center space-x-1.5 text-slate-900 font-semibold">
+                        <BookCheck className="w-3.5 h-3.5 text-indigo-600" />
+                        <span>Рецензируемые первоисточники (OpenAlex / Crossref / OpenStax / DOAB / Wikibooks)</span>
+                      </div>
+                      <span className="text-[10px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded border border-indigo-200 font-mono font-medium">
+                        {Array.isArray(m.action.payload.sources) ? `${m.action.payload.sources.length} источников` : 'Проверено'}
+                      </span>
+                    </div>
+
+                    {Array.isArray(m.action.payload.sources) && m.action.payload.sources.map((src: any, sIdx: number) => {
+                      const badgeBg = src.sourceType === 'openstax'
+                        ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                        : src.sourceType === 'academic_paper'
+                        ? 'bg-sky-50 text-sky-800 border-sky-200'
+                        : src.sourceType === 'djvu_conspect'
+                        ? 'bg-amber-50 text-amber-800 border-amber-200'
+                        : src.sourceType === 'academic_book'
+                        ? 'bg-purple-50 text-purple-800 border-purple-200'
+                        : 'bg-teal-50 text-teal-800 border-teal-200';
+
+                      return (
+                        <div
+                          key={src.id || sIdx}
+                          className="p-3.5 rounded-xl bg-white border border-slate-200 shadow-2xs hover:border-slate-300 transition-all space-y-2.5"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="space-y-1 flex-1 min-w-0">
+                              <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
+                                <span className={`px-1.5 py-0.2 rounded border font-semibold truncate max-w-[220px] ${badgeBg}`}>
+                                  [{sIdx + 1}] {src.sourceLabel}
+                                </span>
+                                <span className="text-slate-300">•</span>
+                                <span className="text-slate-500 font-medium">
+                                  {src.authors || 'Редколлегия'} ({src.year || 2024})
+                                </span>
+                              </div>
+                              <h4 className="font-bold text-xs text-slate-900 leading-snug">
+                                {src.title}
+                              </h4>
+                            </div>
+
+                            {src.doiOrIsbn && (
+                              <div className="shrink-0 text-[9px] text-slate-400 font-mono bg-slate-50 border border-slate-200 px-1.5 py-0.5 rounded truncate max-w-[120px]">
+                                {src.doiOrIsbn}
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200/80 text-[11px] text-slate-600 italic leading-relaxed">
+                            «{src.verifiableQuote || src.snippet}»
+                          </div>
+
+                          <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
+                            <div className="flex items-center space-x-1.5">
+                              {src.url && src.url.startsWith('http') && (
+                                <a
+                                  href={src.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white flex items-center space-x-1 transition shadow-2xs"
+                                >
+                                  <span>Первоисточник / DOI</span>
+                                  <ExternalLink className="w-3 h-3" />
+                                </a>
+                              )}
+
+                              <button
+                                type="button"
+                                onClick={() => setSelectedGroundingSource(src)}
+                                className="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 transition cursor-pointer"
+                              >
+                                <span>Выжимка</span>
+                              </button>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onCreateNote(
+                                  `Учебник: ${src.title}`,
+                                  `### Первоисточник: ${src.title}\n\n**Авторы:** ${src.authors || 'Редколлегия'} (${src.year || 2024})\n**Категория:** ${src.sourceLabel}\n**DOI/ISBN:** ${src.doiOrIsbn || '—'}\n\n> «${src.verifiableQuote || src.snippet}»\n\n${src.url ? `[Ссылка на источник](${src.url})` : ''}`,
+                                  '#учебники'
+                                );
+                                playChime('success');
+                              }}
+                              className="px-2 py-1.5 rounded-lg text-xs font-medium text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition cursor-pointer flex items-center space-x-1"
+                            >
+                              <FileText className="w-3 h-3" />
+                              <span>В конспект</span>
+                            </button>
                           </div>
                         </div>
                       );
