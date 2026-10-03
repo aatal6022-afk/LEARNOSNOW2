@@ -1,4 +1,5 @@
 import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
+import appletConfig from '../firebase-applet-config.json';
 import { 
   getFirestore, 
   doc, 
@@ -30,17 +31,16 @@ import {
   type Unsubscribe
 } from 'firebase/auth';
 
-// Firebase configuration with environment variable override support and built-in defaults
-const rawApiKey = import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyCK55jOpuxDGMxLEe4WP9dtiKt9AcqEbL4';
-const rawAuthDomain = import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'gen-lang-client-0122170639.firebaseapp.com';
-const rawProjectId = import.meta.env.VITE_FIREBASE_PROJECT_ID || 'gen-lang-client-0122170639';
-const rawAppId = import.meta.env.VITE_FIREBASE_APP_ID || '1:97021874420:web:0a6e00cf3b5edf3a670ea1';
-// Only use databaseId if explicitly set in env and not '(default)'
-const rawDatabaseId = (import.meta.env.VITE_FIREBASE_DATABASE_ID && import.meta.env.VITE_FIREBASE_DATABASE_ID.trim() !== '' && import.meta.env.VITE_FIREBASE_DATABASE_ID.trim() !== '(default)')
+// Firebase configuration with environment variable override support and provisioned applet defaults
+const rawApiKey = import.meta.env.VITE_FIREBASE_API_KEY || appletConfig.apiKey;
+const rawAuthDomain = import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || appletConfig.authDomain;
+const rawProjectId = import.meta.env.VITE_FIREBASE_PROJECT_ID || appletConfig.projectId;
+const rawAppId = import.meta.env.VITE_FIREBASE_APP_ID || appletConfig.appId;
+const rawDatabaseId = (import.meta.env.VITE_FIREBASE_DATABASE_ID && import.meta.env.VITE_FIREBASE_DATABASE_ID.trim() !== '')
   ? import.meta.env.VITE_FIREBASE_DATABASE_ID.trim()
-  : '';
-const rawStorageBucket = import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'gen-lang-client-0122170639.firebasestorage.app';
-const rawMessagingSenderId = import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '97021874420';
+  : appletConfig.firestoreDatabaseId;
+const rawStorageBucket = import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || appletConfig.storageBucket;
+const rawMessagingSenderId = import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || appletConfig.messagingSenderId;
 
 export const firebaseConfig = {
   apiKey: rawApiKey,

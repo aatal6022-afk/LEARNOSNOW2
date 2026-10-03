@@ -80,42 +80,25 @@ let aiClient: GoogleGenAI | null = null;
 
 export function getAiClient(): GoogleGenAI {
   if (!aiClient) {
-    const apiKey = (
-      process.env.GEMINI_API_KEY ||
-      process.env.GOOGLE_API_KEY ||
-      process.env.API_KEY ||
-      process.env.VITE_GEMINI_API_KEY ||
-      ''
-    ).trim();
+    const project = process.env.VERTEX_PROJECT || 
+      process.env.VERTEX_PROJECT_ID || 
+      process.env.GOOGLE_CLOUD_PROJECT || 
+      process.env.GCLOUD_PROJECT ||
+      vertexProjectFromCredentials || 
+      'gen-lang-client-0392854940';
+    const location = process.env.VERTEX_LOCATION || process.env.GOOGLE_CLOUD_LOCATION || 'europe-west2';
 
-    if (apiKey && apiKey !== 'MY_GEMINI_API_KEY' && apiKey.length > 8) {
-      aiClient = new GoogleGenAI({
-        apiKey,
-        httpOptions: {
-          headers: {
-            'User-Agent': 'aistudio-build',
-          },
+    aiClient = new GoogleGenAI({
+      vertexai: true,
+      project,
+      location,
+      httpOptions: {
+        headers: {
+          'User-Agent': 'aistudio-build-vertex-pure',
         },
-      });
-    } else {
-      const project = process.env.VERTEX_PROJECT || 
-        process.env.VERTEX_PROJECT_ID || 
-        process.env.GOOGLE_CLOUD_PROJECT || 
-        vertexProjectFromCredentials || 
-        'ais-dev-rbd6dzg4j5sfgpphqupq5o';
-      const location = process.env.VERTEX_LOCATION || process.env.GOOGLE_CLOUD_LOCATION || 'europe-west2';
-
-      aiClient = new GoogleGenAI({
-        vertexai: true,
-        project,
-        location,
-        httpOptions: {
-          headers: {
-            'User-Agent': 'aistudio-build',
-          },
-        },
-      });
-    }
+      },
+    });
+    console.log(`[AI Gateway] Initialized 100% Google Cloud Vertex AI client (Project: ${project}, Location: ${location})`);
   }
   return aiClient;
 }
@@ -473,11 +456,11 @@ export async function callGeminiSafeJson(
     }
   }
 
-  // Gemini model priority & fallbacks (supports both standard Gemini API Keys and Vertex AI)
+  // Vertex AI model priority & fallbacks
   const defaultModel = process.env.GEMINI_MODEL || process.env.VERTEX_MODEL || 'gemini-2.5-flash';
   const rawList = options?.models && options.models.length > 0
     ? options.models
-    : [defaultModel, 'gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-3.1-flash-lite', 'gemini-3.8-flash', 'gemini-flash-latest'];
+    : [defaultModel, 'gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
 
   const normalizedList: string[] = [];
   for (const m of rawList) {
@@ -485,16 +468,14 @@ export async function callGeminiSafeJson(
     if (lower) normalizedList.push(lower);
   }
 
-  // Ensure full fallback chain across distinct model quota pools
+  // Ensure full fallback chain across Vertex AI model pools
   const allCandidatePool = Array.from(new Set([
     ...normalizedList,
     'gemini-2.5-flash',
     'gemini-2.5-pro',
     'gemini-2.0-flash',
     'gemini-1.5-flash',
-    'gemini-3.1-flash-lite',
-    'gemini-flash-latest',
-    'gemini-3.8-flash',
+    'gemini-1.5-pro',
   ])).filter(Boolean);
 
   // Reorder candidates: prioritize models that are NOT currently in backoff (from recent 429 quota or 503 spikes)

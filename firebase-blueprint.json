@@ -1,0 +1,74 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile, state, habits, tasks and metrics",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "karma": { "type": "number" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["userId"]
+    },
+    "UserLearningPath": {
+      "title": "UserLearningPath",
+      "description": "User active DAG nodes, edges, active unit trajectory",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "dagNodes": { "type": "array" },
+        "dagEdges": { "type": "array" },
+        "activeUnitId": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["userId"]
+    },
+    "CommunityRoom": {
+      "title": "CommunityRoom",
+      "description": "Community study room with feed, chat, and participants",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "category": { "type": "string" },
+        "creatorId": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "name"]
+    },
+    "UserArtifact": {
+      "title": "UserArtifact",
+      "description": "Verified project artifact, code solution and rating",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "unitTitle": { "type": "string" },
+        "score": { "type": "number" },
+        "submittedAt": { "type": "string" }
+      },
+      "required": ["id", "userId"]
+    }
+  },
+  "firestore": {
+    "/user_profiles/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Private user state and profile settings"
+    },
+    "/user_learning_paths/{userId}": {
+      "schema": { "$ref": "#/entities/UserLearningPath" },
+      "description": "Personalized DAG trajectory for the user"
+    },
+    "/community_rooms/{roomId}": {
+      "schema": { "$ref": "#/entities/CommunityRoom" },
+      "description": "Community rooms and discussions"
+    },
+    "/user_artifacts/{artifactId}": {
+      "schema": { "$ref": "#/entities/UserArtifact" },
+      "description": "Student solutions and portfolio projects"
+    }
+  }
+}
