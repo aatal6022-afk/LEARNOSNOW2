@@ -256,7 +256,7 @@ ${sampleForModel}
       const aiDistillation = await callGeminiSafeJson(userPrompt, {
         systemInstruction,
         temperature: 0.25,
-        models: ['gemini-3.8-flash', 'gemini-3.1-flash-lite', 'gemini-flash-latest'],
+        models: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-1.5-flash', 'gemini-1.5-pro'],
         skipCache: true,
         agentName: 'AI-PdfDocumentDistiller',
         taskGoal: `Дистилляция документа: ${filename}`,

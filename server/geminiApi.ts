@@ -25,7 +25,7 @@ import type { GroundingSourceItem } from './textbookKnowledgeService.ts';
 dotenv.config();
 
 export function isVertexAiEnabled(): boolean {
-  return true;
+  return process.env.USE_VERTEX_AI === 'true';
 }
 
 let vertexCredentialsError: string | null = null;
@@ -41,7 +41,6 @@ function configureVertexCredentials(): void {
         : undefined)
     )?.trim();
 
-    // Check if raw is Base64 encoded JSON
     if (raw && !raw.startsWith('{') && raw.length > 50) {
       try {
         const decoded = Buffer.from(raw, 'base64').toString('utf8');
@@ -57,7 +56,6 @@ function configureVertexCredentials(): void {
         try {
           credentials = JSON.parse(raw);
         } catch {
-          // Handle potential unescaped newlines in private_key
           const sanitized = raw.replace(/\r/g, '').replace(/(\r?\n)+/g, '\\n');
           try {
             credentials = JSON.parse(sanitized);
@@ -65,7 +63,6 @@ function configureVertexCredentials(): void {
         }
 
         if (credentials && credentials.type === 'service_account' && credentials.client_email && credentials.private_key) {
-          // Ensure private key newlines are proper
           if (typeof credentials.private_key === 'string') {
             credentials.private_key = credentials.private_key.replace(/\\n/g, '\n');
           }
@@ -73,7 +70,7 @@ function configureVertexCredentials(): void {
           fs.writeFileSync(credentialPath, JSON.stringify(credentials, null, 2), { mode: 0o600 });
           process.env.GOOGLE_APPLICATION_CREDENTIALS = credentialPath;
           vertexProjectFromCredentials = credentials.project_id;
-          console.log(`[Vertex Credentials] Successfully configured service account: ${credentials.client_email} (Project: ${credentials.project_id})`);
+          console.log(`[Vertex Credentials] Configured service account: ${credentials.client_email} (${credentials.project_id})`);
           return;
         }
       } catch (err: any) {
@@ -82,12 +79,10 @@ function configureVertexCredentials(): void {
       }
     }
 
-    const configuredPath = process.env.GOOGLE_APPLICATION_CREDENTIALS || 'gcp-key.json';
-    if (configuredPath && !configuredPath.trimStart().startsWith('{')) {
+    if (process.env.GOOGLE_APPLICATION_CREDENTIALS && !process.env.GOOGLE_APPLICATION_CREDENTIALS.trimStart().startsWith('{')) {
       const candidatePaths = [
-        path.resolve(process.cwd(), configuredPath),
+        path.resolve(process.cwd(), process.env.GOOGLE_APPLICATION_CREDENTIALS),
         path.resolve(process.cwd(), 'gcp-key.json'),
-        path.resolve(process.cwd(), '..', 'gcp-key.json'),
       ];
       const found = candidatePaths.find((p) => fs.existsSync(p));
       if (found) {
@@ -95,7 +90,6 @@ function configureVertexCredentials(): void {
         try {
           const parsed = JSON.parse(fs.readFileSync(found, 'utf8'));
           vertexProjectFromCredentials ||= parsed.project_id;
-          console.log(`[Vertex Credentials] Loaded credentials from file: ${found}`);
         } catch {}
       }
     }
@@ -110,21 +104,20 @@ let aiClient: GoogleGenAI | null = null;
 
 export function getAiClient(): GoogleGenAI {
   if (!aiClient) {
+    const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
+    const explicitVertex = process.env.USE_VERTEX_AI === 'true';
     const hasVertexCreds = !!(
-      process.env.GOOGLE_SERVICE_ACCOUNT_JSON ||
       process.env.GOOGLE_APPLICATION_CREDENTIALS ||
       vertexProjectFromCredentials
     );
-    const useVertex = process.env.USE_VERTEX_AI === 'true' || hasVertexCreds;
 
-    if (useVertex) {
+    if (explicitVertex && hasVertexCreds) {
       const project = process.env.VERTEX_PROJECT || 
         process.env.VERTEX_PROJECT_ID || 
         process.env.GOOGLE_CLOUD_PROJECT || 
         process.env.GCLOUD_PROJECT ||
-        vertexProjectFromCredentials || 
-        'gen-lang-client-0392854940';
-      const location = process.env.VERTEX_LOCATION || process.env.GOOGLE_CLOUD_LOCATION || 'europe-west2';
+        vertexProjectFromCredentials;
+      const location = process.env.VERTEX_LOCATION || process.env.GOOGLE_CLOUD_LOCATION || 'us-central1';
 
       aiClient = new GoogleGenAI({
         vertexai: true,
@@ -132,15 +125,21 @@ export function getAiClient(): GoogleGenAI {
         location,
         httpOptions: {
           headers: {
-            'User-Agent': 'aistudio-build-vertex-pure',
+            'User-Agent': 'aistudio-build-vertex',
           },
         },
       });
       console.log(`[AI Gateway] Initialized Google Cloud Vertex AI client (Project: ${project}, Location: ${location})`);
     } else {
-      const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
-      aiClient = new GoogleGenAI(apiKey ? { apiKey } : {});
-      console.log(`[AI Gateway] Initialized Gemini API client`);
+      aiClient = new GoogleGenAI({
+        apiKey: apiKey || '',
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build',
+          },
+        },
+      });
+      console.log(`[AI Gateway] Initialized standard Google Gemini API client (API Key Mode)`);
     }
   }
   return aiClient;
@@ -499,26 +498,29 @@ export async function callGeminiSafeJson(
     }
   }
 
-  // Vertex AI model priority & fallbacks
+  // Vertex AI model priority & fallbacks (Supported and stable on Vertex AI / Gemini API)
   const defaultModel = process.env.GEMINI_MODEL || process.env.VERTEX_MODEL || 'gemini-2.5-flash';
   const rawList = options?.models && options.models.length > 0
     ? options.models
-    : [defaultModel, 'gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+    : [defaultModel, 'gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash'];
 
   const normalizedList: string[] = [];
   for (const m of rawList) {
     const lower = (m || '').trim().toLowerCase();
-    if (lower) normalizedList.push(lower);
+    // Exclude experimental or non-existent identifiers
+    if (lower && !lower.includes('3.8') && !lower.includes('banana')) {
+      normalizedList.push(lower);
+    }
   }
 
-  // Ensure full fallback chain across Vertex AI model pools
+  // Ensure full fallback chain across Vertex AI supported model pools
   const allCandidatePool = Array.from(new Set([
     ...normalizedList,
     'gemini-2.5-flash',
     'gemini-2.5-pro',
-    'gemini-2.0-flash',
     'gemini-1.5-flash',
     'gemini-1.5-pro',
+    'gemini-2.0-flash',
   ])).filter(Boolean);
 
   // Reorder candidates: prioritize models that are NOT currently in backoff (from recent 429 quota or 503 spikes)

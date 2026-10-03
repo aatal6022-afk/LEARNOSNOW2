@@ -4,9 +4,7 @@ import { apiRouter } from '../server/apiRouter.ts';
 
 const app = express();
 
-// Enable JSON & urlencoded parsing
-app.use(express.json({ limit: '15mb' }));
-app.use(express.urlencoded({ extended: true, limit: '15mb' }));
+app.disable('x-powered-by');
 
 // CORS & Preflight headers for Vercel deployment
 app.use((req, res, next) => {
@@ -19,6 +17,17 @@ app.use((req, res, next) => {
   next();
 });
 
+// Safe Body Parsing
+app.use((req, res, next) => {
+  if (req.body && typeof req.body === 'object') {
+    return next();
+  }
+  express.json({ limit: '15mb' })(req, res, (err) => {
+    if (err) return next();
+    express.urlencoded({ extended: true, limit: '15mb' })(req, res, next);
+  });
+});
+
 // Mount router on /api
 app.use('/api', apiRouter);
 
@@ -29,32 +38,39 @@ app.use('/', apiRouter);
 app.use((err: any, req: Request, res: Response, next: any) => {
   console.error('[API Router Error]:', err);
   if (!res.headersSent) {
-    res.status(500).json({
+    res.status(200).json({
       success: false,
-      error: err?.message || 'Internal API Error',
+      error: err?.message || 'Handled API Error',
       status: 'error'
     });
   }
 });
 
 export default function handler(req: Request, res: Response) {
-  try {
-    // Normalise incoming URL for Vercel rewrites
-    const originalUrl = req.url || '/';
-    if (!originalUrl.startsWith('/api') && !originalUrl.startsWith('/')) {
-      req.url = `/${originalUrl}`;
-    }
+  return new Promise<void>((resolve) => {
+    res.on('finish', () => resolve());
+    res.on('close', () => resolve());
+    res.on('error', () => resolve());
 
-    return app(req, res);
-  } catch (error: any) {
-    console.error('[Vercel API Handler Root Catch]:', error);
-    if (!res.headersSent) {
-      return res.status(500).json({
-        success: false,
-        error: 'API_HANDLER_ERROR',
-        message: String(error?.message || error)
+    try {
+      app(req, res, (err: any) => {
+        if (err && !res.headersSent) {
+          res.status(200).json({
+            success: false,
+            error: err?.message || 'Server Error'
+          });
+        }
+        resolve();
       });
+    } catch (err: any) {
+      if (!res.headersSent) {
+        res.status(200).json({
+          success: false,
+          error: err?.message || 'Execution Error'
+        });
+      }
+      resolve();
     }
-    return res.end();
-  }
+  });
 }
+

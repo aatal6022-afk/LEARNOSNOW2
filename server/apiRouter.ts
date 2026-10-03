@@ -44,7 +44,15 @@ import { PdfDistillerService } from './pdfDistillerService.ts';
 
 export const apiRouter = express.Router();
 
-apiRouter.use(express.json());
+apiRouter.use((req, res, next) => {
+  if (req.body && typeof req.body === 'object') {
+    return next();
+  }
+  express.json({ limit: '15mb' })(req, res, (err) => {
+    if (err) return next();
+    express.urlencoded({ extended: true, limit: '15mb' })(req, res, next);
+  });
+});
 
 function resolveFirebaseProjectId(): string | undefined {
   const configuredProjectId = process.env.FIREBASE_PROJECT_ID;
