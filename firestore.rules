@@ -74,8 +74,26 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
-    // Community rooms and discussions
+    // Community rooms, members, and banned members
     match /community_rooms/{roomId} {
+      allow read, write: if true;
+    }
+
+    match /community_rooms/{roomId}/{document=**} {
+      allow read, write: if true;
+    }
+
+    // Community room whiteboards
+    match /community_whiteboards/{roomId} {
+      allow read, write: if true;
+    }
+
+    match /community_whiteboards/{roomId}/{document=**} {
+      allow read, write: if true;
+    }
+
+    // Community chat messages
+    match /community_chat/{roomId}/{document=**} {
       allow read, write: if true;
     }
 

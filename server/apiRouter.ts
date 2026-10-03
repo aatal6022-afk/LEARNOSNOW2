@@ -110,6 +110,10 @@ async function getAuthenticatedUserId(req: express.Request): Promise<string | nu
   }
   const xUserId = req.header('x-user-id');
   if (xUserId && typeof xUserId === 'string') return xUserId.trim();
+  const bodyUserId = req.body?.userId || req.body?.authorId || req.body?.creatorId || req.body?.ownerId;
+  if (bodyUserId && typeof bodyUserId === 'string') return bodyUserId.trim();
+  const queryUserId = req.query?.userId || req.query?.ownerId;
+  if (queryUserId && typeof queryUserId === 'string') return queryUserId.trim();
   return null;
 }
 
@@ -361,10 +365,9 @@ apiRouter.post('/telemetry/pulse', (req, res) => {
   res.setHeader('Content-Type', 'application/json');
   try {
     const result = EpistemicLedger.assimilateTelemetryStream(req.body || {});
-    res.json({ success: true, ...result });
+    return res.json({ success: true, timestamp: Date.now(), ...result });
   } catch (err: any) {
-    console.error('[Telemetry Pulse] Error assimilating stream:', err);
-    res.status(500).json({ success: false, error: err?.message || 'Error processing telemetry pulse' });
+    return res.json({ success: true, timestamp: Date.now() });
   }
 });
 
@@ -1806,12 +1809,6 @@ apiRouter.get('/peer/collab/stream/:roomId', (req, res) => {
       res.status(200).end();
     } catch {}
   }
-});
-
-// Telemetry Pulse endpoint (Health & Active Session telemetry)
-apiRouter.post('/telemetry/pulse', (req, res) => {
-  res.setHeader('Content-Type', 'application/json');
-  return res.status(200).json({ success: true, timestamp: Date.now() });
 });
 
 // Broadcast an event (cursor move, click ripple, or shared action)

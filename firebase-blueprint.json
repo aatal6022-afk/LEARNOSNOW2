@@ -66,6 +66,14 @@
       "schema": { "$ref": "#/entities/CommunityRoom" },
       "description": "Community rooms and discussions"
     },
+    "/community_whiteboards/{roomId}": {
+      "schema": { "$ref": "#/entities/CommunityRoom" },
+      "description": "Shared whiteboards for community rooms"
+    },
+    "/community_chat/{roomId}/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/CommunityRoom" },
+      "description": "Real-time chat messages inside community rooms"
+    },
     "/user_artifacts/{artifactId}": {
       "schema": { "$ref": "#/entities/UserArtifact" },
       "description": "Student solutions and portfolio projects"

@@ -110,25 +110,38 @@ let aiClient: GoogleGenAI | null = null;
 
 export function getAiClient(): GoogleGenAI {
   if (!aiClient) {
-    const project = process.env.VERTEX_PROJECT || 
-      process.env.VERTEX_PROJECT_ID || 
-      process.env.GOOGLE_CLOUD_PROJECT || 
-      process.env.GCLOUD_PROJECT ||
-      vertexProjectFromCredentials || 
-      'gen-lang-client-0392854940';
-    const location = process.env.VERTEX_LOCATION || process.env.GOOGLE_CLOUD_LOCATION || 'europe-west2';
+    const hasVertexCreds = !!(
+      process.env.GOOGLE_SERVICE_ACCOUNT_JSON ||
+      process.env.GOOGLE_APPLICATION_CREDENTIALS ||
+      vertexProjectFromCredentials
+    );
+    const useVertex = process.env.USE_VERTEX_AI === 'true' || hasVertexCreds;
 
-    aiClient = new GoogleGenAI({
-      vertexai: true,
-      project,
-      location,
-      httpOptions: {
-        headers: {
-          'User-Agent': 'aistudio-build-vertex-pure',
+    if (useVertex) {
+      const project = process.env.VERTEX_PROJECT || 
+        process.env.VERTEX_PROJECT_ID || 
+        process.env.GOOGLE_CLOUD_PROJECT || 
+        process.env.GCLOUD_PROJECT ||
+        vertexProjectFromCredentials || 
+        'gen-lang-client-0392854940';
+      const location = process.env.VERTEX_LOCATION || process.env.GOOGLE_CLOUD_LOCATION || 'europe-west2';
+
+      aiClient = new GoogleGenAI({
+        vertexai: true,
+        project,
+        location,
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build-vertex-pure',
+          },
         },
-      },
-    });
-    console.log(`[AI Gateway] Initialized 100% Google Cloud Vertex AI client (Project: ${project}, Location: ${location})`);
+      });
+      console.log(`[AI Gateway] Initialized Google Cloud Vertex AI client (Project: ${project}, Location: ${location})`);
+    } else {
+      const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
+      aiClient = new GoogleGenAI(apiKey ? { apiKey } : {});
+      console.log(`[AI Gateway] Initialized Gemini API client`);
+    }
   }
   return aiClient;
 }

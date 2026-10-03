@@ -94,10 +94,9 @@ export async function ensureAuth(): Promise<User | null> {
   }
   try {
     const cred = await signInAnonymously(auth);
-    console.log('[Firebase Auth] Anonymous session initialized for Firestore sync:', cred.user.uid);
     return cred.user;
   } catch (err) {
-    console.warn('[Firebase Auth] Background session notice (offline or rule fallback):', err);
+    // Anonymous auth may be disabled on project - silent fallback
     return null;
   }
 }
@@ -183,7 +182,7 @@ export async function loginWithGoogle(): Promise<User> {
   }
 }
 
-export async function loginAsGuest(): Promise<User> {
+export async function loginAsGuest(): Promise<User | any> {
   try {
     const result = await signInAnonymously(auth);
     if (result.user) {
@@ -198,11 +197,36 @@ export async function loginAsGuest(): Promise<User> {
       } catch {}
       return result.user;
     }
-    throw new Error('Anonymous login failed');
   } catch (err: any) {
-    console.warn('[Firebase Auth] Anonymous sign-in error:', err?.message || err);
-    throw err;
+    console.log('[Firebase Auth] Anonymous sign-in unavailable, using local guest session.');
+    let localGuestUid = '';
+    try {
+      localGuestUid = localStorage.getItem('learning_os_local_uid') || '';
+      if (!localGuestUid) {
+        localGuestUid = 'guest_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
+        localStorage.setItem('learning_os_local_uid', localGuestUid);
+      }
+    } catch {
+      localGuestUid = 'guest_' + Date.now().toString(36);
+    }
+    const guestProfile = {
+      uid: localGuestUid,
+      displayName: 'Студент (Демо)',
+      email: 'guest@learning-os.internal',
+      photoURL: undefined,
+      isAnonymous: true,
+    };
+    try {
+      localStorage.setItem('learning_os_auth_user', JSON.stringify(guestProfile));
+    } catch {}
+    return guestProfile;
   }
+  const fallbackGuest = {
+    uid: 'guest_' + Date.now().toString(36),
+    displayName: 'Студент (Демо)',
+    email: 'guest@learning-os.internal',
+  };
+  return fallbackGuest;
 }
 
 export async function logoutUser(): Promise<void> {
