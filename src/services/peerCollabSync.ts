@@ -360,6 +360,11 @@ class PeerCollabSyncManager {
 
   private connectStream(roomId: string) {
     if (this.sseDisabled) return;
+    // Serverless platforms like Vercel don't support persistent SSE streams; use Firestore + BroadcastChannel
+    if (typeof window !== 'undefined' && window.location.hostname.includes('vercel.app')) {
+      this.sseDisabled = true;
+      return;
+    }
     try {
       if (this.eventSource) {
         this.eventSource.close();
@@ -383,16 +388,11 @@ class PeerCollabSyncManager {
 
       sse.onerror = () => {
         this.isConnected = false;
-        this.sseErrorCount += 1;
-        // If serverless environment drops SSE or returns connection error, disable SSE after 2 attempts
-        // and fall back cleanly to Firestore & BroadcastChannel
-        if (this.sseErrorCount >= 2) {
-          this.sseDisabled = true;
-          try {
-            sse.close();
-          } catch {}
-          this.eventSource = null;
-        }
+        this.sseDisabled = true;
+        try {
+          sse.close();
+        } catch {}
+        this.eventSource = null;
       };
     } catch {
       this.sseDisabled = true;
