@@ -1,7 +1,7 @@
 import express from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
-import { apiRouter } from './server/apiRouter.ts';
+import { apiRouter } from './server/apiRouter';
 
 process.on('unhandledRejection', (reason) => {
   console.warn('[Server Unhandled Rejection Caught]:', reason);

@@ -1,7 +1,7 @@
-import { FirestoreKnowledgeCache } from './firestoreKnowledgeCache.ts';
-import { callGeminiSafeJson, UNIVERSAL_REAL_WORLD_HONESTY_CONSTITUTION } from './geminiApi.ts';
-import { detectDomainCategory } from './curriculumGenerator.ts';
-import { retrieveMultiSourceGrounding, formatSourcesForPrompt } from './textbookKnowledgeService.ts';
+import { FirestoreKnowledgeCache } from './firestoreKnowledgeCache';
+import { callGeminiSafeJson, UNIVERSAL_REAL_WORLD_HONESTY_CONSTITUTION } from './geminiApi';
+import { detectDomainCategory } from './curriculumGenerator';
+import { retrieveMultiSourceGrounding, formatSourcesForPrompt } from './textbookKnowledgeService';
 
 export interface DistilledEducationalBlock {
   topic: string;

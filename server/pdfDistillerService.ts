@@ -1,8 +1,8 @@
 import { createRequire } from 'module';
 import path from 'path';
 import crypto from 'crypto';
-import { callGeminiSafeJson, UNIVERSAL_REAL_WORLD_HONESTY_CONSTITUTION } from './geminiApi.ts';
-import { FirestoreKnowledgeCache } from './firestoreKnowledgeCache.ts';
+import { callGeminiSafeJson, UNIVERSAL_REAL_WORLD_HONESTY_CONSTITUTION } from './geminiApi';
+import { FirestoreKnowledgeCache } from './firestoreKnowledgeCache';
 
 let pdfParse: ((buffer: Buffer) => Promise<any>) | undefined;
 

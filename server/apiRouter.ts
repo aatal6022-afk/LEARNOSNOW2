@@ -35,12 +35,12 @@ import {
   negotiateAgentMatchmaking,
   synthesizeSparringConsensus,
   negotiatePeerBlockProject,
-} from './geminiApi.ts';
-import { retrieveMultiSourceGrounding } from './textbookKnowledgeService.ts';
-import { EpistemicLedger, type CastalianBridge } from './epistemicLedger.ts';
-import { FirestoreKnowledgeCache } from './firestoreKnowledgeCache.ts';
-import { TextbookDistiller } from './textbookDistiller.ts';
-import { PdfDistillerService } from './pdfDistillerService.ts';
+} from './geminiApi';
+import { retrieveMultiSourceGrounding } from './textbookKnowledgeService';
+import { EpistemicLedger, type CastalianBridge } from './epistemicLedger';
+import { FirestoreKnowledgeCache } from './firestoreKnowledgeCache';
+import { TextbookDistiller } from './textbookDistiller';
+import { PdfDistillerService } from './pdfDistillerService';
 
 export const apiRouter = express.Router();
 

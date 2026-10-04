@@ -1,5 +1,5 @@
-import { callGeminiSafeJson } from './geminiApi.ts';
-import { analyzeDiagnosticBlank } from './geminiApi.ts';
+import { callGeminiSafeJson } from './geminiApi';
+import { analyzeDiagnosticBlank } from './geminiApi';
 
 export interface CurriculumSprint {
   t: string;

@@ -4,7 +4,7 @@ import crypto from 'crypto';
 import os from 'os';
 import path from 'path';
 import fs from 'fs';
-import { EpistemicLedger } from './epistemicLedger.ts';
+import { EpistemicLedger } from './epistemicLedger';
 import {
   LANGUAGES_TAXONOMY,
   DESIGN_TAXONOMY,
@@ -13,14 +13,14 @@ import {
   TECH_TAXONOMY,
   generateProceduralTaxonomy,
   getDomainOrProceduralTaxonomy,
-} from './domainTaxonomies.ts';
-import type { CurriculumModule, CurriculumSprint } from './curriculumGenerator.ts';
-import { detectDomainCategory } from './curriculumGenerator.ts';
+} from './domainTaxonomies';
+import type { CurriculumModule, CurriculumSprint } from './curriculumGenerator';
+import { detectDomainCategory } from './curriculumGenerator';
 import {
   retrieveMultiSourceGrounding,
   formatSourcesForPrompt,
-} from './textbookKnowledgeService.ts';
-import type { GroundingSourceItem } from './textbookKnowledgeService.ts';
+} from './textbookKnowledgeService';
+import type { GroundingSourceItem } from './textbookKnowledgeService';
 
 dotenv.config();
 

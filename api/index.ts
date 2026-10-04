@@ -1,6 +1,6 @@
 import express from 'express';
 import type { Request, Response } from 'express';
-import { apiRouter } from '../server/apiRouter.ts';
+import { apiRouter } from '../server/apiRouter';
 
 const app = express();
 
