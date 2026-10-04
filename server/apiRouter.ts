@@ -35,6 +35,7 @@ import {
   negotiateAgentMatchmaking,
   synthesizeSparringConsensus,
   negotiatePeerBlockProject,
+  classifyTaskGoals,
 } from './geminiApi';
 import { retrieveMultiSourceGrounding } from './textbookKnowledgeService';
 import { EpistemicLedger, type CastalianBridge } from './epistemicLedger';
@@ -1530,6 +1531,18 @@ apiRouter.post('/gemini/targeted-gap-closure', async (req, res) => {
       unitTitle: req.body?.unitTitle || 'Инженерия',
       rawDomain: req.body?.rawDomain || '',
     }));
+  }
+});
+
+// Autonomous Telemetry Goal Classifier ("ИИ классифицирует и закрывает задачи студента")
+apiRouter.post('/gemini/classify-task-goals', async (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  try {
+    const result = await classifyTaskGoals(req.body || {});
+    return res.json(result);
+  } catch (err) {
+    console.error('[API Route] Error classifying task goals:', err);
+    return res.json({ completedTaskIds: [], completedHabitIds: [], evaluations: [] });
   }
 });
 

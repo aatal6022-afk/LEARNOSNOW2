@@ -77,6 +77,7 @@ import {
 import { normalizeDagLayout } from './utils/dagLayout.ts';
 import { socialProfileService } from './services/socialProfileService.ts';
 import { isShortcutCaptureActive, keyboardEventToShortcut, loadKeyboardShortcuts, SHORTCUT_DEFINITIONS } from './services/keyboardShortcuts.ts';
+import { telemetryGoalTracker } from './services/telemetryGoalTracker.ts';
 
 export default function App() {
   const portfolioUid = new URLSearchParams(window.location.search).get('portfolio')?.trim();
@@ -280,6 +281,27 @@ function LearningOSApp() {
       return false;
     }
   });
+
+  useEffect(() => {
+    const unsub = telemetryGoalTracker.onAutoComplete((id, title, reason, isHabit) => {
+      showNotification(
+        `🎯 Авто-зачет телеметрии: «${title}» — ${isHabit ? 'привычка подтверждена' : 'задача зачтена'}! (${reason})`,
+        'success'
+      );
+    });
+    return unsub;
+  }, []);
+
+  useEffect(() => {
+    if (tasks.length > 0 || habits.length > 0) {
+      telemetryGoalTracker.evaluateAndAutoCheck(
+        tasks,
+        habits,
+        (newTasks) => setTasks(newTasks),
+        (newHabits) => setHabits(newHabits)
+      );
+    }
+  }, [tasks.length, habits.length]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -932,6 +954,20 @@ function LearningOSApp() {
         score: computedScore,
       });
     }
+
+    // Autonomous Telemetry Goal Tracker: record block completion & auto-check tasks/habits
+    telemetryGoalTracker.recordEvent(
+      {
+        type: 'blocks_completed',
+        amount: 1,
+        unitId,
+        unitTitle: completedUnitObj?.title || unitId,
+      },
+      tasks,
+      habits,
+      (newTasks) => setTasks(newTasks),
+      (newHabits) => setHabits(newHabits)
+    );
 
     // 2. Spaced Repetition tracking (Ebbinghaus forgetting curve initiation)
     const completedNode = nodes.find((n) => n.unitId === unitId || n.id === unitId);

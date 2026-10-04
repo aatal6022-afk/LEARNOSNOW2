@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { CheckSquare, Square, Plus, Trash2, CheckCircle2 } from 'lucide-react';
+import { CheckSquare, Square, Plus, Trash2, CheckCircle2, Bot, Sparkles } from 'lucide-react';
 import { TaskItem } from '../../../types.ts';
 import { playChime } from '../../../utils/audio.ts';
+import { telemetryGoalTracker } from '../../../services/telemetryGoalTracker.ts';
 
 interface TaskListWidgetProps {
   tasks: TaskItem[];
@@ -36,9 +37,15 @@ export const TaskListWidget: React.FC<TaskListWidgetProps> = ({
           <CheckSquare className="w-3.5 h-3.5 text-emerald-500" />
           <span>Оперативные задачи</span>
         </div>
-        <span className="text-[11px] font-mono text-slate-500 font-medium">
-          {completedCount}/{tasks.length}
-        </span>
+        <div className="flex items-center space-x-2">
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 font-medium flex items-center space-x-1" title="ИИ автоматически отслеживает действия и закрывает задачи">
+            <Bot className="w-2.5 h-2.5" />
+            <span>Авто-зачет ИИ</span>
+          </span>
+          <span className="text-[11px] font-mono text-slate-500 font-medium">
+            {completedCount}/{tasks.length}
+          </span>
+        </div>
       </div>
 
       {/* Task List */}
@@ -49,45 +56,69 @@ export const TaskListWidget: React.FC<TaskListWidgetProps> = ({
             <span className="text-[11px]">Все задачи выполнены!</span>
           </div>
         ) : (
-          tasks.slice(0, 8).map((t) => (
-            <div
-              key={t.id}
-              className={`flex items-center justify-between p-1.5 rounded-lg group transition-colors ${
-                t.done ? 'bg-slate-50 text-slate-400' : 'bg-slate-50/70 hover:bg-slate-100/70 text-slate-800'
-              }`}
-            >
-              <button
-                type="button"
-                id={`task-item-${t.id}`}
-                data-task-id={t.id}
-                onClick={() => {
-                  onToggleTask(t.id);
-                  playChime('click');
-                }}
-                className="flex items-center space-x-2 text-left truncate flex-1 cursor-pointer"
-              >
-                {t.done ? (
-                  <CheckSquare className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                ) : (
-                  <Square className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 shrink-0" />
-                )}
-                <span className={`truncate text-xs ${t.done ? 'line-through text-slate-400' : 'font-medium'}`}>
-                  {t.title}
-                </span>
-              </button>
+          tasks.slice(0, 8).map((t) => {
+            const criteria = telemetryGoalTracker.parseGoalCriteria(t.title);
+            const currentCount = criteria ? telemetryGoalTracker.getCurrentMetricCount(criteria.metricType) : 0;
 
-              {onDeleteTask && (
-                <button
-                  type="button"
-                  onClick={() => onDeleteTask(t.id)}
-                  className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-500 transition cursor-pointer"
-                  title="Удалить"
-                >
-                  <Trash2 className="w-3 h-3" />
-                </button>
-              )}
-            </div>
-          ))
+            return (
+              <div
+                key={t.id}
+                className={`flex flex-col p-1.5 rounded-lg group transition-colors ${
+                  t.done ? 'bg-slate-50 text-slate-400' : 'bg-slate-50/70 hover:bg-slate-100/70 text-slate-800'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <button
+                    type="button"
+                    id={`task-item-${t.id}`}
+                    data-task-id={t.id}
+                    onClick={() => {
+                      onToggleTask(t.id);
+                      playChime('click');
+                    }}
+                    className="flex items-center space-x-2 text-left truncate flex-1 cursor-pointer"
+                  >
+                    {t.done ? (
+                      <CheckSquare className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                    ) : (
+                      <Square className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 shrink-0" />
+                    )}
+                    <span className={`truncate text-xs ${t.done ? 'line-through text-slate-400' : 'font-medium'}`}>
+                      {t.title}
+                    </span>
+                  </button>
+
+                  {onDeleteTask && (
+                    <button
+                      type="button"
+                      onClick={() => onDeleteTask(t.id)}
+                      className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-500 transition cursor-pointer"
+                      title="Удалить"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+
+                {/* AI Telemetry Live Tracker Badge */}
+                {criteria && (
+                  <div className="ml-5.5 mt-0.5 flex items-center space-x-1.5 text-[10px]">
+                    {t.done ? (
+                      <span className="text-emerald-600 font-medium flex items-center space-x-1">
+                        <Sparkles className="w-2.5 h-2.5" />
+                        <span>Автоматически зачтено телеметрией</span>
+                      </span>
+                    ) : (
+                      <span className="text-indigo-600 bg-indigo-50/80 px-1.5 py-0.2 rounded flex items-center space-x-1 font-mono">
+                        <Bot className="w-2.5 h-2.5" />
+                        <span>Телеметрия: {currentCount}/{criteria.targetCount} ({criteria.metricLabel})</span>
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })
         )}
       </div>
 
@@ -97,8 +128,8 @@ export const TaskListWidget: React.FC<TaskListWidgetProps> = ({
           type="text"
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
-          placeholder="+ Добавить задачу и Enter..."
-          className="flex-1 bg-slate-50 border border-slate-200/80 rounded-md px-2 py-1 text-xs outline-hidden focus:border-sky-400 text-slate-800 placeholder:text-slate-400"
+          placeholder="+ 'Пройти 3 блока' или любая задача..."
+          className="flex-1 bg-slate-50 border border-slate-200/80 rounded-md px-2 py-1 text-xs outline-hidden focus:border-indigo-400 text-slate-800 placeholder:text-slate-400"
         />
         <button
           type="submit"

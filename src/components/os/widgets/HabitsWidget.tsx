@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { HabitItem } from '../../../types.ts';
 import { playChime } from '../../../utils/audio.ts';
+import { telemetryGoalTracker } from '../../../services/telemetryGoalTracker.ts';
 
 interface HabitsWidgetProps {
   habits?: HabitItem[];
@@ -510,6 +511,17 @@ export const HabitsWidget: React.FC<HabitsWidgetProps> = ({
                             Рекорд: {h.bestStreak}дн
                           </span>
                         )}
+                        {(() => {
+                          const criteria = telemetryGoalTracker.parseGoalCriteria(h.title);
+                          if (!criteria) return null;
+                          const current = telemetryGoalTracker.getCurrentMetricCount(criteria.metricType);
+                          return (
+                            <span className="text-[9px] text-indigo-600 bg-indigo-50 px-1 py-0.2 rounded border border-indigo-200 font-mono flex items-center space-x-0.5" title="Отслеживается телеметрией ИИ">
+                              <Sparkles className="w-2.5 h-2.5" />
+                              <span>ИИ: {current}/{criteria.targetCount}</span>
+                            </span>
+                          );
+                        })()}
                       </div>
                     </div>
                   </div>

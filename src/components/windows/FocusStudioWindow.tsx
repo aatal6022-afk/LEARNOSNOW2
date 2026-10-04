@@ -73,6 +73,7 @@ import { AnnotatedTheoryContent } from '../learning/AnnotatedTheoryContent.tsx';
 import { TheoryGlossarySection } from '../learning/TheoryGlossarySection.tsx';
 import { executionSandbox } from '../../services/executionSandbox.ts';
 import { epistemicLedgerService } from '../../services/epistemicLedgerService.ts';
+import { telemetryGoalTracker } from '../../services/telemetryGoalTracker.ts';
 
 interface FocusStudioWindowProps {
   unit: LearningUnit;
@@ -971,6 +972,14 @@ export const FocusStudioWindow: React.FC<FocusStudioWindowProps> = ({
 
     if (calculatedScore >= 80) {
       playChime('success');
+      // Autonomous Telemetry Goal Tracking for Quizzes Passed
+      telemetryGoalTracker.recordEvent(
+        { type: 'quizzes_passed', amount: 1, unitId: currentUnit.id, unitTitle: currentUnit.title },
+        [],
+        [],
+        () => {},
+        () => {}
+      );
       // Automatic Core Crystallization on quiz mastery
       telemetryEngine.trackUnitMastery({
         unitId: currentUnit.id,
@@ -1138,6 +1147,13 @@ export const FocusStudioWindow: React.FC<FocusStudioWindowProps> = ({
     );
     setLocalExecutionOutput(result);
     telemetryEngine.trackCodeRun(result.success, result.success ? undefined : 'execution_failed');
+    telemetryGoalTracker.recordEvent(
+      { type: 'code_executed', amount: 1, unitId: currentUnit.id, unitTitle: currentUnit.title },
+      [],
+      [],
+      () => {},
+      () => {}
+    );
     setIsExecutingLocal(false);
     if (result.success) {
       playChime('success');

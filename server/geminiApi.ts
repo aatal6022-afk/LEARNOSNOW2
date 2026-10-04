@@ -9587,6 +9587,97 @@ export async function negotiatePeerBlockProject(params: {
   };
 }
 
+export async function classifyTaskGoals(payload: {
+  tasks: Array<{ id: string; title: string }>;
+  habits: Array<{ id: string; title: string }>;
+  telemetryStats: any;
+  completedUnitTitles?: string[];
+  recentActivities?: string[];
+}): Promise<{
+  completedTaskIds: string[];
+  completedHabitIds: string[];
+  evaluations: Array<{
+    id: string;
+    satisfied: boolean;
+    reason: string;
+    matchedMetric: string;
+  }>;
+}> {
+  const { tasks = [], habits = [], telemetryStats = {}, completedUnitTitles = [], recentActivities = [] } = payload;
+  
+  if (tasks.length === 0 && habits.length === 0) {
+    return { completedTaskIds: [], completedHabitIds: [], evaluations: [] };
+  }
+
+  const prompt = `Ты — Интеллектуальный Диспетчер Телеметрии Learning OS.
+Твоя задача — объективно сопоставить задачи и привычки, сформулированные студентом своими словами, с реальными действиями и метриками за сегодняшний день.
+
+СПИСОК НЕВЫПОЛНЕННЫХ ЗАДАЧ СТУДЕНТА:
+${JSON.stringify(tasks, null, 2)}
+
+СПИСОК ПРИВЫЧЕК СТУДЕНТА:
+${JSON.stringify(habits, null, 2)}
+
+ДАННЫЕ ТЕЛЕМЕТРИИ ЗА СЕГОДНЯ:
+- Завершено блоков знаний: ${telemetryStats.blocksCompleted || 0}
+- Сдано тестов/квизов: ${telemetryStats.quizzesPassed || 0}
+- Пройдено спаррингов/дебатов: ${telemetryStats.sparringCompleted || 0}
+- Запусков кода/тестов в песочнице: ${telemetryStats.codeExecuted || 0}
+- Минут в фокус-режиме (Pomodoro): ${telemetryStats.focusMinutes || 0}
+- Воспроизведений на чистом листе: ${telemetryStats.blankPageDone || 0}
+- Создано заметок/инвариантов: ${telemetryStats.notesCreated || 0}
+- Повторено карточек: ${telemetryStats.flashcardsReviewed || 0}
+- Изучено узлов сферы: ${telemetryStats.sphereInspected || 0}
+- Прочитано учебников/глав: ${telemetryStats.textbookRead || 0}
+- Создано схем/рисунков: ${telemetryStats.whiteboardDrawn || 0}
+- Сохранено артефактов в портфолио: ${telemetryStats.artifactSaved || 0}
+
+НАЗВАНИЯ ПРОЙДЕННЫХ БЛОКОВ СЕГОДНЯ:
+${JSON.stringify(completedUnitTitles, null, 2)}
+
+ПОСЛЕДНИЕ СОБЫТИЯ В СИСТЕМЕ:
+${JSON.stringify(recentActivities, null, 2)}
+
+ПРАВИЛА ОЦЕНКИ:
+1. Если цель формулирует количество (например "3 блока", "20 мин фокуса", "1 тест") — сравни с телеметрией. Если метрика >= целевой, задача выполнена (satisfied: true).
+2. Если цель касается конкретной темы (например "разобрать Docker", "изучить микросервисы") и среди пройденных блоков есть похожая тема — задача выполнена (satisfied: true).
+3. Понимай любые формулировки на русском языке (например: "покодить", "порешать задачи", "закрыть модуль", "поспарринговать").
+4. Будь строгим, но справедливым: засчитывай только то, что действительно подтверждено телеметрией или пройденными темами.
+
+Ответь строго валидным JSON следующей структуры:
+{
+  "completedTaskIds": ["id1", "id2"],
+  "completedHabitIds": ["h1"],
+  "evaluations": [
+    {
+      "id": "id1",
+      "satisfied": true,
+      "reason": "Подтверждено телеметрией: пройдено 3 блока за сегодня",
+      "matchedMetric": "blocks_completed"
+    }
+  ]
+}`;
+
+  try {
+    const result: any = await callGeminiSafeJson(prompt, {
+      temperature: 0.1,
+    });
+
+    if (result && Array.isArray(result.completedTaskIds)) {
+      return {
+        completedTaskIds: result.completedTaskIds || [],
+        completedHabitIds: result.completedHabitIds || [],
+        evaluations: result.evaluations || [],
+      };
+    }
+  } catch (e) {
+    console.warn('Gemini goal classification fallback:', e);
+  }
+
+  return { completedTaskIds: [], completedHabitIds: [], evaluations: [] };
+}
+
+
 
 
 
