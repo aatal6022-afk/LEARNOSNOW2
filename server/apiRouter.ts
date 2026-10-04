@@ -41,28 +41,17 @@ import { EpistemicLedger, type CastalianBridge } from './epistemicLedger';
 import { FirestoreKnowledgeCache } from './firestoreKnowledgeCache';
 import { TextbookDistiller } from './textbookDistiller';
 import { PdfDistillerService } from './pdfDistillerService';
+import appletConfig from '../firebase-applet-config.json';
 
 export const apiRouter = express.Router();
 
-apiRouter.use((req, res, next) => {
-  if (req.body && typeof req.body === 'object') {
-    return next();
-  }
-  express.json({ limit: '15mb' })(req, res, (err) => {
-    if (err) return next();
-    express.urlencoded({ extended: true, limit: '15mb' })(req, res, next);
-  });
-});
-
 function resolveFirebaseProjectId(): string | undefined {
-  const configuredProjectId = process.env.FIREBASE_PROJECT_ID;
-  if (configuredProjectId) return configuredProjectId;
-  try {
-    const config = JSON.parse(readFileSync(path.join(process.cwd(), 'firebase-applet-config.json'), 'utf8'));
-    return typeof config.projectId === 'string' ? config.projectId : undefined;
-  } catch {
-    return process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT || process.env.VERTEX_PROJECT;
-  }
+  return (typeof appletConfig?.projectId === 'string' ? appletConfig.projectId : undefined) ||
+    process.env.FIREBASE_PROJECT_ID || 
+    process.env.VITE_FIREBASE_PROJECT_ID || 
+    process.env.GCLOUD_PROJECT || 
+    process.env.GOOGLE_CLOUD_PROJECT || 
+    process.env.VERTEX_PROJECT;
 }
 
 const firebaseProjectId = resolveFirebaseProjectId();

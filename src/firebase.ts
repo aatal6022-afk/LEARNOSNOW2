@@ -31,16 +31,18 @@ import {
   type Unsubscribe
 } from 'firebase/auth';
 
-// Firebase configuration with environment variable override support and provisioned applet defaults
-const rawApiKey = import.meta.env.VITE_FIREBASE_API_KEY || appletConfig.apiKey;
-const rawAuthDomain = import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || appletConfig.authDomain;
-const rawProjectId = import.meta.env.VITE_FIREBASE_PROJECT_ID || appletConfig.projectId;
-const rawAppId = import.meta.env.VITE_FIREBASE_APP_ID || appletConfig.appId;
-const rawDatabaseId = (import.meta.env.VITE_FIREBASE_DATABASE_ID && import.meta.env.VITE_FIREBASE_DATABASE_ID.trim() !== '')
-  ? import.meta.env.VITE_FIREBASE_DATABASE_ID.trim()
-  : appletConfig.firestoreDatabaseId;
-const rawStorageBucket = import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || appletConfig.storageBucket;
-const rawMessagingSenderId = import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || appletConfig.messagingSenderId;
+// Firebase configuration: appletConfig from firebase-applet-config.json is the primary source of truth
+const rawApiKey = appletConfig?.apiKey || import.meta.env.VITE_FIREBASE_API_KEY;
+const rawAuthDomain = appletConfig?.authDomain || import.meta.env.VITE_FIREBASE_AUTH_DOMAIN;
+const rawProjectId = appletConfig?.projectId || import.meta.env.VITE_FIREBASE_PROJECT_ID;
+const rawAppId = appletConfig?.appId || import.meta.env.VITE_FIREBASE_APP_ID;
+const rawDatabaseId = (appletConfig?.firestoreDatabaseId && appletConfig.firestoreDatabaseId.trim() !== '')
+  ? appletConfig.firestoreDatabaseId.trim()
+  : (import.meta.env.VITE_FIREBASE_DATABASE_ID && import.meta.env.VITE_FIREBASE_DATABASE_ID.trim() !== '')
+    ? import.meta.env.VITE_FIREBASE_DATABASE_ID.trim()
+    : undefined;
+const rawStorageBucket = appletConfig?.storageBucket || import.meta.env.VITE_FIREBASE_STORAGE_BUCKET;
+const rawMessagingSenderId = appletConfig?.messagingSenderId || import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID;
 
 export const firebaseConfig = {
   apiKey: rawApiKey,
@@ -87,23 +89,12 @@ googleProvider.setCustomParameters({
   prompt: 'select_account'
 });
 
-// Auto-authenticate anonymously if no active user exists, ensuring Firestore rules always pass
+// Safe check for current authenticated user
 export async function ensureAuth(): Promise<User | null> {
   if (auth.currentUser) {
     return auth.currentUser;
   }
-  try {
-    const cred = await signInAnonymously(auth);
-    return cred.user;
-  } catch (err) {
-    // Anonymous auth may be disabled on project - silent fallback
-    return null;
-  }
-}
-
-// Auto-run background session initialization
-if (typeof window !== 'undefined') {
-  ensureAuth().catch(() => {});
+  return null;
 }
 
 export let isFirestoreOnline = true;

@@ -1,31 +1,25 @@
 import { initializeApp, getApps } from 'firebase/app';
 import { getFirestore, doc, getDoc, setDoc, collection, getDocs, query, limit } from 'firebase/firestore';
-import fs from 'fs';
-import path from 'path';
 import crypto from 'crypto';
+import appletConfig from '../firebase-applet-config.json';
 
 // Load Firebase configuration
 let db: any = null;
 let isFirestoreAvailable = false;
 
 try {
-  let firebaseConfig: any = null;
-  const configPath = path.resolve(process.cwd(), 'firebase-applet-config.json');
-  if (fs.existsSync(configPath)) {
-    const configRaw = fs.readFileSync(configPath, 'utf-8');
-    firebaseConfig = JSON.parse(configRaw);
-  } else if (process.env.FIREBASE_API_KEY || process.env.VITE_FIREBASE_API_KEY) {
-    firebaseConfig = {
-      apiKey: process.env.FIREBASE_API_KEY || process.env.VITE_FIREBASE_API_KEY,
-      authDomain: process.env.FIREBASE_AUTH_DOMAIN || process.env.VITE_FIREBASE_AUTH_DOMAIN,
-      projectId: process.env.FIREBASE_PROJECT_ID || process.env.VITE_FIREBASE_PROJECT_ID,
-      storageBucket: process.env.FIREBASE_STORAGE_BUCKET || process.env.VITE_FIREBASE_STORAGE_BUCKET,
-      appId: process.env.FIREBASE_APP_ID || process.env.VITE_FIREBASE_APP_ID,
-      firestoreDatabaseId: (process.env.FIREBASE_DATABASE_ID || process.env.VITE_FIREBASE_DATABASE_ID) !== '(default)'
+  const firebaseConfig: any = {
+    apiKey: appletConfig?.apiKey || process.env.FIREBASE_API_KEY || process.env.VITE_FIREBASE_API_KEY,
+    authDomain: appletConfig?.authDomain || process.env.FIREBASE_AUTH_DOMAIN || process.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: appletConfig?.projectId || process.env.FIREBASE_PROJECT_ID || process.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: appletConfig?.storageBucket || process.env.FIREBASE_STORAGE_BUCKET || process.env.VITE_FIREBASE_STORAGE_BUCKET,
+    appId: appletConfig?.appId || process.env.FIREBASE_APP_ID || process.env.VITE_FIREBASE_APP_ID,
+    firestoreDatabaseId: (appletConfig?.firestoreDatabaseId && appletConfig.firestoreDatabaseId !== '(default)')
+      ? appletConfig.firestoreDatabaseId
+      : (process.env.FIREBASE_DATABASE_ID || process.env.VITE_FIREBASE_DATABASE_ID) !== '(default)'
         ? (process.env.FIREBASE_DATABASE_ID || process.env.VITE_FIREBASE_DATABASE_ID)
         : undefined,
-    };
-  }
+  };
 
   if (firebaseConfig && firebaseConfig.apiKey && firebaseConfig.projectId) {
     const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
@@ -39,7 +33,7 @@ try {
       db = getFirestore(app);
     }
     isFirestoreAvailable = true;
-    console.log('[Firestore Knowledge Cache] Initialized successfully.');
+    console.log('[Firestore Knowledge Cache] Initialized successfully with project:', firebaseConfig.projectId);
   }
 } catch (err) {
   console.warn('[Firestore Knowledge Cache] Firebase init notice (in-memory tier active):', err);
