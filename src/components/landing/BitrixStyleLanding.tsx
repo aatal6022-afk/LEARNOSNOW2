@@ -1,4 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { ChangelogUpdatesView } from './ChangelogUpdatesView.tsx';
+import { AdminUpdatesModal } from './AdminUpdatesModal.tsx';
+import { releaseUpdatesService } from '../../services/releaseUpdatesService.ts';
 
 interface BitrixStyleLandingProps {
   onStartFree: () => void;
@@ -17,6 +20,24 @@ export const BitrixStyleLanding: React.FC<BitrixStyleLandingProps> = ({
   const [tipText, setTipText] = useState<string>('Нажмите на светящийся узел, чтобы пройти его.');
   const [isFinished, setIsFinished] = useState<boolean>(false);
   const [pomoSeconds, setPomoSeconds] = useState<number>(18 * 60 + 42);
+
+  // Changelog & Admin State
+  const [showChangelog, setShowChangelog] = useState<boolean>(false);
+  const [showAdminModal, setShowAdminModal] = useState<boolean>(false);
+  const [latestReleaseVersion, setLatestReleaseVersion] = useState<string>(() => {
+    return releaseUpdatesService.getLatestUpdate()?.version || 'v0.9.4-alpha';
+  });
+
+  useEffect(() => {
+    const updateVer = () => {
+      const latest = releaseUpdatesService.getLatestUpdate();
+      if (latest?.version) {
+        setLatestReleaseVersion(latest.version);
+      }
+    };
+    updateVer();
+    return releaseUpdatesService.subscribe(updateVer);
+  }, []);
 
   // DAG nodes interactive state
   const [dagState, setDagState] = useState<Record<string, 'done' | 'review' | 'open' | 'lock'>>({
@@ -319,6 +340,67 @@ export const BitrixStyleLanding: React.FC<BitrixStyleLandingProps> = ({
           font-size: 12.5px;
           border: 1px solid var(--primary-soft);
         }
+        .pink-scope .nav-btn-link {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          border: none;
+          background: transparent;
+          font-size: 15px;
+          font-weight: 500;
+          color: var(--muted);
+          padding: 8px 14px;
+          border-radius: 999px;
+          cursor: pointer;
+          transition: background .15s, color .15s;
+        }
+        .pink-scope .nav-btn-link:hover {
+          background: var(--surface);
+          color: var(--fg);
+        }
+        .pink-scope .nav-pill-badge {
+          font-family: var(--font-mono);
+          font-size: 11px;
+          font-weight: 700;
+          background: var(--container);
+          color: var(--primary);
+          padding: 1px 6px;
+          border-radius: 999px;
+        }
+        .pink-scope .foot-btn-link {
+          border: none;
+          background: transparent;
+          padding: 0;
+          font: inherit;
+          color: var(--muted);
+          font-size: 14.5px;
+          cursor: pointer;
+          text-align: left;
+          transition: color .15s;
+        }
+        .pink-scope .foot-btn-link:hover {
+          color: var(--primary);
+          text-decoration: underline;
+        }
+        .pink-scope .foot-admin-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          border: 1px dashed var(--line);
+          background: var(--surface);
+          color: var(--muted);
+          font-size: 12px;
+          font-weight: 500;
+          padding: 3px 10px;
+          border-radius: 999px;
+          cursor: pointer;
+          transition: all .15s;
+        }
+        .pink-scope .foot-admin-btn:hover {
+          border-color: var(--primary);
+          color: var(--primary);
+          background: var(--container);
+        }
 
         /* app bar */
         .pink-scope .bar { position: sticky; top: 0; z-index: 40; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
@@ -580,6 +662,13 @@ export const BitrixStyleLanding: React.FC<BitrixStyleLandingProps> = ({
           <nav aria-label="Разделы">
             <a href="#features">Возможности</a>
             <a href="#how">Как это работает</a>
+            <button
+              type="button"
+              onClick={() => setShowChangelog(true)}
+              className="nav-btn-link"
+            >
+              Что нового <span className="nav-pill-badge">{latestReleaseVersion}</span>
+            </button>
             <a href="#faq">Вопросы</a>
           </nav>
           <span className="spacer"></span>
@@ -598,8 +687,18 @@ export const BitrixStyleLanding: React.FC<BitrixStyleLandingProps> = ({
           <div className="wrap">
             <div className="hero-in">
               <div className="alpha-banner">
-                <span className="alpha-tag">Alpha Preview</span>
-                <span>⚠️ Ранняя альфа-версия. Если нашли баги или есть пожелания — пишите: <a href="https://t.me/pinkinauceo" target="_blank" rel="noopener noreferrer" className="alpha-link">@pinkinauceo</a></span>
+                <span className="alpha-tag">Alpha {latestReleaseVersion}</span>
+                <span>
+                  ⚠️ Ранняя альфа-версия.{' '}
+                  <button
+                    type="button"
+                    onClick={() => setShowChangelog(true)}
+                    className="alpha-link cursor-pointer bg-transparent border-none p-0 inline"
+                  >
+                    Что нового?
+                  </button>{' '}
+                  • Нашли баг: <a href="https://t.me/pinkinauceo" target="_blank" rel="noopener noreferrer" className="alpha-link">@pinkinauceo</a>
+                </span>
               </div>
 
               <div>
@@ -1003,11 +1102,30 @@ export const BitrixStyleLanding: React.FC<BitrixStyleLandingProps> = ({
               <li><a href="#features" onClick={() => setSelectedTab('git')}>Git знаний</a></li>
               <li><a href="#features" onClick={() => setSelectedTab('folio')}>Портфолио</a></li>
               <li><a href="#features" onClick={() => setSelectedTab('focus')}>Продуктивность</a></li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => setShowChangelog(true)}
+                  className="foot-btn-link"
+                >
+                  Что нового (Релизы)
+                </button>
+              </li>
               <li><a href="#faq">Вопросы</a></li>
             </ul></div>
           </div>
           <div className="fbot" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-            <div>© 2026 PinkInAu. Все права защищены.</div>
+            <div className="flex items-center gap-3">
+              <div>© 2026 PinkInAu. Все права защищены.</div>
+              <button
+                type="button"
+                onClick={() => setShowAdminModal(true)}
+                className="foot-admin-btn"
+                title="Панель администратора (пароль)"
+              >
+                ⚙️ Админ-панель
+              </button>
+            </div>
             <div className="alpha-foot-badge">
               <span>⚡ <b>Альфа-версия:</b> если нашли баги, пишите в Telegram:</span>
               <a href="https://t.me/pinkinauceo" target="_blank" rel="noopener noreferrer" className="alpha-link">@pinkinauceo</a>
@@ -1015,6 +1133,22 @@ export const BitrixStyleLanding: React.FC<BitrixStyleLandingProps> = ({
           </div>
         </div>
       </footer>
+
+      {/* Changelog Fullscreen View / Modal */}
+      <ChangelogUpdatesView
+        isOpen={showChangelog}
+        onClose={() => setShowChangelog(false)}
+        onOpenAdmin={() => {
+          setShowChangelog(false);
+          setShowAdminModal(true);
+        }}
+      />
+
+      {/* Admin Protected Updates Panel Modal */}
+      <AdminUpdatesModal
+        isOpen={showAdminModal}
+        onClose={() => setShowAdminModal(false)}
+      />
     </div>
   );
 };

@@ -54,6 +54,46 @@ export interface AiActionEvent {
   targetAxiom: string;
 }
 
+export interface CognitiveConflict {
+  id: string;
+  topic: string;
+  branch: string;
+  userHypothesis: string;
+  canonicalInvariant: string;
+  counterExampleCode: string;
+  counterExampleOutput: string;
+  explanation: string;
+  resolved: boolean;
+  resolvedAt?: string;
+  resolutionNote?: string;
+  xpReward: number;
+}
+
+export interface KnowledgeMilestoneTag {
+  tag: string;
+  title: string;
+  date: string;
+  sha256Hash: string;
+  masteredUnitsCount: number;
+  provenFactsCount: number;
+  verdict: string;
+  exportReady: boolean;
+}
+
+export interface KnowledgePullRequest {
+  id: string;
+  title: string;
+  author: string;
+  reviewer: string;
+  sourceBranch: string;
+  targetBranch: string;
+  status: 'open' | 'merged' | 'closed';
+  conceptDiff: string[];
+  peerComments: Array<{ author: string; role: string; comment: string; timestamp: string }>;
+  artifactName: string;
+  createdAt: string;
+}
+
 export interface EpistemicLedgerData {
   version: number;
   studentState: {
@@ -71,6 +111,9 @@ export interface EpistemicLedgerData {
   castalianBridges?: CastalianBridge[];
   aiPerceptions?: AiPerceptionEvent[];
   aiActions?: AiActionEvent[];
+  cognitiveConflicts?: CognitiveConflict[];
+  milestoneTags?: KnowledgeMilestoneTag[];
+  pullRequests?: KnowledgePullRequest[];
   crystallizedKnowledgeNodes: Array<{
     id: string;
     title: string;
@@ -102,300 +145,357 @@ export interface EpistemicLedgerData {
   }>;
 }
 
+const STORAGE_KEY = 'pink_epistemic_ledger_v3';
+const CONFLICTS_STORAGE_KEY = 'pink_epistemic_conflicts_v3';
+const BRANCHES_STORAGE_KEY = 'pink_knowledge_custom_branches_v3';
+
+const INITIAL_CONFLICTS: CognitiveConflict[] = [
+  {
+    id: 'conf-async-threads',
+    topic: 'Асинхронность в Node.js / JS',
+    branch: 'hypothesis/async-mental-model',
+    userHypothesis: 'Каждый вызов async/await создает отдельный поток OS и параллельно выполняет JS-инструкции.',
+    canonicalInvariant: 'JavaScript выполняется в единственном главном потоке (Single-Threaded Event Loop). Асинхронность достигается через фазы Event Loop и неблокирующий I/O в пуле libuv.',
+    counterExampleCode: `// Доказательство: тяжелый синхронный цикл блокирует асинхронные таймеры\nconsole.log("Старт таймера");\nsetTimeout(() => console.log("Таймер сработал!"), 100);\n\nconst start = Date.now();\nwhile (Date.now() - start < 400) {\n  // Блокируем главный поток на 400мс\n}\nconsole.log("Главный поток освобожден через " + (Date.now() - start) + "мс");`,
+    counterExampleOutput: `Старт таймера\nГлавный поток освобожден через 401мс\nТаймер сработал! // Сработал только ПОСЛЕ освобождения главного потока`,
+    explanation: 'Таймер не смог выполниться параллельно, потому что JavaScript однопоточен. await лишь приостанавливает выполнение генераторной функции и передает управление в очередь микротасок (Microtask Queue).',
+    resolved: false,
+    xpReward: 120,
+  },
+  {
+    id: 'conf-immutability-react',
+    topic: 'Мутации состояния в React / State Flow',
+    branch: 'hypothesis/state-reactivity',
+    userHypothesis: 'Прямое изменение свойств объекта (state.user.name = "Alex") экономит память и должно вызывать быстрый ререндер.',
+    canonicalInvariant: 'React проверяет равенство ссылок (Object.is / Shallow Comparison). Прямая мутация сохраняет ту же ссылку объекта в памяти, предотвращая обнаружение изменений компонентом.',
+    counterExampleCode: `const prevUser = { name: "Ivan", role: "guest" };\nconst nextUser = prevUser;\nnextUser.name = "Alex"; // Прямая мутация\n\nconsole.log("Равны ли ссылки?", Object.is(prevUser, nextUser)); // true -> React НЕ сделает re-render!`,
+    counterExampleOutput: `Равны ли ссылки? true\nРезультат: Компонент не перерисовывается, данные устаревают в UI.`,
+    explanation: 'Иммутабельное обновление ({ ...prev, name: "Alex" }) создает новую ссылку, гарантируя предсказуемый ререндер и работу memo/useMemo.',
+    resolved: false,
+    xpReward: 90,
+  },
+  {
+    id: 'conf-sql-transactions',
+    topic: 'Уровни изоляции транзакций БД',
+    branch: 'hypothesis/database-isolation',
+    userHypothesis: 'Read Committed уровень изоляции полностью защищает от "Фантомного чтения" (Phantom Reads).',
+    canonicalInvariant: 'Read Committed предотвращает только Dirty Read. Phantom Reads предотвращаются только на уровнях Repeatable Read (в PG) или Serializable.',
+    counterExampleCode: `// T1: SELECT COUNT(*) FROM users WHERE age > 25 (результат: 5)\n// T2: INSERT INTO users (age) VALUES (30); COMMIT;\n// T1: SELECT COUNT(*) FROM users WHERE age > 25 (результат: 6 -> Фантомная строка!)`,
+    counterExampleOutput: `Count 1: 5\nTransaction 2 committed\nCount 2: 6 // Появилась фантомная строка внутри одной транзакции T1`,
+    explanation: 'В Read Committed каждый отдельный запрос видит свой свежий снимок (Snapshot), поэтому между двумя одинаковыми запросами могут появиться новые строки из закоммиченных сторонних транзакций.',
+    resolved: true,
+    resolvedAt: 'Вчера, 18:40',
+    resolutionNote: 'Инвариант подтвержден практикой в песочнице SQL.',
+    xpReward: 100,
+  },
+];
+
+const INITIAL_TAGS: KnowledgeMilestoneTag[] = [
+  {
+    tag: 'v1.0-junior-invariants',
+    title: 'Фундаментальные структуры данных & Базовые алгоритмы',
+    date: '28 сентября 2026',
+    sha256Hash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+    masteredUnitsCount: 8,
+    provenFactsCount: 14,
+    verdict: 'Верифицировано: 100% покрытие тестами в изолированной песочнице.',
+    exportReady: true,
+  },
+  {
+    tag: 'v1.2-async-concurrency',
+    title: 'Асинхронные архитектуры, Event Loop & Libuv',
+    date: '3 октября 2026',
+    sha256Hash: '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08',
+    masteredUnitsCount: 12,
+    provenFactsCount: 22,
+    verdict: 'Верифицировано: Сдано 4 Capstone проекта без единой когнитивной ошибки.',
+    exportReady: true,
+  },
+];
+
+const INITIAL_PULL_REQUESTS: KnowledgePullRequest[] = [
+  {
+    id: 'pr-104',
+    title: 'Реализация распределенного Rate Limiter на Token Bucket',
+    author: 'Вы (Student HEAD)',
+    reviewer: 'ИИ-Экзаменатор & Напарник (Sparring Peer)',
+    sourceBranch: 'feature/rate-limiter-token-bucket',
+    targetBranch: 'main',
+    status: 'open',
+    conceptDiff: [
+      '+ Invariant: Токены пополняются непрерывно на основе формулы: min(capacity, current + rate * delta)',
+      '+ Invariant: Атомарная проверка в Redis через Lua-скрипт исключает race conditions',
+      '- Deprecated: Синхронная блокировка через локальный мьютекс в многосерверной среде'
+    ],
+    peerComments: [
+      {
+        author: 'Напарник (Sparring)',
+        role: 'Peer Reviewer',
+        comment: 'Отличная идея с расчетом delta на лету вместо фонового таймера setInterval. Это снижает нагрузку на CPU!',
+        timestamp: '15 минут назад',
+      },
+      {
+        author: 'Vertex AI Mentor',
+        role: 'AI Examiner',
+        comment: 'Ассерты на граничный случай переполнения емкости (bucket burst capacity) пройдены на 100%. Готово к мерджу.',
+        timestamp: '5 минут назад',
+      }
+    ],
+    artifactName: 'RateLimiterService.ts',
+    createdAt: 'Сегодня, 12:30',
+  }
+];
 
 class EpistemicLedgerService {
   private cache: EpistemicLedgerData | null = null;
-  private listeners: Array<(data: EpistemicLedgerData) => void> = [];
+  private listeners: Set<(data: EpistemicLedgerData) => void> = new Set();
+  private isFetching: boolean = false;
+  private conflicts: CognitiveConflict[] = [];
+  private customBranches: string[] = [];
 
-  public async getLedger(): Promise<EpistemicLedgerData> {
-    const data = await this.fetchLedger();
-    data.provenInvariants = data.provenFacts;
-    return data;
+  constructor() {
+    this.conflicts = this.loadStoredConflicts();
+    this.customBranches = this.loadStoredBranches();
+    this.loadFromLocal();
+    void this.fetchLedger();
   }
 
-  public async fetchLedger(): Promise<EpistemicLedgerData> {
+  private loadStoredConflicts(): CognitiveConflict[] {
     try {
-      const res = await fetch('/api/epistemic/ledger');
-      if (res.ok) {
-        const data = await res.json();
-        data.provenInvariants = data.provenFacts || [];
-        this.cache = data;
-        this.notify();
-        return data;
-      }
-    } catch (e) {
-      console.warn('[Epistemic Service] Offline ledger fallback:', e);
-    }
-    const fallback = this.getLocalFallback();
-    fallback.provenInvariants = fallback.provenFacts;
-    return fallback;
-  }
-
-  public async runCleanMemoryAgentCycle(params: {
-    taskPrompt: string;
-    domain?: string;
-    agentName?: string;
-    workingContextSnapshot?: any;
-  }): Promise<{ success: boolean; crystallizedFact?: EpistemicFact }> {
-    try {
-      const res = await fetch('/api/epistemic/run-clean-cycle', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.ledger) {
-          data.ledger.provenInvariants = data.ledger.provenFacts;
-          this.cache = data.ledger;
-          this.notify();
+      const raw = localStorage.getItem(CONFLICTS_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
         }
-        return { success: true, crystallizedFact: data.crystallizedFact };
       }
-    } catch (err) {
-      console.warn('[Epistemic Service] Clean agent cycle local execution:', err);
-    }
-
-    // Local fallback synthesis
-    const newFact: EpistemicFact = {
-      id: `fact-${Date.now()}`,
-      topic: params.taskPrompt.slice(0, 50),
-      domain: params.domain || 'Архитектура',
-      statement: `Инвариант «${params.taskPrompt}» доказан в изоляции и кристаллизован в ядро.`,
-      confidence: 0.96,
-      discoveredByAgent: params.agentName || 'EpistemicCoreSynthesizer',
-      verifiedAt: new Date().toISOString(),
-      layer: 'core_axiom',
-      impactWeight: 12
-    };
-
-    if (!this.cache) this.cache = this.getLocalFallback();
-    this.cache.provenFacts.unshift(newFact);
-    this.cache.provenInvariants = this.cache.provenFacts;
-    this.notify();
-
-    return { success: true, crystallizedFact: newFact };
+    } catch {}
+    return INITIAL_CONFLICTS;
   }
 
-  public updateFromPulse(updatedLedger: EpistemicLedgerData) {
-    if (updatedLedger) {
-      updatedLedger.provenInvariants = updatedLedger.provenFacts || [];
-      this.cache = updatedLedger;
+  private saveStoredConflicts(conflicts: CognitiveConflict[]) {
+    this.conflicts = conflicts;
+    try {
+      localStorage.setItem(CONFLICTS_STORAGE_KEY, JSON.stringify(conflicts));
+    } catch {}
+    if (this.cache) {
+      this.cache.cognitiveConflicts = conflicts;
       this.notify();
     }
   }
 
-  public getCachedLedger(): EpistemicLedgerData {
-    if (!this.cache) {
-      this.cache = this.getLocalFallback();
-    }
-    return this.cache;
+  private loadStoredBranches(): string[] {
+    try {
+      const raw = localStorage.getItem(BRANCHES_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch {}
+    return [];
   }
 
-  public subscribe(cb: (data: EpistemicLedgerData) => void): () => void {
-    this.listeners.push(cb);
-    if (this.cache) cb(this.cache);
-    return () => {
-      this.listeners = this.listeners.filter((l) => l !== cb);
+  private saveStoredBranches(branches: string[]) {
+    this.customBranches = branches;
+    try {
+      localStorage.setItem(BRANCHES_STORAGE_KEY, JSON.stringify(branches));
+    } catch {}
+  }
+
+  public getCustomBranches(): string[] {
+    return [...this.customBranches];
+  }
+
+  public addCustomBranch(name: string): string {
+    const formatted = name.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-');
+    const branchName = formatted.startsWith('hypothesis/') ? formatted : `hypothesis/${formatted}`;
+    if (!this.customBranches.includes(branchName)) {
+      const next = [...this.customBranches, branchName];
+      this.saveStoredBranches(next);
+    }
+    return branchName;
+  }
+
+  public getConflicts(): CognitiveConflict[] {
+    return [...this.conflicts];
+  }
+
+  public resolveConflict(conflictId: string, note?: string): { success: boolean; xpReward: number } {
+    const target = this.conflicts.find((c) => c.id === conflictId);
+    if (!target) return { success: false, xpReward: 0 };
+
+    target.resolved = true;
+    target.resolvedAt = 'Только что';
+    target.resolutionNote = note || 'Когнитивный конфликт разрешен. Истинный инвариант подтвержден доказательством и влит в ветку main.';
+    this.saveStoredConflicts([...this.conflicts]);
+
+    // Add proven fact to ledger
+    if (this.cache) {
+      const newFact: EpistemicFact = {
+        id: `fact-resolved-${Date.now()}`,
+        topic: target.topic,
+        domain: 'Разрешенные конфликты',
+        statement: target.canonicalInvariant,
+        confidence: 0.99,
+        discoveredByAgent: 'Epistemic 3-Way Merge Engine',
+        verifiedAt: new Date().toISOString(),
+        layer: 'core_axiom',
+        impactWeight: 20,
+      };
+      this.cache.provenFacts = [newFact, ...(this.cache.provenFacts || [])];
+      this.cache.provenInvariants = this.cache.provenFacts;
+      this.notify();
+    }
+
+    return { success: true, xpReward: target.xpReward || 100 };
+  }
+
+  public getMilestones(): KnowledgeMilestoneTag[] {
+    return this.cache?.milestoneTags || INITIAL_TAGS;
+  }
+
+  public getPullRequests(): KnowledgePullRequest[] {
+    return this.cache?.pullRequests || INITIAL_PULL_REQUESTS;
+  }
+
+  public mergePullRequest(prId: string): boolean {
+    if (!this.cache) return false;
+    const prs = this.cache.pullRequests || INITIAL_PULL_REQUESTS;
+    const target = prs.find((p) => p.id === prId);
+    if (!target) return false;
+
+    target.status = 'merged';
+    this.cache.pullRequests = [...prs];
+
+    // Add proven facts from PR
+    const newFact: EpistemicFact = {
+      id: `fact-pr-${Date.now()}`,
+      topic: target.title,
+      domain: 'Peer Review & Sparring',
+      statement: `Пулл-реквест «${target.title}» проверен спарринг-партнером и ИИ-экзаменатором и влит в ветку main.`,
+      confidence: 1.0,
+      discoveredByAgent: 'Peer Review Sparring Pipeline',
+      verifiedAt: new Date().toISOString(),
+      layer: 'orbit_artifact',
+      impactWeight: 25,
     };
+    this.cache.provenFacts = [newFact, ...(this.cache.provenFacts || [])];
+    this.notify();
+    return true;
+  }
+
+  private loadFromLocal() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        this.cache = JSON.parse(raw);
+        if (this.cache) {
+          this.cache.cognitiveConflicts = this.conflicts;
+          this.cache.milestoneTags = INITIAL_TAGS;
+          this.cache.pullRequests = INITIAL_PULL_REQUESTS;
+        }
+      }
+    } catch {
+      this.cache = this.getLocalFallback();
+    }
+  }
+
+  private saveToLocal(data: EpistemicLedgerData) {
+    this.cache = data;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch {}
+    this.notify();
+  }
+
+  public async getLedger(): Promise<EpistemicLedgerData> {
+    if (!this.cache) {
+      await this.fetchLedger();
+    }
+    return this.cache || this.getLocalFallback();
+  }
+
+  public subscribe(listener: (data: EpistemicLedgerData) => void): () => void {
+    this.listeners.add(listener);
+    if (this.cache) {
+      listener(this.cache);
+    }
+    return () => this.listeners.delete(listener);
   }
 
   private notify() {
-    if (this.cache) {
-      this.listeners.forEach((cb) => cb(this.cache!));
-    }
+    if (!this.cache) return;
+    this.listeners.forEach((fn) => {
+      try {
+        fn(this.cache!);
+      } catch (err) {
+        console.warn('[EpistemicLedgerService] Listener notification error:', err);
+      }
+    });
   }
 
-  public async synthesizeCoreNode(node: {
-    title: string;
-    subtitle?: string;
-    layer?: 'core' | 'mantle' | 'orbit';
-    domain?: string;
-    description?: string;
-    linkedTargets?: string[];
-  }): Promise<boolean> {
+  public async fetchLedger(): Promise<void> {
+    if (this.isFetching) return;
+    this.isFetching = true;
     try {
-      const res = await fetch('/api/epistemic/synthesize-core', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(node),
-      });
+      const res = await fetch('/api/epistemic/ledger');
       if (res.ok) {
-        const data = await res.json();
-        if (data.ledger) {
-          this.cache = data.ledger;
-          this.notify();
-        }
-        return true;
+        const data: EpistemicLedgerData = await res.json();
+        data.cognitiveConflicts = this.conflicts;
+        data.milestoneTags = INITIAL_TAGS;
+        data.pullRequests = INITIAL_PULL_REQUESTS;
+        this.saveToLocal(data);
+      } else {
+        if (!this.cache) this.cache = this.getLocalFallback();
       }
-    } catch (err) {
-      console.warn('Error synthesizing core node:', err);
-    }
-    return false;
-  }
-
-  /**
-   * Record a completed educational unit/skill directly into the Epistemic Ledger and Sphere
-   */
-  public async recordCompletedUnit(unit: {
-    id: string;
-    title: string;
-    category?: string;
-    summaryMarkdown?: string;
-    score?: number;
-  }): Promise<void> {
-    const domain = unit.category || 'Прикладные навыки';
-    const cleanTopic = unit.title.replace(/^[0-9.\s]+/, '').slice(0, 60);
-
-    const newFact: EpistemicFact = {
-      id: `fact-unit-${unit.id}-${Date.now()}`,
-      topic: cleanTopic,
-      domain,
-      statement: `Инвариант «${cleanTopic}» успешно освоен, проверен на практике и зафиксирован в Сфере Знаний.`,
-      confidence: (unit.score || 95) / 100,
-      discoveredByAgent: 'VertexAi-EpistemicEngine',
-      verifiedAt: new Date().toISOString(),
-      layer: 'core_axiom',
-      impactWeight: 14,
-    };
-
-    const newCrystallizedNode = {
-      id: `sphere-core-${unit.id}`,
-      title: cleanTopic,
-      subtitle: `Освоенный навык [${domain}]`,
-      layer: 'core' as const,
-      domain,
-      domainColor: '#38bdf8',
-      status: 'completed' as const,
-      impactRayTargets: [`sphere-orbit-${unit.id}`, `sphere-mantle-${unit.id}`],
-      description: unit.summaryMarkdown?.slice(0, 160) || `Навык «${cleanTopic}» успешно сдан и кристаллизован.`,
-      weight: 16,
-      synthesizedByAgent: 'VertexAi-EpistemicEngine',
-      createdAt: new Date().toISOString(),
-      formula: `Mastery(${cleanTopic}) ⟹ 100%`,
-      castalianBeadId: cleanTopic.slice(0, 18),
-      firstPrinciplesCitation: `Академический инвариант дисциплины [${domain}]`,
-      aiPerception: {
-        observedFriction: 'Телеметрия: концептуальный базис усвоен без затыков',
-        masteryConfidence: unit.score || 95,
-        retentionState: 'firm' as const,
-        liveVector: 'Устойчивая ментальная модель'
-      },
-      aiAction: {
-        activeIntervention: 'Аксиома переведена в статус проверенной в долговременной памяти',
-        projectedRaysCount: 3,
-        groundedInArtifact: true
-      }
-    };
-
-    if (!this.cache) this.cache = this.getLocalFallback();
-    
-    // Add to mastered topics
-    if (!this.cache.studentState.masteredTopics.includes(cleanTopic)) {
-      this.cache.studentState.masteredTopics.unshift(cleanTopic);
-    }
-    this.cache.studentState.totalInsightsCrystallized = (this.cache.studentState.totalInsightsCrystallized || 0) + 1;
-    this.cache.studentState.lastUpdated = new Date().toISOString();
-
-    // Add fact
-    this.cache.provenFacts.unshift(newFact);
-    this.cache.provenInvariants = this.cache.provenFacts;
-
-    // Add crystallized knowledge node
-    if (!this.cache.crystallizedKnowledgeNodes) this.cache.crystallizedKnowledgeNodes = [];
-    const existingIdx = this.cache.crystallizedKnowledgeNodes.findIndex(n => n.id === newCrystallizedNode.id || n.title === cleanTopic);
-    if (existingIdx !== -1) {
-      this.cache.crystallizedKnowledgeNodes[existingIdx] = newCrystallizedNode;
-    } else {
-      this.cache.crystallizedKnowledgeNodes.unshift(newCrystallizedNode);
-    }
-
-    this.notify();
-
-    // Broadcast trace to backend
-    try {
-      await fetch('/api/epistemic/record-trace', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          agentName: 'VertexAi-EpistemicEngine',
-          taskGoal: `Фиксация завершенного модуля «${cleanTopic}»`,
-          premises: [
-            `Студент успешно выполнил все этапы блока «${cleanTopic}»`,
-            `Результаты проверены в песочнице и верифицированы ИИ`,
-          ],
-          deduction: `Навык «${cleanTopic}» переведен в статус полностью освоенного и добавлен в Сферу Знаний.`,
-          verdict: 'Навык интегрирован в Сферу Знаний.',
-          discoveredFacts: [
-            {
-              topic: cleanTopic,
-              statement: `Инвариант «${cleanTopic}» доказан на практике.`,
-              domain,
-              layer: 'core_axiom',
-            },
-          ],
-          crystallizedNode: newCrystallizedNode,
-        }),
-      });
-    } catch (e) {
-      console.warn('[Epistemic Service] Cloud trace sync notice:', e);
+    } catch {
+      if (!this.cache) this.cache = this.getLocalFallback();
+    } finally {
+      this.isFetching = false;
     }
   }
 
-  /**
-   * Record a completed practical exercise into the Epistemic Ledger and Sphere
-   */
-  public async recordCompletedExercise(params: {
-    unitId: string;
-    unitTitle: string;
-    exerciseId: string;
-    exerciseTitle: string;
-    domain?: string;
-    score?: number;
-  }): Promise<void> {
-    const domain = params.domain || 'Прикладная практика';
-    const cleanTopic = params.exerciseTitle.replace(/^[0-9.\s]+/, '').slice(0, 60);
-
-    const newFact: EpistemicFact = {
-      id: `fact-ex-${params.exerciseId}-${Date.now()}`,
-      topic: cleanTopic,
-      domain,
-      statement: `Практический навык «${cleanTopic}» подтвержден решением кейса в тренажере.`,
-      confidence: (params.score || 95) / 100,
-      discoveredByAgent: 'InteractiveLabVerifier',
-      verifiedAt: new Date().toISOString(),
-      layer: 'mantle_skill',
-      impactWeight: 12,
-    };
-
-    if (!this.cache) this.cache = this.getLocalFallback();
-    if (!this.cache.studentState.masteredTopics.includes(cleanTopic)) {
-      this.cache.studentState.masteredTopics.unshift(cleanTopic);
-    }
-    this.cache.provenFacts.unshift(newFact);
-    this.cache.provenInvariants = this.cache.provenFacts;
-    this.notify();
-  }
-
-  /**
-   * Sync Epistemic Ledger state dynamically with the student's real curriculum
-   */
-  public syncWithCurriculum(
-    nodes: DAGNode[],
-    units: Record<string, LearningUnit>,
-    artifacts: UserArtifact[] = [],
-    domainName?: string
-  ): void {
+  public updateFromPulse(serverLedger: Partial<EpistemicLedgerData>) {
     if (!this.cache) {
       this.cache = this.getLocalFallback();
     }
+    this.cache = {
+      ...this.cache,
+      ...serverLedger,
+      cognitiveConflicts: this.conflicts,
+      milestoneTags: INITIAL_TAGS,
+      pullRequests: INITIAL_PULL_REQUESTS,
+      studentState: {
+        ...this.cache.studentState,
+        ...(serverLedger.studentState || {}),
+        lastUpdated: new Date().toISOString(),
+      },
+    };
+    this.saveToLocal(this.cache);
+  }
 
-    const completedUnits = nodes
-      .filter((n) => n.status === 'completed')
-      .map((n) => units[n.unitId || n.id])
-      .filter(Boolean);
+  public reconcileWithRealAppState(
+    nodes: DAGNode[],
+    units: Record<string, LearningUnit>,
+    artifacts: UserArtifact[],
+    domainName?: string
+  ) {
+    if (!this.cache) this.cache = this.getLocalFallback();
 
-    const masteredTopics = completedUnits.map((u) => u.title.replace(/^[0-9.\s]+/, '').slice(0, 60));
+    const completedUnits: LearningUnit[] = [];
+    nodes.forEach((n) => {
+      if (n.status === 'completed' && n.unitId && units[n.unitId]) {
+        completedUnits.push(units[n.unitId]);
+      }
+    });
+
+    const masteredTopics: string[] = [];
+    completedUnits.forEach((u) => {
+      if (!masteredTopics.includes(u.title)) {
+        masteredTopics.push(u.title);
+      }
+    });
+
     artifacts.forEach((art) => {
       if (art.filename && !masteredTopics.includes(art.filename)) {
         masteredTopics.push(`Артефакт: ${art.filename}`);
@@ -408,7 +508,6 @@ class EpistemicLedgerService {
     this.cache.studentState.totalInsightsCrystallized = Math.max(masteredTopics.length, this.cache.studentState.totalInsightsCrystallized || 0);
     this.cache.studentState.lastUpdated = new Date().toISOString();
 
-    // Dynamically build facts from real completed units
     this.cache.provenFacts = completedUnits.map((u, idx) => ({
       id: `fact-unit-${u.id}-${idx}`,
       topic: u.title.replace(/^[0-9.\s]+/, '').slice(0, 60),
@@ -423,6 +522,120 @@ class EpistemicLedgerService {
     this.cache.provenInvariants = this.cache.provenFacts;
 
     this.notify();
+  }
+
+  public getCachedLedger(): EpistemicLedgerData {
+    return this.cache || this.getLocalFallback();
+  }
+
+  public recordCompletedUnit(unit: Partial<LearningUnit> & { id?: string; title: string; score?: number }, scoreParam?: number) {
+    if (!this.cache) this.cache = this.getLocalFallback();
+    const effectiveScore = scoreParam !== undefined ? scoreParam : (unit.score || 100);
+    const fact: EpistemicFact = {
+      id: `fact-unit-${unit.id || 'u'}-${Date.now()}`,
+      topic: unit.title.replace(/^[0-9.\s]+/, '').slice(0, 60),
+      domain: unit.category || 'Архитектура & Системы',
+      statement: `Инвариант «${unit.title}» подтвержден решением в песочнице с оценкой ${effectiveScore}%.`,
+      confidence: 0.98,
+      discoveredByAgent: 'Learning OS Unit Pipeline',
+      verifiedAt: new Date().toISOString(),
+      layer: 'core_axiom',
+      impactWeight: 18,
+    };
+    this.cache.provenFacts = [fact, ...(this.cache.provenFacts || [])];
+    this.cache.provenInvariants = this.cache.provenFacts;
+    if (!this.cache.studentState.masteredTopics.includes(unit.title)) {
+      this.cache.studentState.masteredTopics.push(unit.title);
+    }
+    this.cache.studentState.totalInsightsCrystallized = Math.max(
+      this.cache.studentState.masteredTopics.length,
+      this.cache.studentState.totalInsightsCrystallized || 0
+    );
+    this.saveToLocal(this.cache);
+  }
+
+  public recordCompletedExercise(
+    exerciseOrTitle: string | { unitId?: string; unitTitle?: string; exerciseId?: string; exerciseTitle: string; score: number },
+    unitTitleParam?: string,
+    scoreParam?: number
+  ) {
+    if (!this.cache) this.cache = this.getLocalFallback();
+    let exTitle = '';
+    let uTitle = '';
+    let finalScore = 100;
+
+    if (typeof exerciseOrTitle === 'object') {
+      exTitle = exerciseOrTitle.exerciseTitle;
+      uTitle = exerciseOrTitle.unitTitle || 'Практика';
+      finalScore = exerciseOrTitle.score;
+    } else {
+      exTitle = exerciseOrTitle;
+      uTitle = unitTitleParam || 'Практика';
+      finalScore = scoreParam || 100;
+    }
+
+    const fact: EpistemicFact = {
+      id: `fact-ex-${Date.now()}`,
+      topic: exTitle,
+      domain: uTitle,
+      statement: `Практическое упражнение «${exTitle}» успешно решено с итогом ${finalScore}%.`,
+      confidence: 0.95,
+      discoveredByAgent: 'Interactive Practice Engine',
+      verifiedAt: new Date().toISOString(),
+      layer: 'mantle_skill',
+      impactWeight: 12,
+    };
+    this.cache.provenFacts = [fact, ...(this.cache.provenFacts || [])];
+    this.cache.provenInvariants = this.cache.provenFacts;
+    this.saveToLocal(this.cache);
+  }
+
+  public async runCleanMemoryAgentCycle(params: {
+    taskPrompt: string;
+    domain?: string;
+    agentName?: string;
+    workingContextSnapshot?: any;
+  }): Promise<{
+    success: boolean;
+    trace?: AgentReasoningTrace;
+    crystallizedAxiom?: EpistemicFact;
+    crystallizedFact?: EpistemicFact;
+    error?: string;
+  }> {
+    const fact: EpistemicFact = {
+      id: `axiom-telemetry-${Date.now()}`,
+      topic: params.workingContextSnapshot?.topic || 'Телеметрический инвариант',
+      domain: params.domain || 'Архитектура & Системы',
+      statement: params.taskPrompt || 'Инвариант вычислен на основе глубокой телеметрии и чистой памяти.',
+      confidence: 0.96,
+      discoveredByAgent: params.agentName || 'AI-TelemetryCoreSynthesizer',
+      verifiedAt: new Date().toISOString(),
+      layer: 'core_axiom',
+      impactWeight: 16,
+    };
+
+    const trace: AgentReasoningTrace = {
+      id: `trace-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      agentName: params.agentName || 'AI-TelemetryCoreSynthesizer',
+      taskGoal: params.taskPrompt,
+      premises: ['Телеметрия без когнитивного шума', 'Чистая память без раздувания контекста'],
+      deduction: 'Успешная фиксация инварианта в ядре знаний.',
+      verdict: 'Crystallized into Core Invariant',
+    };
+
+    if (!this.cache) this.cache = this.getLocalFallback();
+    this.cache.provenFacts = [fact, ...(this.cache.provenFacts || [])];
+    this.cache.provenInvariants = this.cache.provenFacts;
+    this.cache.recentTraces = [trace, ...(this.cache.recentTraces || []).slice(0, 19)];
+    this.saveToLocal(this.cache);
+
+    return {
+      success: true,
+      trace,
+      crystallizedAxiom: fact,
+      crystallizedFact: fact,
+    };
   }
 
   public async purgeContext(): Promise<boolean> {
@@ -441,9 +654,6 @@ class EpistemicLedgerService {
     return false;
   }
 
-  /**
-   * Castalian AI Synthesis: Weaves a real cross-disciplinary bridge linking core axiom to projects or skills
-   */
   public async triggerCastalianSynthesis(sourceNodeId: string, targetNodeId?: string): Promise<{
     success: boolean;
     bridge?: CastalianBridge;
@@ -475,7 +685,6 @@ class EpistemicLedgerService {
       console.warn('[Castalian Service] Local execution error:', err);
     }
 
-    // Dynamic local fallback Castalian bridge based on the real source node
     const fallbackBridge: CastalianBridge = {
       id: `bridge-${Date.now()}`,
       source: sourceNodeId,
@@ -518,6 +727,9 @@ class EpistemicLedgerService {
       castalianBridges: [],
       aiPerceptions: [],
       aiActions: [],
+      cognitiveConflicts: this.conflicts,
+      milestoneTags: INITIAL_TAGS,
+      pullRequests: INITIAL_PULL_REQUESTS,
       crystallizedKnowledgeNodes: [],
     };
   }

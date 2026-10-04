@@ -1546,6 +1546,147 @@ apiRouter.post('/gemini/classify-task-goals', async (req, res) => {
   }
 });
 
+// ==========================================
+// 🚀 RELEASE UPDATES & ADMIN CHANGELOG ENGINE
+// ==========================================
+const ADMIN_SECRET = 'admin789056@pinKil@ve';
+
+let inMemoryReleaseUpdates: Array<{
+  id: string;
+  version: string;
+  title: string;
+  date: string;
+  badge: string;
+  badgeColor?: string;
+  summary: string;
+  highlights: string[];
+  detailsMarkdown?: string;
+  author?: string;
+  isLatest?: boolean;
+  createdAt: number;
+}> = [
+  {
+    id: 'rel-0-9-4',
+    version: 'v0.9.4-alpha',
+    title: 'Глобальный запуск Pink Learn Alpha & Умная Телеметрия',
+    date: '4 октября 2026',
+    badge: 'Крупный релиз',
+    badgeColor: 'pink',
+    summary: 'Первый публичный альфа-релиз Pink Learn. Интерактивный граф знаний, парный спарринг в реальном времени и двухуровневый трекер целей.',
+    highlights: [
+      'Интерактивный граф обучения с тепловой картой забывания Эббингауза',
+      'Фокус-студия с тестом «Чистый лист» и интерактивной песочницей Python/TypeScript',
+      'Парный спарринг со звуковым и видео-каналом WebRTC и синхронной доской',
+      'Автоматическое закрытие задач через глубокую телеметрию и ИИ-анализ',
+      'Публичная страница портфолио для демонстрации артефактов и кода'
+    ],
+    detailsMarkdown: 'Мы рады представить первый полнофункциональный альфа-релиз Pink Learn! Платформа превращает линейные курсы в динамический граф понимания. Вся система работает в формате Web OS: плавающие окна, общая память сессий, командный Помодоро и кристаллизация знаний в Сфере.',
+    author: 'PinkInAu Core Team',
+    isLatest: true,
+    createdAt: Date.now() - 1000 * 60 * 60 * 2,
+  },
+  {
+    id: 'rel-0-9-2',
+    version: 'v0.9.2-alpha',
+    title: '3D Сфера Знаний & Кастальенский Синтез',
+    date: '28 сентября 2026',
+    badge: 'Новая функция',
+    badgeColor: 'purple',
+    summary: 'Внедрена трехслойная Сфера Знаний (Ядро, Мантия, Орбита), вдохновленная «Игрой в бисер» Германа Гессе.',
+    highlights: [
+      '3D-визуализация междисциплинарных связей на Three.js / WebGL',
+      'Алгоритм поиска скрытых аналогий между физикой, музыкой и кодом',
+      'Сохранение инвариантов и концептуальных мостов'
+    ],
+    detailsMarkdown: 'Сфера Знаний позволяет увидеть дисциплины как единый связанный космос. ИИ анализирует ваши пройденные темы и предлагает неожиданные параллели для глубокого понимания.',
+    author: 'PinkInAu Core Team',
+    isLatest: false,
+    createdAt: Date.now() - 1000 * 60 * 60 * 24 * 6,
+  },
+  {
+    id: 'rel-0-9-0',
+    version: 'v0.9.0-alpha',
+    title: 'Песочницы кода и Git Понимания',
+    date: '15 сентября 2026',
+    badge: 'Архитектура',
+    badgeColor: 'blue',
+    summary: 'Полноценный изолированный запуск скриптов Python 3.11 и коммиты мастерства.',
+    highlights: [
+      'Серверная песочница с исполнением тестов за <200мс',
+      'Ветвление гипотез и версионирование заметок',
+      'Поддержка адаптивных квизов на базе Gemini'
+    ],
+    detailsMarkdown: 'Теперь каждый теоретический блок сопровождается реальной практикой в терминале с автоматической проверкой ассертов.',
+    author: 'PinkInAu Core Team',
+    isLatest: false,
+    createdAt: Date.now() - 1000 * 60 * 60 * 24 * 19,
+  }
+];
+
+apiRouter.get('/updates', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  return res.json({
+    success: true,
+    updates: inMemoryReleaseUpdates.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)),
+  });
+});
+
+apiRouter.post('/updates', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  const { password, update } = req.body || {};
+  
+  if (password !== ADMIN_SECRET) {
+    return res.status(403).json({ success: false, error: 'Неверный пароль администратора' });
+  }
+
+  if (!update || !update.version || !update.title) {
+    return res.status(400).json({ success: false, error: 'Заполните номер версии и заголовок' });
+  }
+
+  const newId = update.id || `rel-${Date.now()}`;
+  const existingIdx = inMemoryReleaseUpdates.findIndex((u) => u.id === newId);
+
+  const formattedUpdate = {
+    id: newId,
+    version: update.version.trim(),
+    title: update.title.trim(),
+    date: update.date?.trim() || new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }),
+    badge: update.badge?.trim() || 'Обновление',
+    badgeColor: update.badgeColor || 'pink',
+    summary: update.summary?.trim() || '',
+    highlights: Array.isArray(update.highlights) ? update.highlights.filter(Boolean) : [],
+    detailsMarkdown: update.detailsMarkdown?.trim() || '',
+    author: update.author?.trim() || 'PinkInAu Team',
+    isLatest: update.isLatest !== undefined ? update.isLatest : true,
+    createdAt: update.createdAt || Date.now(),
+  };
+
+  if (formattedUpdate.isLatest) {
+    inMemoryReleaseUpdates.forEach((u) => { u.isLatest = false; });
+  }
+
+  if (existingIdx >= 0) {
+    inMemoryReleaseUpdates[existingIdx] = formattedUpdate;
+  } else {
+    inMemoryReleaseUpdates.unshift(formattedUpdate);
+  }
+
+  return res.json({ success: true, update: formattedUpdate, updates: inMemoryReleaseUpdates });
+});
+
+apiRouter.delete('/updates/:id', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  const { password } = req.body || {};
+  const { id } = req.params;
+
+  if (password !== ADMIN_SECRET) {
+    return res.status(403).json({ success: false, error: 'Неверный пароль администратора' });
+  }
+
+  inMemoryReleaseUpdates = inMemoryReleaseUpdates.filter((u) => u.id !== id);
+  return res.json({ success: true, updates: inMemoryReleaseUpdates });
+});
+
 apiRouter.post('/gemini/chat', async (req, res) => {
   res.setHeader('Content-Type', 'application/json');
   try {

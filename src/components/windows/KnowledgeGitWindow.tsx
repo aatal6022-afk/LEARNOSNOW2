@@ -9,6 +9,8 @@ import {
   FileText,
   GitBranch,
   GitCommitHorizontal,
+  GitMerge,
+  GitPullRequest,
   Layers,
   Sparkles,
   Check,
@@ -18,10 +20,29 @@ import {
   ShieldCheck,
   AlertTriangle,
   RotateCcw,
+  Tag,
+  Search,
+  Plus,
+  Play,
+  Share2,
+  Sliders,
+  Flame,
+  Activity,
+  Award,
+  MessageSquare,
+  HelpCircle,
+  Copy,
+  ChevronRight
 } from 'lucide-react';
 import { LearningUnit, NoteItem, UserArtifact } from '../../types.ts';
 import { telemetryEngine } from '../../services/telemetryEngine.ts';
-import { epistemicLedgerService, EpistemicLedgerData } from '../../services/epistemicLedgerService.ts';
+import { 
+  epistemicLedgerService, 
+  EpistemicLedgerData, 
+  CognitiveConflict,
+  KnowledgeMilestoneTag,
+  KnowledgePullRequest
+} from '../../services/epistemicLedgerService.ts';
 import { playChime } from '../../utils/audio.ts';
 
 interface KnowledgeGitWindowProps {
@@ -34,7 +55,7 @@ interface KnowledgeGitWindowProps {
 
 const formatPath = (value: string) => value.replace(/[\s/\\:]+/g, '-').toLowerCase();
 
-const BRANCHES = [
+const DEFAULT_BRANCHES = [
   { name: 'main', label: 'production knowledge', desc: 'Утверждённые инварианты, завершённые модули и проверенные факты' },
   { name: 'feature/personalized-path', label: 'adaptive learning path', desc: 'Активные блоки, пользовательские заметки и текущие цели' },
   { name: 'research/debugging-loop', label: 'error recovery & telemetry', desc: 'Сигналы затруднений, разборы граничных случаев и исправления' },
@@ -46,11 +67,21 @@ export const KnowledgeGitWindow: React.FC<KnowledgeGitWindowProps> = ({
   artifacts,
   onLaunchUnit,
 }) => {
+  // Navigation & Sub-views
+  const [activeTab, setActiveTab] = useState<'tree' | 'conflicts' | 'diff' | 'bisect' | 'tags' | 'prs'>('tree');
   const [selectedBranch, setSelectedBranch] = useState('main');
+  
+  // Custom branches
+  const [customBranches, setCustomBranches] = useState<string[]>(() => epistemicLedgerService.getCustomBranches());
+  const [newBranchInput, setNewBranchInput] = useState('');
+  const [showNewBranchModal, setShowNewBranchModal] = useState(false);
+
+  // Telemetry & Ledger
   const [telemetryState, setTelemetryState] = useState(() => telemetryEngine.getState());
   const [ledgerData, setLedgerData] = useState<EpistemicLedgerData | null>(null);
 
-  // Selected file for built-in Git file viewer
+  // Selected Commit & File in Tree view
+  const [selectedCommitHash, setSelectedCommitHash] = useState<string | null>(null);
   const [inspectedFile, setInspectedFile] = useState<{
     path: string;
     label: string;
@@ -61,15 +92,41 @@ export const KnowledgeGitWindow: React.FC<KnowledgeGitWindowProps> = ({
     branch: string;
   } | null>(null);
 
-  // Resolved conflicts tracking
-  const [resolvedConflictIds, setResolvedConflictIds] = useState<Set<string>>(new Set());
-  const [resolutionNotice, setResolutionNotice] = useState<string | null>(null);
+  // 3-Way Merge Conflicts State
+  const [conflicts, setConflicts] = useState<CognitiveConflict[]>(() => epistemicLedgerService.getConflicts());
+  const [selectedConflictId, setSelectedConflictId] = useState<string | null>(null);
+  const [runningSimulator, setRunningSimulator] = useState(false);
+  const [simulatorOutput, setSimulatorOutput] = useState<string | null>(null);
+  const [resolveSuccessNotice, setResolveSuccessNotice] = useState<string | null>(null);
+
+  // Bisect State
+  const [bisectActive, setBisectActive] = useState(false);
+  const [bisectStep, setBisectStep] = useState(1);
+  const [bisectResult, setBisectResult] = useState<{
+    targetFault: string;
+    rootCommit: string;
+    rootConcept: string;
+    remediationUnitTitle: string;
+    explanation: string;
+  } | null>(null);
+
+  // Semantic Diff state
+  const [diffBasePeriod, setDiffBasePeriod] = useState<'sprint-start' | 'yesterday' | 'day-1'>('sprint-start');
+
+  // Copy status
+  const [copiedHash, setCopiedHash] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribeTelemetry = telemetryEngine.subscribe((next) => setTelemetryState(next));
-    const unsubscribeLedger = epistemicLedgerService.subscribe((next) => setLedgerData(next));
+    const unsubscribeLedger = epistemicLedgerService.subscribe((next) => {
+      setLedgerData(next);
+      setConflicts(epistemicLedgerService.getConflicts());
+    });
 
-    void epistemicLedgerService.getLedger().then((next) => setLedgerData(next));
+    void epistemicLedgerService.getLedger().then((next) => {
+      setLedgerData(next);
+      setConflicts(epistemicLedgerService.getConflicts());
+    });
 
     return () => {
       unsubscribeTelemetry();
@@ -79,7 +136,17 @@ export const KnowledgeGitWindow: React.FC<KnowledgeGitWindowProps> = ({
 
   const completedCount = nodes.filter((node) => node.status === 'completed').length;
   const activeCount = nodes.filter((node) => node.status === 'active').length;
-  const branchMeta = BRANCHES.find((branch) => branch.name === selectedBranch) || BRANCHES[0];
+
+  const allBranches = useMemo(() => {
+    const customList = customBranches.map((b) => ({
+      name: b,
+      label: 'custom hypothesis',
+      desc: 'Пользовательская ветка исследования и проверки гипотез',
+    }));
+    return [...DEFAULT_BRANCHES, ...customList];
+  }, [customBranches]);
+
+  const branchMeta = allBranches.find((branch) => branch.name === selectedBranch) || allBranches[0];
 
   // Dynamic commit history based on real actions, ledger facts, and telemetry
   const commitHistory = useMemo(() => {
@@ -145,29 +212,56 @@ export const KnowledgeGitWindow: React.FC<KnowledgeGitWindowProps> = ({
             },
           ];
     }
-    // feature/personalized-path
-    return [
-      ...notes.map((n, i) => ({
-        hash: `not-${i + 10}`,
-        label: `note: ${n.title.slice(0, 25)}`,
-        author: 'User Workspace',
-        time: 'recently',
-        summary: n.content.slice(0, 60) + '...',
-        branch: 'feature/personalized-path',
-        diff: [`+ tag: ${n.tag || 'general'}`],
-      })),
-      ...nodes
-        .filter((n) => n.status === 'active')
-        .map((n, i) => ({
-          hash: `act-${i + 50}`,
-          label: `active: ${n.title}`,
-          author: 'Curriculum Orchestrator',
-          time: 'in progress',
-          summary: `Текущий активный фокус изучения (${n.phaseTitle || 'блок'}).`,
+    if (selectedBranch === 'feature/personalized-path') {
+      return [
+        ...notes.map((n, i) => ({
+          hash: `not-${i + 10}`,
+          label: `note: ${n.title.slice(0, 25)}`,
+          author: 'User Workspace',
+          time: 'recently',
+          summary: n.content.slice(0, 60) + '...',
           branch: 'feature/personalized-path',
-          diff: [`+ unit_id: ${n.unitId || n.id}`, `+ state: active`],
+          diff: [`+ tag: ${n.tag || 'general'}`],
         })),
-    ].slice(0, 15);
+        ...nodes
+          .filter((n) => n.status === 'active')
+          .map((n, i) => ({
+            hash: `act-${i + 50}`,
+            label: `active: ${n.title}`,
+            author: 'Curriculum Orchestrator',
+            time: 'in progress',
+            summary: `Текущий активный фокус изучения (${n.phaseTitle || 'блок'}).`,
+            branch: 'feature/personalized-path',
+            diff: [`+ unit_id: ${n.unitId || n.id}`, `+ state: active`],
+          })),
+      ].slice(0, 15);
+    }
+
+    // Custom hypothesis branch commits
+    return [
+      {
+        hash: 'hyp-001',
+        label: `hypothesis: ${selectedBranch.replace('hypothesis/', '')}`,
+        author: 'Student HEAD',
+        time: 'активно',
+        summary: 'Ветка проверки рабочей гипотезы. Код изолирован до прохождения верификации.',
+        branch: selectedBranch,
+        diff: [
+          '+ status: testing hypothesis',
+          '+ isolated_context: true',
+          '+ peer_review_ready: false'
+        ]
+      },
+      {
+        hash: 'hyp-002',
+        label: 'spec: baseline invariant check',
+        author: 'Epistemic Engine',
+        time: '1h ago',
+        summary: 'Автоматическая генерация проверочных ассертов для текущей гипотезы.',
+        branch: selectedBranch,
+        diff: ['+ generated_assertions: 4', '+ syntax: validated']
+      }
+    ];
   }, [ledgerData, telemetryState, nodes, notes, selectedBranch]);
 
   // Real files in this branch with inspectable content
@@ -218,26 +312,39 @@ export const KnowledgeGitWindow: React.FC<KnowledgeGitWindowProps> = ({
       ];
     }
 
-    // research/debugging-loop
-    return [
-      ...(telemetryState.signals ?? []).map((s, idx) => ({
-        path: `telemetry/signals/signal-${idx + 1}-${s.type}.log`,
-        label: `Signal: ${s.type}`,
-        status: s.severity === 'high' ? ('conflict' as const) : ('staged' as const),
-        summary: s.details,
-        unitId: undefined,
-        content: `TIMESTAMP: ${new Date(s.timestamp).toISOString()}\nTYPE: ${s.type}\nSEVERITY: ${s.severity}\nDETAILS: ${s.details}\nRECOMMENDATION: Рекомендуется повторить ключевые инварианты главы.`,
-      })),
-      ...artifacts
-        .filter((a) => !a.passed)
-        .map((a) => ({
-          path: `artifacts/review/${a.filename}`,
-          label: a.unitTitle || a.filename,
-          status: 'conflict' as const,
-          summary: `Артефакт не сдан (${a.score || 0}%). Требуется ревизия.`,
-          unitId: a.unitId,
-          content: `// Artifact Review: ${a.unitTitle || a.filename}\n// Filename: ${a.filename}\n// Score: ${a.score || 0}%\n// Status: FAILED\n\n${a.fileContent || '// Код требует доработки'}`,
+    if (selectedBranch === 'research/debugging-loop') {
+      return [
+        ...(telemetryState.signals ?? []).map((s, idx) => ({
+          path: `telemetry/signals/signal-${idx + 1}-${s.type}.log`,
+          label: `Signal: ${s.type}`,
+          status: s.severity === 'high' ? ('conflict' as const) : ('staged' as const),
+          summary: s.details,
+          unitId: undefined,
+          content: `TIMESTAMP: ${new Date(s.timestamp).toISOString()}\nTYPE: ${s.type}\nSEVERITY: ${s.severity}\nDETAILS: ${s.details}\nRECOMMENDATION: Рекомендуется повторить ключевые инварианты главы.`,
         })),
+        ...artifacts
+          .filter((a) => !a.passed)
+          .map((a) => ({
+            path: `artifacts/review/${a.filename}`,
+            label: a.unitTitle || a.filename,
+            status: 'conflict' as const,
+            summary: `Артефакт не сдан (${a.score || 0}%). Требуется ревизия.`,
+            unitId: a.unitId,
+            content: `// Artifact Review: ${a.unitTitle || a.filename}\n// Filename: ${a.filename}\n// Score: ${a.score || 0}%\n// Status: FAILED\n\n${a.fileContent || '// Код требует доработки'}`,
+          })),
+      ];
+    }
+
+    // Custom hypothesis branch files
+    return [
+      {
+        path: `hypotheses/${selectedBranch.replace('/', '_')}.md`,
+        label: `Hypothesis Draft: ${selectedBranch}`,
+        status: 'modified' as const,
+        summary: 'Рабочая формулировка гипотезы студента.',
+        unitId: undefined,
+        content: `# Экспериментальная гипотеза: ${selectedBranch}\n\n## Цель проверки\nПроверить поведение алгоритма на граничных нагрузках и выяснить, сохраняется ли инвариант целостности.\n\n## Доказательная база\n- Статус верификации: В процессе\n- Защищено в спарринге: Ожидает ревью`
+      }
     ];
   }, [selectedBranch, nodes, ledgerData, notes, telemetryState, artifacts]);
 
@@ -248,384 +355,944 @@ export const KnowledgeGitWindow: React.FC<KnowledgeGitWindowProps> = ({
       )
     : 0;
 
-  // Real merge conflicts with resolve capability
-  const mergeConflicts = useMemo(() => {
-    const conflicts: Array<{
-      id: string;
-      title: string;
-      severity: 'low' | 'medium' | 'high';
-      source: string;
-      details: string;
-      resolution: string;
-    }> = [];
+  // Active Conflict Selection
+  const currentConflict = conflicts.find((c) => c.id === selectedConflictId) || conflicts[0];
 
-    const unresolvedConfusions = telemetryState.explicitConfusionFlags || [];
-    if (unresolvedConfusions.length > 0 && !resolvedConflictIds.has('telemetry-confusion')) {
-      conflicts.push({
-        id: 'telemetry-confusion',
-        title: 'Сигналы затруднения требуют адаптивного слияния',
-        severity: 'high',
-        source: 'Telemetry Engine',
-        details: `Зафиксировано ${unresolvedConfusions.length} сигналов сомнения (${unresolvedConfusions.slice(0, 2).join(', ')}).`,
-        resolution: 'Слить поясняющий инвариант в ветку personal path и снять флаг затруднения.',
-      });
+  const handleRunSimulator = () => {
+    setRunningSimulator(true);
+    setSimulatorOutput(null);
+    playChime('click');
+    setTimeout(() => {
+      setRunningSimulator(false);
+      if (currentConflict) {
+        setSimulatorOutput(currentConflict.counterExampleOutput);
+        playChime('alert');
+      }
+    }, 600);
+  };
+
+  const handleResolveConflict = (conflictId: string) => {
+    const res = epistemicLedgerService.resolveConflict(conflictId);
+    if (res.success) {
+      playChime('success');
+      setResolveSuccessNotice(`Конфликт разрешен! +${res.xpReward} XP. Истинный инвариант добавлен в ветку main.`);
+      setConflicts(epistemicLedgerService.getConflicts());
+      setTimeout(() => setResolveSuccessNotice(null), 3000);
     }
+  };
 
-    const failedArtifacts = artifacts.filter((a) => !a.passed);
-    if (failedArtifacts.length > 0 && !resolvedConflictIds.has('artifact-rework')) {
-      conflicts.push({
-        id: 'artifact-rework',
-        title: 'Артефакты требуют ревизии перед слиянием в main',
-        severity: 'medium',
-        source: 'Artifact Review',
-        details: `Файл «${failedArtifacts[0].filename}» не прошёл порог зачёта (${failedArtifacts[0].score || 0}%).`,
-        resolution: 'Объединить исправления кода и перезапустить проверку артефакта.',
-      });
-    }
-
-    const activeNodes = nodes.filter((n) => n.status === 'active');
-    if (activeNodes.length > 0 && !resolvedConflictIds.has('branch-priority')) {
-      conflicts.push({
-        id: 'branch-priority',
-        title: 'Несинхронизированные активные модули',
-        severity: selectedBranch === 'feature/personalized-path' ? 'medium' : 'low',
-        source: 'Curriculum Planner',
-        details: `Активный модуль «${activeNodes[0].title}» находится в процессе изучения.`,
-        resolution: 'Зафиксировать промежуточный прогресс в ветке personal path.',
-      });
-    }
-
-    return conflicts;
-  }, [telemetryState, artifacts, nodes, selectedBranch, resolvedConflictIds]);
-
-  const handleResolveConflict = (conflictId: string, resolutionTitle: string) => {
-    setResolvedConflictIds((prev) => new Set([...prev, conflictId]));
+  const handleCreateBranch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newBranchInput.trim()) return;
+    const name = epistemicLedgerService.addCustomBranch(newBranchInput);
+    setCustomBranches(epistemicLedgerService.getCustomBranches());
+    setSelectedBranch(name);
+    setNewBranchInput('');
+    setShowNewBranchModal(false);
     playChime('success');
-    setResolutionNotice(`Конфликт «${resolutionTitle}» успешно разрешён и слит в контекст.`);
-    setTimeout(() => setResolutionNotice(null), 4000);
+  };
 
-    // Record crystallization in ledger
-    void epistemicLedgerService.synthesizeCoreNode({
-      title: `Слияние: ${resolutionTitle}`,
-      subtitle: 'Разрешённый конфликт ветвления',
-      layer: 'mantle',
-      domain: 'Архитектура знаний',
-      description: `Конфликт ветки ${selectedBranch} успешно разрешён и синхронизирован с основным ядром знаний.`,
-    });
+  const handleCopyHash = (hash: string) => {
+    navigator.clipboard.writeText(hash);
+    setCopiedHash(hash);
+    setTimeout(() => setCopiedHash(null), 1500);
+  };
+
+  const handleStartBisect = () => {
+    setBisectActive(true);
+    setBisectStep(1);
+    setBisectResult(null);
+    playChime('click');
+  };
+
+  const handleStepBisect = (answerGood: boolean) => {
+    playChime('click');
+    if (bisectStep < 3) {
+      setBisectStep(bisectStep + 1);
+    } else {
+      // Finished bisect: found root cause
+      setBisectResult({
+        targetFault: 'Провал теста Capstone на распределенные гонки данных (Race Conditions)',
+        rootCommit: 'mod-102 (Асинхронные структуры данных)',
+        rootConcept: 'Атомарность операций и отсутствие мьютекса в разделяемой памяти',
+        remediationUnitTitle: 'Модуль: Синхронизация и мьютексы',
+        explanation: 'Скрытый пробел возник на этапе изучения асинхронных коллекций. При переходе к Capstone не был учтен инвариант неатомарного инкремента.'
+      });
+      playChime('alert');
+    }
   };
 
   return (
-    <div className="h-full w-full flex flex-col bg-[#F8F9FA] text-[#202124] overflow-hidden select-none">
-      {/* Top Header - Google Cloud Console / Developer Style */}
-      <header className="flex items-center justify-between px-5 py-2.5 border-b border-[#DADCE0] bg-white shrink-0">
-        <div className="flex items-center space-x-3">
-          <div className="p-2 rounded-lg bg-[#E8F0FE] text-[#1A73E8]">
-            <GitBranch className="w-4 h-4" />
+    <div className="flex flex-col h-full bg-[#FFFBFC] text-[#241519] font-sans selection:bg-[#C8266A] selection:text-white">
+      
+      {/* Top Header & Sub-nav Bar */}
+      <div className="bg-[#FFF1F6] border-b border-[#ECD5DE] px-4 py-3 flex-shrink-0 flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-[#C8266A] text-white flex items-center justify-center font-bold shadow-sm">
+            <GitBranch className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-[10px] uppercase tracking-wider text-[#5F6368] font-medium">Knowledge Git</div>
-            <div className="text-sm font-semibold text-[#202124]">Репозиторий учебных знаний</div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-base font-bold font-display text-[#241519]">
+                Git Знаний & Эпистемический Леджер
+              </h2>
+              <span className="text-[11px] font-mono font-bold bg-[#FFDFEB] text-[#C8266A] px-2 py-0.5 rounded-full border border-[#F48FB4]">
+                v3.4 Pure Context
+              </span>
+            </div>
+            <p className="text-xs text-[#6F5A63]">
+              Контрольные точки понимания, версионирование ментальных моделей и устранение когнитивных конфликтов
+            </p>
           </div>
         </div>
 
-        {/* Branch Selector (Google Segmented Buttons / Chips) */}
-        <div className="flex items-center gap-1.5 text-xs flex-wrap justify-end">
-          {BRANCHES.map((branch) => {
-            const isSelected = selectedBranch === branch.name;
-            return (
-              <button
-                key={branch.name}
-                type="button"
-                onClick={() => {
-                  setSelectedBranch(branch.name);
-                  playChime('click');
-                }}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium transition cursor-pointer flex items-center gap-1.5 border ${
-                  isSelected
-                    ? 'bg-[#E8F0FE] text-[#1A73E8] border-[#1A73E8]/40 shadow-xs'
-                    : 'bg-white text-[#5F6368] border-[#DADCE0] hover:bg-[#F1F3F4] hover:text-[#202124]'
-                }`}
-                title={branch.desc}
-              >
-                <GitBranch className="w-3.5 h-3.5" />
-                <span>{branch.name}</span>
-              </button>
-            );
-          })}
-        </div>
-      </header>
-
-      {/* Metrics Row (Google Cards Style) */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-4 border-b border-[#DADCE0] bg-white shrink-0">
-        <div className="rounded-xl border border-[#DADCE0] bg-[#FFFFFF] p-3.5 shadow-none">
-          <div className="flex items-center justify-between text-xs text-[#5F6368]">
-            <span>Зафиксировано</span>
-            <CheckCircle2 className="w-4 h-4 text-[#1E8E3E]" />
-          </div>
-          <div className="mt-1 text-2xl font-bold text-[#202124]">{completedCount}</div>
-          <div className="text-[11px] text-[#5F6368]">освоенных модулей</div>
-        </div>
-
-        <div className="rounded-xl border border-[#DADCE0] bg-[#FFFFFF] p-3.5 shadow-none">
-          <div className="flex items-center justify-between text-xs text-[#5F6368]">
-            <span>В разработке</span>
-            <Layers className="w-4 h-4 text-[#1A73E8]" />
-          </div>
-          <div className="mt-1 text-2xl font-bold text-[#202124]">{activeCount}</div>
-          <div className="text-[11px] text-[#5F6368]">активных веток</div>
-        </div>
-
-        <div className="rounded-xl border border-[#DADCE0] bg-[#FFFFFF] p-3.5 shadow-none">
-          <div className="flex items-center justify-between text-xs text-[#5F6368]">
-            <span>Качество знаний</span>
-            <Database className="w-4 h-4 text-[#8430CE]" />
-          </div>
-          <div className="mt-1 text-2xl font-bold text-[#202124]">{avgMastery}%</div>
-          <div className="text-[11px] text-[#5F6368]">средний балл курса</div>
-        </div>
-
-        <div className="rounded-xl border border-[#DADCE0] bg-[#FFFFFF] p-3.5 shadow-none">
-          <div className="flex items-center justify-between text-xs text-[#5F6368]">
-            <span>Аксиомы реестра</span>
-            <Sparkles className="w-4 h-4 text-[#E37400]" />
-          </div>
-          <div className="mt-1 text-2xl font-bold text-[#202124]">{ledgerData?.provenFacts?.length ?? 0}</div>
-          <div className="text-[11px] text-[#5F6368]">доказанных фактов</div>
+        {/* Tab switcher */}
+        <div className="flex items-center gap-1 bg-[#FFDFEB]/60 p-1 rounded-2xl border border-[#ECD5DE] overflow-x-auto">
+          <button
+            type="button"
+            onClick={() => setActiveTab('tree')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+              activeTab === 'tree' ? 'bg-[#C8266A] text-white shadow-sm' : 'text-[#6F5A63] hover:text-[#241519]'
+            }`}
+          >
+            <GitCommitHorizontal className="w-3.5 h-3.5" /> Ветки & Дерево
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('conflicts')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer relative ${
+              activeTab === 'conflicts' ? 'bg-[#C8266A] text-white shadow-sm' : 'text-[#6F5A63] hover:text-[#241519]'
+            }`}
+          >
+            <AlertTriangle className="w-3.5 h-3.5" /> 3-Way Конфликты
+            {conflicts.filter((c) => !c.resolved).length > 0 && (
+              <span className="w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white"></span>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('diff')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+              activeTab === 'diff' ? 'bg-[#C8266A] text-white shadow-sm' : 'text-[#6F5A63] hover:text-[#241519]'
+            }`}
+          >
+            <Layers className="w-3.5 h-3.5" /> Семантический Дифф
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('bisect')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+              activeTab === 'bisect' ? 'bg-[#C8266A] text-white shadow-sm' : 'text-[#6F5A63] hover:text-[#241519]'
+            }`}
+          >
+            <Search className="w-3.5 h-3.5" /> Knowledge Bisect
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('tags')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+              activeTab === 'tags' ? 'bg-[#C8266A] text-white shadow-sm' : 'text-[#6F5A63] hover:text-[#241519]'
+            }`}
+          >
+            <Tag className="w-3.5 h-3.5" /> Релизы & Теги
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('prs')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+              activeTab === 'prs' ? 'bg-[#C8266A] text-white shadow-sm' : 'text-[#6F5A63] hover:text-[#241519]'
+            }`}
+          >
+            <GitPullRequest className="w-3.5 h-3.5" /> Pull Requests
+          </button>
         </div>
       </div>
 
-      {resolutionNotice && (
-        <div className="mx-4 mt-3 p-3 rounded-lg bg-[#E6F4EA] border border-[#CEEAD6] text-[#137333] text-xs flex items-center justify-between">
-          <span>{resolutionNotice}</span>
-          <button type="button" onClick={() => setResolutionNotice(null)} className="p-1 hover:bg-[#CEEAD6] rounded text-[#137333]">
-            <X className="w-3.5 h-3.5" />
+      {/* Live Pure-Context Telemetry Ribbon */}
+      <div className="bg-[#FFF1F6]/70 border-b border-[#ECD5DE] px-4 py-1.5 flex items-center justify-between text-[11px] text-[#6F5A63] flex-wrap gap-2">
+        <div className="flex items-center gap-4">
+          <span className="flex items-center gap-1.5 font-medium">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <b>Телеметрия:</b> {telemetryState.sessionMetrics?.trackedActions || 0} событий записано
+          </span>
+          <span className="flex items-center gap-1.5">
+            <Activity className="w-3 h-3 text-[#C8266A]" />
+            Резонанс ядра: <b>{telemetryState.coreResonancePercentage}%</b>
+          </span>
+          <span className="flex items-center gap-1.5">
+            <ShieldCheck className="w-3 h-3 text-indigo-600" />
+            Инвариантов в памяти: <b>{ledgerData?.provenFacts?.length || completedCount}</b>
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span>Средний мастер-балл: <b className="text-[#C8266A]">{avgMastery}%</b></span>
+          <button
+            type="button"
+            onClick={() => setShowNewBranchModal(true)}
+            className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white border border-[#ECD5DE] text-[#C8266A] font-semibold hover:bg-[#FFDFEB] transition cursor-pointer text-[10.5px]"
+          >
+            <Plus className="w-3 h-3" /> Новая ветка гипотезы
           </button>
         </div>
-      )}
+      </div>
 
-      {/* Main Split: Git Commit History & Change Set */}
-      <div className="grid grid-cols-1 md:grid-cols-[1.1fr_1.5fr] flex-1 min-h-0 p-4 gap-4 overflow-hidden">
-        {/* Left Column: Commit Log */}
-        <div className="rounded-xl border border-[#DADCE0] bg-white p-4 overflow-hidden flex flex-col shadow-none">
-          <div className="flex items-center justify-between pb-2 mb-3 border-b border-[#DADCE0] shrink-0">
-            <div className="flex items-center space-x-2 text-sm font-semibold text-[#202124]">
-              <GitCommitHorizontal className="w-4 h-4 text-[#1E8E3E]" />
-              <span>История коммитов ({commitHistory.length})</span>
-            </div>
-            <span className="text-[10px] uppercase tracking-wider text-[#5F6368] font-mono font-medium">
-              {branchMeta.label}
-            </span>
-          </div>
-
-          <div className="space-y-2.5 overflow-y-auto pr-1 flex-1">
-            {commitHistory.map((commit, idx) => (
-              <div key={`${commit.hash}-${idx}`} className="rounded-lg border border-[#DADCE0] bg-white p-3 hover:bg-[#F8F9FA] transition space-y-1.5">
-                <div className="flex items-center justify-between text-xs text-[#5F6368] font-mono">
-                  <span className="text-[#1A73E8] font-bold bg-[#E8F0FE] px-1.5 py-0.5 rounded text-[11px]">{commit.hash}</span>
-                  <span>{commit.time}</span>
+      {/* Main Content Areas */}
+      <div className="flex-1 overflow-hidden p-4">
+        
+        {/* ======================================================== */}
+        {/* 1. TAB: TREE & COMMITS (Graph + Files + Diff Viewer)     */}
+        {/* ======================================================== */}
+        {activeTab === 'tree' && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-full">
+            
+            {/* Left Column: Interactive Topology Graph & Branch Selector (4 cols) */}
+            <div className="lg:col-span-4 flex flex-col gap-3 h-full overflow-hidden">
+              
+              {/* Branch Selector */}
+              <div className="bg-white p-3 rounded-2xl border border-[#ECD5DE] shadow-sm flex-shrink-0 space-y-2">
+                <div className="flex items-center justify-between text-xs font-bold text-[#6F5A63]">
+                  <span>ВЕТКА (BRANCH)</span>
+                  <span className="text-[10px] font-mono text-[#C8266A]">HEAD → {selectedBranch}</span>
                 </div>
-                <div className="text-sm font-semibold text-[#202124] leading-snug">{commit.label}</div>
-                <div className="text-xs text-[#5F6368] leading-relaxed">{commit.summary}</div>
-                <div className="text-[11px] text-[#80868B]">Автор: {commit.author}</div>
-                {commit.diff && commit.diff.length > 0 && (
-                  <div className="pt-1.5 border-t border-[#F1F3F4] space-y-0.5 font-mono text-[11px] text-[#137333]">
-                    {commit.diff.map((line, dIdx) => (
-                      <div key={dIdx}>{line}</div>
-                    ))}
+                <div className="space-y-1 max-h-36 overflow-y-auto pr-1">
+                  {allBranches.map((branch) => (
+                    <button
+                      key={branch.name}
+                      type="button"
+                      onClick={() => setSelectedBranch(branch.name)}
+                      className={`w-full text-left px-3 py-2 rounded-xl text-xs flex items-center justify-between transition cursor-pointer ${
+                        selectedBranch === branch.name
+                          ? 'bg-[#FFDFEB] text-[#C8266A] font-bold border border-[#F48FB4]'
+                          : 'bg-[#FFFBFC] text-[#241519] hover:bg-[#FFF1F6] border border-transparent'
+                      }`}
+                    >
+                      <span className="font-mono truncate">{branch.name}</span>
+                      <span className="text-[10px] uppercase font-bold text-[#6F5A63] opacity-80">
+                        {branch.label.split(' ')[0]}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[11px] text-[#6F5A63] italic pt-1 border-t border-[#ECD5DE]">
+                  {branchMeta.desc}
+                </p>
+              </div>
+
+              {/* Visual Branch DAG Topology Canvas (SVG) */}
+              <div className="bg-white p-3.5 rounded-2xl border border-[#ECD5DE] shadow-sm flex-1 overflow-y-auto space-y-2">
+                <div className="flex items-center justify-between text-xs font-bold text-[#6F5A63] mb-1">
+                  <span>ВИЗУАЛЬНОЕ ДЕРЕВО ВЕТОК</span>
+                  <span className="text-[10px] font-mono text-emerald-600">● 100% Invariants</span>
+                </div>
+
+                <div className="relative py-2 px-1">
+                  <svg viewBox="0 0 300 240" className="w-full h-auto drop-shadow-sm font-mono text-[10px]">
+                    {/* Main branch trunk */}
+                    <line x1="40" y1="20" x2="40" y2="220" stroke="#C8266A" strokeWidth="3" strokeLinecap="round" />
+                    <text x="50" y="24" fill="#C8266A" fontWeight="bold">main</text>
+
+                    {/* Hypothesis branch split and merge */}
+                    <path d="M40 70 C 110 70, 120 120, 120 140 C 120 170, 100 190, 40 190" fill="none" stroke="#F59E0B" strokeWidth="2.5" strokeDasharray="4 3" />
+                    <text x="130" y="145" fill="#D97706" fontWeight="bold">hypothesis/*</text>
+
+                    {/* Telemetry/Debugging branch */}
+                    <path d="M40 110 C 180 110, 190 150, 190 180" fill="none" stroke="#0284C7" strokeWidth="2" strokeDasharray="3 3" />
+                    <text x="198" y="185" fill="#0284C7" fontWeight="bold">research/*</text>
+
+                    {/* Commit nodes on Main */}
+                    <circle cx="40" cy="40" r="6" fill="#C8266A" className="cursor-pointer hover:r-8 transition" />
+                    <circle cx="40" cy="70" r="6" fill="#C8266A" />
+                    <circle cx="40" cy="110" r="6" fill="#C8266A" />
+                    <circle cx="40" cy="150" r="6" fill="#C8266A" />
+                    <circle cx="40" cy="190" r="7" fill="#10B981" stroke="#fff" strokeWidth="2" />
+                    <circle cx="40" cy="220" r="8" fill="#C8266A" stroke="#FFDFEB" strokeWidth="3" className="animate-pulse" />
+
+                    {/* Commit nodes on Hypothesis */}
+                    <circle cx="120" cy="120" r="5" fill="#F59E0B" />
+                    <circle cx="120" cy="150" r="5" fill="#F59E0B" />
+
+                    {/* Commit nodes on Research */}
+                    <circle cx="190" cy="150" r="5" fill="#0284C7" />
+                    <circle cx="190" cy="180" r="5" fill="#0284C7" />
+                  </svg>
+                </div>
+
+                <div className="pt-2 border-t border-[#ECD5DE] text-[11px] text-[#6F5A63] flex items-center justify-between">
+                  <span>HEAD: <b>{commitHistory[0]?.hash || 'fct-latest'}</b></span>
+                  <span className="text-emerald-600 font-semibold">● Merged clean</span>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Middle Column: Commit History Log (4 cols) */}
+            <div className="lg:col-span-4 bg-white p-3.5 rounded-2xl border border-[#ECD5DE] shadow-sm flex flex-col h-full overflow-hidden">
+              <div className="flex items-center justify-between text-xs font-bold text-[#6F5A63] pb-2 border-b border-[#ECD5DE] mb-2">
+                <span>ЖУРНАЛ КОММИТОВ ({commitHistory.length})</span>
+                <span className="text-[10px] text-[#C8266A] font-mono">git log --graph</span>
+              </div>
+
+              <div className="flex-1 overflow-y-auto space-y-2.5 pr-1">
+                {commitHistory.map((c) => (
+                  <div
+                    key={c.hash}
+                    onClick={() => setSelectedCommitHash(c.hash)}
+                    className={`p-3 rounded-xl border transition cursor-pointer ${
+                      selectedCommitHash === c.hash
+                        ? 'bg-[#FFDFEB] border-[#C8266A] ring-1 ring-[#C8266A]'
+                        : 'bg-[#FFFBFC] border-[#ECD5DE] hover:border-[#F48FB4]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono text-xs font-bold text-[#C8266A] bg-white px-2 py-0.5 rounded-md border border-[#ECD5DE]">
+                          {c.hash}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCopyHash(c.hash);
+                          }}
+                          className="text-[#6F5A63] hover:text-[#241519] p-0.5"
+                          title="Скопировать хэш"
+                        >
+                          {copiedHash === c.hash ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                        </button>
+                      </div>
+                      <span className="text-[10.5px] text-[#6F5A63] font-medium">{c.time}</span>
+                    </div>
+
+                    <h4 className="text-xs font-bold text-[#241519] mb-1 line-clamp-1">
+                      {c.label}
+                    </h4>
+                    <p className="text-[11.5px] text-[#6F5A63] line-clamp-2 mb-2">
+                      {c.summary}
+                    </p>
+
+                    <div className="space-y-0.5 bg-white/70 p-2 rounded-lg border border-[#ECD5DE]/60 font-mono text-[10.5px]">
+                      {c.diff.map((d, i) => (
+                        <div
+                          key={i}
+                          className={d.startsWith('+') ? 'text-emerald-700' : d.startsWith('-') ? 'text-rose-600' : 'text-[#6F5A63]'}
+                        >
+                          {d}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Right Column: Tracked Knowledge Files & Code Inspector (4 cols) */}
+            <div className="lg:col-span-4 bg-white p-3.5 rounded-2xl border border-[#ECD5DE] shadow-sm flex flex-col h-full overflow-hidden">
+              <div className="flex items-center justify-between text-xs font-bold text-[#6F5A63] pb-2 border-b border-[#ECD5DE] mb-2">
+                <span>ФАЙЛОВАЯ СИСТЕМА ЗНАНИЙ</span>
+                <span className="text-[10px] text-[#6F5A63]">{trackedKnowledge.length} файлов</span>
+              </div>
+
+              {inspectedFile ? (
+                /* File Source Inspector */
+                <div className="flex-1 flex flex-col overflow-hidden space-y-2">
+                  <div className="flex items-center justify-between bg-[#FFF1F6] p-2 rounded-xl border border-[#ECD5DE]">
+                    <div className="flex items-center gap-1.5 truncate">
+                      <FileCode className="w-4 h-4 text-[#C8266A]" />
+                      <span className="font-mono text-xs font-bold text-[#241519] truncate">
+                        {inspectedFile.path}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setInspectedFile(null)}
+                      className="p-1 text-[#6F5A63] hover:text-[#241519] rounded-md hover:bg-white"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <p className="text-xs text-[#6F5A63] italic px-1">
+                    {inspectedFile.summary}
+                  </p>
+
+                  <div className="flex-1 bg-[#1A1016] text-[#FFDFEB] p-3 rounded-xl font-mono text-xs overflow-y-auto whitespace-pre-wrap leading-relaxed shadow-inner">
+                    {inspectedFile.content}
+                  </div>
+
+                  {inspectedFile.unitId && onLaunchUnit && (
+                    <button
+                      type="button"
+                      onClick={() => onLaunchUnit(inspectedFile.unitId!)}
+                      className="w-full py-2 bg-[#C8266A] hover:bg-[#A81B56] text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 transition shadow-sm cursor-pointer"
+                    >
+                      <Play className="w-3.5 h-3.5" /> Открыть интерактивный модуль
+                    </button>
+                  )}
+                </div>
+              ) : (
+                /* File List */
+                <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+                  {trackedKnowledge.map((file, idx) => (
+                    <div
+                      key={idx}
+                      onClick={() => setInspectedFile({ ...file, branch: selectedBranch })}
+                      className="p-2.5 rounded-xl bg-[#FFFBFC] border border-[#ECD5DE] hover:border-[#C8266A] transition cursor-pointer flex items-start gap-2.5"
+                    >
+                      <div className="w-6 h-6 rounded-lg bg-[#FFDFEB] text-[#C8266A] flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <FileText className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-1 mb-0.5">
+                          <h5 className="font-mono text-xs font-bold text-[#241519] truncate">
+                            {file.path.split('/').pop()}
+                          </h5>
+                          <span
+                            className={`text-[9.5px] font-bold px-1.5 py-0.2 rounded uppercase ${
+                              file.status === 'committed'
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : file.status === 'conflict'
+                                ? 'bg-rose-100 text-rose-800'
+                                : 'bg-blue-100 text-blue-800'
+                            }`}
+                          >
+                            {file.status}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-[#6F5A63] line-clamp-1">
+                          {file.summary}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+          </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* 2. TAB: 3-WAY COGNITIVE CONFLICTS (Interactive Merge)    */}
+        {/* ======================================================== */}
+        {activeTab === 'conflicts' && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-full">
+            
+            {/* Left Column: Conflict list (4 cols) */}
+            <div className="lg:col-span-4 bg-white p-3.5 rounded-2xl border border-[#ECD5DE] shadow-sm flex flex-col h-full overflow-hidden">
+              <div className="flex items-center justify-between text-xs font-bold text-[#6F5A63] pb-2 border-b border-[#ECD5DE] mb-2">
+                <span>ОБНАРУЖЕННЫЕ КОНФЛИКТЫ ({conflicts.length})</span>
+                <span className="text-[10px] text-rose-600 font-bold">● Git Cognitive Merge</span>
+              </div>
+
+              <div className="flex-1 overflow-y-auto space-y-2.5 pr-1">
+                {conflicts.map((conf) => (
+                  <div
+                    key={conf.id}
+                    onClick={() => {
+                      setSelectedConflictId(conf.id);
+                      setSimulatorOutput(null);
+                    }}
+                    className={`p-3 rounded-xl border transition cursor-pointer ${
+                      currentConflict?.id === conf.id
+                        ? 'bg-[#FFDFEB] border-[#C8266A] ring-1 ring-[#C8266A]'
+                        : 'bg-[#FFFBFC] border-[#ECD5DE] hover:border-[#F48FB4]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-1 mb-1">
+                      <span className="font-mono text-[11px] font-bold text-[#C8266A]">{conf.topic}</span>
+                      {conf.resolved ? (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 flex items-center gap-1">
+                          <Check className="w-3 h-3" /> Решено
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 animate-pulse">
+                          Конфликт
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-[#6F5A63] line-clamp-2 mb-1.5">
+                      {conf.userHypothesis}
+                    </p>
+                    <span className="text-[10.5px] font-bold text-[#C8266A]">
+                      Награда: +{conf.xpReward} XP
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Right Column: 3-Way Diff & Runnable Simulator (8 cols) */}
+            <div className="lg:col-span-8 bg-white p-5 rounded-2xl border border-[#ECD5DE] shadow-sm flex flex-col h-full overflow-y-auto space-y-4">
+              {currentConflict ? (
+                <>
+                  <div className="flex items-center justify-between flex-wrap gap-2 pb-3 border-b border-[#ECD5DE]">
+                    <div>
+                      <span className="text-xs font-mono font-bold text-[#6F5A63] uppercase">
+                        Разбор когнитивного конфликта понимания
+                      </span>
+                      <h3 className="text-base font-bold font-display text-[#241519]">
+                        {currentConflict.topic}
+                      </h3>
+                    </div>
+                    {currentConflict.resolved ? (
+                      <div className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold flex items-center gap-1.5">
+                        <CheckCircle2 className="w-4 h-4" /> Конфликт разрешен и слит с веткой main
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleResolveConflict(currentConflict.id)}
+                        className="px-4 py-2 bg-[#C8266A] hover:bg-[#A81B56] text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-md transition cursor-pointer"
+                      >
+                        <GitMerge className="w-4 h-4" /> Разрешить конфликт и влить в main (+{currentConflict.xpReward} XP)
+                      </button>
+                    )}
+                  </div>
+
+                  {resolveSuccessNotice && (
+                    <div className="p-3 rounded-xl bg-[#DCFCE7] border border-[#86EFAC] text-emerald-900 text-xs font-bold flex items-center gap-2 animate-bounce">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      <span>{resolveSuccessNotice}</span>
+                    </div>
+                  )}
+
+                  {/* 3-Way Side-by-Side Diff Panels */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    
+                    {/* Panel 1: User's Mental Model (Branch Hypothesis) */}
+                    <div className="bg-rose-50/60 border border-rose-200 p-3.5 rounded-xl space-y-2">
+                      <div className="flex items-center justify-between text-xs font-bold text-rose-800">
+                        <span>{'<<<<<<<'} ВЕТКА СТУДЕНТА (ГИПОТЕЗА)</span>
+                        <span className="font-mono text-[10px]">HEAD: hypothesis</span>
+                      </div>
+                      <p className="text-xs text-rose-900 leading-relaxed font-sans">
+                        "{currentConflict.userHypothesis}"
+                      </p>
+                      <span className="inline-block text-[10.5px] text-rose-600 bg-white px-2 py-0.5 rounded border border-rose-200">
+                        ⚠️ Когнитивное заблуждение
+                      </span>
+                    </div>
+
+                    {/* Panel 2: Canonical Invariant (Main Branch) */}
+                    <div className="bg-emerald-50/60 border border-emerald-200 p-3.5 rounded-xl space-y-2">
+                      <div className="flex items-center justify-between text-xs font-bold text-emerald-800">
+                        <span>{'======='} КАНОНИЧЕСКИЙ ИНВАРИАНТ (MAIN)</span>
+                        <span className="font-mono text-[10px]">origin/main</span>
+                      </div>
+                      <p className="text-xs text-emerald-900 leading-relaxed font-sans font-medium">
+                        "{currentConflict.canonicalInvariant}"
+                      </p>
+                      <span className="inline-block text-[10.5px] text-emerald-700 bg-white px-2 py-0.5 rounded border border-emerald-200">
+                        ✅ Доказанный закон
+                      </span>
+                    </div>
+
+                  </div>
+
+                  {/* Explanation & Counter-example Code Simulator */}
+                  <div className="bg-[#1A1016] text-[#FFDFEB] p-4 rounded-2xl space-y-3 shadow-md">
+                    <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                      <span className="font-mono text-xs text-[#F48FB4] font-bold">
+                        {">>>>>>>"} ДОКАЗАТЕЛЬНЫЙ КОНТРПРИМЕР В ПЕСОЧНИЦЕ
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleRunSimulator}
+                        disabled={runningSimulator}
+                        className="flex items-center gap-1 px-3 py-1 bg-[#C8266A] hover:bg-[#A81B56] text-white text-xs font-bold rounded-lg transition disabled:opacity-50 cursor-pointer"
+                      >
+                        <Play className="w-3.5 h-3.5" />
+                        {runningSimulator ? 'Выполнение...' : 'Запустить доказательство'}
+                      </button>
+                    </div>
+
+                    <pre className="font-mono text-xs overflow-x-auto text-emerald-300 leading-relaxed">
+                      {currentConflict.counterExampleCode}
+                    </pre>
+
+                    {simulatorOutput && (
+                      <div className="bg-black/60 p-3 rounded-xl border border-white/10 space-y-1">
+                        <span className="text-[10px] uppercase font-mono text-[#F48FB4] font-bold block">
+                          Терминальный вывод (Output):
+                        </span>
+                        <pre className="font-mono text-xs text-white whitespace-pre-wrap">
+                          {simulatorOutput}
+                        </pre>
+                      </div>
+                    )}
+
+                    <div className="pt-2 border-t border-white/10 text-xs text-[#FFDFEB]/80 leading-relaxed">
+                      <b>Объяснение ИИ-арбитра:</b> {currentConflict.explanation}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-12 text-[#6F5A63]">
+                  Выберите конфликт из списка слева для просмотра 3-Way Diff.
+                </div>
+              )}
+            </div>
+
+          </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* 3. TAB: SEMANTIC KNOWLEDGE DIFF (Delta Growth)           */}
+        {/* ======================================================== */}
+        {activeTab === 'diff' && (
+          <div className="bg-white p-5 rounded-2xl border border-[#ECD5DE] shadow-sm h-full overflow-y-auto space-y-5">
+            <div className="flex items-center justify-between flex-wrap gap-3 pb-3 border-b border-[#ECD5DE]">
+              <div>
+                <h3 className="text-base font-bold font-display text-[#241519]">
+                  Семантический Дифф Роста (Knowledge Delta)
+                </h3>
+                <p className="text-xs text-[#6F5A63]">
+                  Сравнение текущего состояния памяти со стартовым срезом спринта
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-[#6F5A63]">Базовый срез:</span>
+                <select
+                  value={diffBasePeriod}
+                  onChange={(e) => setDiffBasePeriod(e.target.value as any)}
+                  className="px-3 py-1.5 bg-[#FFFBFC] border border-[#ECD5DE] rounded-xl text-xs font-semibold text-[#241519] focus:outline-none focus:border-[#C8266A]"
+                >
+                  <option value="sprint-start">Начало спринта (7 дней назад)</option>
+                  <option value="yesterday">Вчерашний срез</option>
+                  <option value="day-1">День 1 (Точка старта)</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Metric Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl space-y-1">
+                <div className="flex items-center justify-between text-emerald-800 text-xs font-bold">
+                  <span>+ НОВЫЕ ИНВАРИАНТЫ</span>
+                  <span className="text-lg font-mono">+{completedCount || 8}</span>
+                </div>
+                <p className="text-xs text-emerald-900">
+                  Темы, успешно сданные в «Чистом листе» и подтвержденные практикой.
+                </p>
+              </div>
+
+              <div className="bg-amber-50 border border-amber-200 p-4 rounded-2xl space-y-1">
+                <div className="flex items-center justify-between text-amber-800 text-xs font-bold">
+                  <span>~ РИСК ЗАБЫВАНИЯ (ЭББИНГАУЗ)</span>
+                  <span className="text-lg font-mono">~2 темы</span>
+                </div>
+                <p className="text-xs text-amber-900">
+                  Узлы, требующие повторения в ближайшие 24 часа для закрепления в долговременной памяти.
+                </p>
+              </div>
+
+              <div className="bg-rose-50 border border-rose-200 p-4 rounded-2xl space-y-1">
+                <div className="flex items-center justify-between text-rose-800 text-xs font-bold">
+                  <span>- ОПРОВЕРГНУТЫЕ ЗАБЛУЖДЕНИЯ</span>
+                  <span className="text-lg font-mono">-3 ошибки</span>
+                </div>
+                <p className="text-xs text-rose-900">
+                  Когнитивные конфликты, разрешенные доказательствами в песочнице.
+                </p>
+              </div>
+            </div>
+
+            {/* Detailed Semantic Breakdown List */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-[#6F5A63]">
+                Детальные изменения ментальных моделей:
+              </h4>
+
+              <div className="space-y-2 font-mono text-xs">
+                {nodes.filter((n) => n.status === 'completed').map((node, i) => (
+                  <div key={i} className="p-3 rounded-xl bg-[#DCFCE7]/60 border border-[#86EFAC] text-emerald-950 flex items-center justify-between">
+                    <span>+ [ADDED INVARIANT] {node.title} (Score: {node.score || 100}%)</span>
+                    <span className="text-[10px] text-emerald-800 bg-white px-2 py-0.5 rounded border border-emerald-200">
+                      Верифицировано
+                    </span>
+                  </div>
+                ))}
+                <div className="p-3 rounded-xl bg-[#FEF3C7]/60 border border-[#FDE68A] text-amber-950 flex items-center justify-between">
+                  <span>~ [DECAY WARNING] Рекурсивные алгоритмы & Стек вызовов (Прошло 5 дней с момента практики)</span>
+                  <span className="text-[10px] text-amber-800 bg-white px-2 py-0.5 rounded border border-amber-200">
+                    Повторить
+                  </span>
+                </div>
+                <div className="p-3 rounded-xl bg-[#FFE4E6]/60 border border-[#FECDD3] text-rose-950 flex items-center justify-between">
+                  <span>- [REFUTED] Заблуждение о многопоточности JavaScript в Event Loop удалено из базы знаний</span>
+                  <span className="text-[10px] text-rose-800 bg-white px-2 py-0.5 rounded border border-rose-200">
+                    Разрешено
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* 4. TAB: KNOWLEDGE BISECT (Diagnostic Root Cause Finder)   */}
+        {/* ======================================================== */}
+        {activeTab === 'bisect' && (
+          <div className="bg-white p-5 rounded-2xl border border-[#ECD5DE] shadow-sm h-full overflow-y-auto space-y-5">
+            <div className="flex items-center justify-between flex-wrap gap-2 pb-3 border-b border-[#ECD5DE]">
+              <div>
+                <h3 className="text-base font-bold font-display text-[#241519]">
+                  Knowledge Bisect (Поиск корневых пробелов)
+                </h3>
+                <p className="text-xs text-[#6F5A63]">
+                  Бинарный поиск по истории коммитов понимания для локализации фундаментальной ошибки
+                </p>
+              </div>
+
+              {!bisectActive && (
+                <button
+                  type="button"
+                  onClick={handleStartBisect}
+                  className="px-4 py-2 bg-[#C8266A] hover:bg-[#A81B56] text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-md transition cursor-pointer"
+                >
+                  <Play className="w-3.5 h-3.5" /> Запустить Knowledge Bisect
+                </button>
+              )}
+            </div>
+
+            {bisectActive ? (
+              <div className="space-y-4">
+                {!bisectResult ? (
+                  <div className="bg-[#FFF1F6] border border-[#F48FB4] p-5 rounded-2xl space-y-4">
+                    <div className="flex items-center justify-between text-xs font-bold text-[#C8266A]">
+                      <span>ШАГ ДИАГНОСТИКИ: {bisectStep} из 3</span>
+                      <span>Проверяемый коммит: mod-10{bisectStep + 1}</span>
+                    </div>
+
+                    <h4 className="text-sm font-bold text-[#241519]">
+                      {bisectStep === 1
+                        ? 'Проверка базовой ментальной модели: Понимаете ли вы разницу между мутабельными и иммутабельными операциями со стеком?'
+                        : bisectStep === 2
+                        ? 'Проверка асинхронного тайминга: Блокирует ли промис microtask очередь перед следующей макротаской?'
+                        : 'Проверка атомарности: Гарантирует ли операция i++ отсутствие race condition в многопоточной среде?'}
+                    </h4>
+
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => handleStepBisect(true)}
+                        className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition cursor-pointer"
+                      >
+                        ✅ Да, инвариант верен (Good)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleStepBisect(false)}
+                        className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl transition cursor-pointer"
+                      >
+                        ❌ Нет, здесь возникает сбой (Bad)
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  /* Bisect Found Root Cause */
+                  <div className="bg-emerald-50 border-2 border-emerald-300 p-5 rounded-2xl space-y-4 animate-in fade-in">
+                    <div className="flex items-center gap-2 text-emerald-800 font-bold text-xs">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                      <span>КОРНЕВАЯ ПРИЧИНА УСПЕШНО ЛОКАЛИЗОВАНА (FIRST BAD COMMIT)</span>
+                    </div>
+
+                    <div className="space-y-2 text-xs text-emerald-950">
+                      <p><b>Первый коммит со сбоем:</b> <span className="font-mono bg-white px-2 py-0.5 rounded border">{bisectResult.rootCommit}</span></p>
+                      <p><b>Скрытый концептуальный пробел:</b> {bisectResult.rootConcept}</p>
+                      <p><b>Пояснение ИИ:</b> {bisectResult.explanation}</p>
+                    </div>
+
+                    <div className="pt-3 border-t border-emerald-200 flex items-center justify-between">
+                      <span className="text-xs font-semibold text-emerald-900">
+                        Рекомендуемый блок для ликвидации: <b>{bisectResult.remediationUnitTitle}</b>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setBisectActive(false)}
+                        className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl transition"
+                      >
+                        Завершить диагностику
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Right Column: Change Set / File Tree with Built-in File Inspector */}
-        <div className="rounded-xl border border-[#DADCE0] bg-white p-4 overflow-hidden flex flex-col shadow-none">
-          <div className="flex items-center justify-between pb-2 mb-3 border-b border-[#DADCE0] shrink-0">
-            <div className="flex items-center space-x-2 text-sm font-semibold text-[#202124]">
-              <FileText className="w-4 h-4 text-[#1A73E8]" />
-              <span>Файлы ветки ({trackedKnowledge.length})</span>
-            </div>
-            <span className="text-[10px] uppercase tracking-wider text-[#5F6368] font-mono">
-              Нажмите для просмотра
-            </span>
-          </div>
-
-          <div className="space-y-2 overflow-y-auto pr-1 flex-1">
-            {trackedKnowledge.length === 0 ? (
-              <div className="p-8 text-center text-xs text-[#5F6368]">
-                В этой ветке нет изменённых файлов
-              </div>
             ) : (
-              trackedKnowledge.map((item, index) => (
-                <button
-                  key={`${item.path}-${index}`}
-                  type="button"
-                  onClick={() => {
-                    setInspectedFile({
-                      path: item.path,
-                      label: item.label,
-                      status: item.status,
-                      summary: item.summary,
-                      content: item.content,
-                      unitId: item.unitId,
-                      branch: selectedBranch,
-                    });
-                    playChime('click');
-                  }}
-                  className="w-full text-left rounded-lg border border-[#DADCE0] bg-white hover:bg-[#F8F9FA] transition p-3 cursor-pointer flex flex-col space-y-1.5 group"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center space-x-2 min-w-0">
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider ${
-                          item.status === 'staged'
-                            ? 'bg-[#E6F4EA] text-[#137333] border border-[#CEEAD6]'
-                            : item.status === 'modified'
-                            ? 'bg-[#FEF7E0] text-[#B06000] border border-[#FEEFC3]'
-                            : item.status === 'committed'
-                            ? 'bg-[#E8F0FE] text-[#1A73E8] border border-[#D2E3FC]'
-                            : 'bg-[#FCE8E6] text-[#C5221F] border border-[#FAD2CF]'
-                        }`}
-                      >
-                        {item.status}
-                      </span>
-                      <span className="text-xs text-[#5F6368] font-mono truncate">{item.path}</span>
-                    </div>
-                    <div className="flex items-center gap-1 text-[#80868B] group-hover:text-[#1A73E8]">
-                      <Eye className="w-3.5 h-3.5" />
-                    </div>
-                  </div>
-                  <div className="text-sm font-semibold text-[#202124]">{item.label}</div>
-                  <div className="text-xs text-[#5F6368] leading-relaxed">{item.summary}</div>
-                </button>
-              ))
+              <div className="text-center py-12 text-[#6F5A63] space-y-2">
+                <Search className="w-10 h-10 text-[#C8266A] mx-auto opacity-50" />
+                <h4 className="text-sm font-bold text-[#241519]">Инструмент Knowledge Bisect готов</h4>
+                <p className="text-xs max-w-md mx-auto">
+                  Если вы испытываете трудности на сложных Capstone-проектах, запустите бисект, чтобы за 3 вопроса найти упущенный базовый инвариант.
+                </p>
+              </div>
             )}
           </div>
-        </div>
-      </div>
+        )}
 
-      {/* Bottom Merge Conflicts & Status Bar */}
-      <footer className="border-t border-[#DADCE0] bg-white px-5 py-3 shrink-0">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center space-x-2 text-xs font-semibold text-[#5F6368] uppercase tracking-wider">
-            <AlertTriangle className="w-4 h-4 text-[#E37400]" />
-            <span>Контроль слияния и разрешение конфликтов ({mergeConflicts.length})</span>
-          </div>
-          <div className="text-xs text-[#5F6368] font-mono">
-            Ветка: {selectedBranch} • Telemetry Sync: Live
-          </div>
-        </div>
-
-        {mergeConflicts.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {mergeConflicts.map((conflict) => (
-              <div key={conflict.id} className="rounded-lg border border-[#DADCE0] bg-[#F8F9FA] p-3 flex flex-col justify-between space-y-2">
-                <div>
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="text-xs font-bold text-[#202124]">{conflict.title}</div>
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
-                        conflict.severity === 'high'
-                          ? 'bg-[#FCE8E6] text-[#C5221F]'
-                          : conflict.severity === 'medium'
-                          ? 'bg-[#FEF7E0] text-[#B06000]'
-                          : 'bg-[#E6F4EA] text-[#137333]'
-                      }`}
-                    >
-                      {conflict.severity}
-                    </span>
-                  </div>
-                  <div className="mt-1 text-[10px] uppercase font-mono text-[#5F6368]">{conflict.source}</div>
-                  <div className="mt-1 text-xs text-[#5F6368] leading-relaxed">{conflict.details}</div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => handleResolveConflict(conflict.id, conflict.title)}
-                  className="w-full py-1.5 px-3 rounded-lg bg-[#E6F4EA] hover:bg-[#CEEAD6] border border-[#CEEAD6] text-[#137333] font-semibold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer"
-                >
-                  <Check className="w-3.5 h-3.5" />
-                  <span>Разрешить и слить</span>
-                </button>
+        {/* ======================================================== */}
+        {/* 5. TAB: MILESTONE TAGS (`git tag`)                       */}
+        {/* ======================================================== */}
+        {activeTab === 'tags' && (
+          <div className="bg-white p-5 rounded-2xl border border-[#ECD5DE] shadow-sm h-full overflow-y-auto space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-2 pb-3 border-b border-[#ECD5DE]">
+              <div>
+                <h3 className="text-base font-bold font-display text-[#241519]">
+                  Релизные Теги Мастерства (`git tag`)
+                </h3>
+                <p className="text-xs text-[#6F5A63]">
+                  Верифицированные снапшоты знаний с криптографическим хэшем для портфолио
+                </p>
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="p-2.5 rounded-lg bg-[#E6F4EA] border border-[#CEEAD6] text-[#137333] text-xs flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-[#1E8E3E]" />
-            <span>Все ветки синхронизированы без конфликтов. Знания согласованы.</span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {epistemicLedgerService.getMilestones().map((tag) => (
+                <div key={tag.tag} className="bg-[#FFF1F6] border border-[#ECD5DE] p-4 rounded-2xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-sm font-bold text-[#C8266A] bg-white px-2.5 py-1 rounded-xl border border-[#F48FB4]">
+                      {tag.tag}
+                    </span>
+                    <span className="text-xs text-[#6F5A63]">{tag.date}</span>
+                  </div>
+
+                  <h4 className="font-bold text-sm text-[#241519]">{tag.title}</h4>
+
+                  <div className="space-y-1 text-xs text-[#6F5A63] bg-white/80 p-2.5 rounded-xl border border-[#ECD5DE] font-mono">
+                    <p>Освоено модулей: <b>{tag.masteredUnitsCount}</b></p>
+                    <p>Проверено фактов: <b>{tag.provenFactsCount}</b></p>
+                    <p className="truncate text-[10px] text-slate-500">SHA-256: {tag.sha256Hash}</p>
+                  </div>
+
+                  <p className="text-xs text-emerald-800 font-semibold">{tag.verdict}</p>
+                </div>
+              ))}
+            </div>
           </div>
         )}
-      </footer>
 
-      {/* Built-in File Inspector Modal (Clean Google Dialog) */}
-      {inspectedFile && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-          <div className="w-full max-w-2xl max-h-[85vh] bg-white border border-[#DADCE0] rounded-2xl shadow-xl flex flex-col overflow-hidden">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#DADCE0] bg-white">
-              <div className="flex items-center gap-2.5">
-                <FileCode className="w-5 h-5 text-[#1A73E8]" />
-                <div>
-                  <div className="text-sm font-bold text-[#202124]">{inspectedFile.label}</div>
-                  <div className="text-xs font-mono text-[#5F6368]">{inspectedFile.path}</div>
-                </div>
+        {/* ======================================================== */}
+        {/* 6. TAB: PULL REQUESTS & SPARRING REVIEWS                 */}
+        {/* ======================================================== */}
+        {activeTab === 'prs' && (
+          <div className="bg-white p-5 rounded-2xl border border-[#ECD5DE] shadow-sm h-full overflow-y-auto space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-2 pb-3 border-b border-[#ECD5DE]">
+              <div>
+                <h3 className="text-base font-bold font-display text-[#241519]">
+                  Парные Pull Requests & Peer Review
+                </h3>
+                <p className="text-xs text-[#6F5A63]">
+                  Совместная рецензия проектов спарринг-партнерами и ИИ-экзаменатором
+                </p>
               </div>
+            </div>
 
+            <div className="space-y-4">
+              {epistemicLedgerService.getPullRequests().map((pr) => (
+                <div key={pr.id} className="border border-[#ECD5DE] rounded-2xl p-4 space-y-3 bg-[#FFFBFC]">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                      <GitPullRequest className="w-5 h-5 text-[#C8266A]" />
+                      <h4 className="font-bold text-sm text-[#241519]">{pr.title}</h4>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        pr.status === 'merged' ? 'bg-purple-100 text-purple-800' : 'bg-emerald-100 text-emerald-800'
+                      }`}>
+                        {pr.status === 'merged' ? 'Merged' : 'Open for Review'}
+                      </span>
+                    </div>
+
+                    {pr.status !== 'merged' && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          epistemicLedgerService.mergePullRequest(pr.id);
+                          playChime('success');
+                        }}
+                        className="px-3.5 py-1.5 bg-[#C8266A] hover:bg-[#A81B56] text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition cursor-pointer"
+                      >
+                        <GitMerge className="w-3.5 h-3.5" /> Подтвердить и влить в main (LGTM)
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="bg-white p-3 rounded-xl border border-[#ECD5DE] font-mono text-xs space-y-1 text-emerald-800">
+                    {pr.conceptDiff.map((d, i) => (
+                      <div key={i}>{d}</div>
+                    ))}
+                  </div>
+
+                  <div className="space-y-2 pt-2 border-t border-[#ECD5DE]">
+                    <span className="text-xs font-bold text-[#6F5A63]">Комментарии рецензентов:</span>
+                    {pr.peerComments.map((comm, i) => (
+                      <div key={i} className="bg-[#FFF1F6] p-2.5 rounded-xl border border-[#ECD5DE] text-xs space-y-0.5">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-[#241519]">{comm.author} ({comm.role})</span>
+                          <span className="text-[10.5px] text-[#6F5A63]">{comm.timestamp}</span>
+                        </div>
+                        <p className="text-[#4A0B27]">{comm.comment}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+      </div>
+
+      {/* New Hypothesis Branch Modal */}
+      {showNewBranchModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-white rounded-3xl p-6 border border-[#ECD5DE] shadow-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold font-display text-base text-[#241519]">
+                Создать новую ветку гипотезы
+              </h3>
               <button
                 type="button"
-                onClick={() => setInspectedFile(null)}
-                className="p-1.5 rounded-full text-[#5F6368] hover:bg-[#F1F3F4] hover:text-[#202124] transition cursor-pointer"
+                onClick={() => setShowNewBranchModal(false)}
+                className="p-1 text-[#6F5A63] hover:text-[#241519]"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Modal Body */}
-            <div className="p-5 overflow-y-auto flex-1 space-y-3 bg-[#F8F9FA]">
-              <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded-full bg-[#E8F0FE] border border-[#D2E3FC] text-[#1A73E8] text-xs font-mono">
-                  {inspectedFile.status}
-                </span>
-                <span className="text-xs text-[#5F6368]">
-                  Ветка: <span className="font-mono text-[#202124] font-medium">{inspectedFile.branch}</span>
-                </span>
-              </div>
+            <p className="text-xs text-[#6F5A63]">
+              Ветка позволит безопасно экспериментировать с кодом и формулировать ментальные модели без риска испортить доказанные инварианты ветки main.
+            </p>
 
-              <div className="rounded-xl border border-[#DADCE0] bg-white p-4 font-mono text-xs text-[#202124] whitespace-pre-wrap leading-relaxed select-text shadow-none">
-                {inspectedFile.content}
-              </div>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="px-5 py-3 border-t border-[#DADCE0] bg-white flex items-center justify-between">
-              {inspectedFile.unitId && onLaunchUnit ? (
+            <form onSubmit={handleCreateBranch} className="space-y-3">
+              <input
+                type="text"
+                required
+                placeholder="Например: optimistic-lock-recovery"
+                value={newBranchInput}
+                onChange={(e) => setNewBranchInput(e.target.value)}
+                className="w-full px-3.5 py-2.5 bg-[#FFFBFC] border border-[#ECD5DE] rounded-xl text-xs font-mono text-[#241519] focus:outline-none focus:border-[#C8266A]"
+                autoFocus
+              />
+              <div className="flex items-center justify-end gap-2">
                 <button
                   type="button"
-                  onClick={() => {
-                    const unitId = inspectedFile.unitId!;
-                    setInspectedFile(null);
-                    onLaunchUnit(unitId);
-                  }}
-                  className="px-4 py-2 rounded-full bg-[#1A73E8] hover:bg-[#1765CC] text-white text-xs font-medium flex items-center gap-2 transition cursor-pointer"
+                  onClick={() => setShowNewBranchModal(false)}
+                  className="px-3 py-2 text-xs font-semibold text-[#6F5A63] hover:bg-[#FFDFEB] rounded-xl"
                 >
-                  <ArrowRight className="w-3.5 h-3.5" />
-                  <span>Открыть этот модуль в курсе</span>
+                  Отмена
                 </button>
-              ) : <div />}
-
-              <button
-                type="button"
-                onClick={() => setInspectedFile(null)}
-                className="px-4 py-2 rounded-full border border-[#DADCE0] hover:bg-[#F1F3F4] text-[#3C4043] text-xs font-medium transition cursor-pointer"
-              >
-                Закрыть
-              </button>
-            </div>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-[#C8266A] hover:bg-[#A81B56] text-white text-xs font-bold rounded-xl shadow-sm"
+                >
+                  Создать ветку
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
+
     </div>
   );
 };
