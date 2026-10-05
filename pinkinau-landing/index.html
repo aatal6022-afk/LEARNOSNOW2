@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="ru" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PinkInAu — Digital Products & Platforms</title>
+  <meta name="description" content="PinkInAu — технологиялық компания, цифрлық өнімдер мен оқу операциялық орталарын әзірлеуші." />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='46' fill='%23F43F5E'/><text x='50' y='65' font-size='44' font-family='system-ui, sans-serif' font-weight='700' fill='white' text-anchor='middle'>P</text></svg>" />
+  
+  <!-- Clean Modern Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Standalone Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Inter"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              pink: '#F43F5E',
+              'pink-dark': '#E11D48',
+              'pink-light': '#FFF1F2',
+              'pink-border': '#FFE4E6',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #FFFFFF;
+      color: #111827;
+      font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .hero-space {
+      background-color: #030712;
+      background-image: 
+        linear-gradient(to bottom, rgba(3, 7, 18, 0.45), rgba(3, 7, 18, 0.85)),
+        url('./assets/cosmos.jpg'),
+        url('https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?q=80&w=2400&auto=format&fit=crop');
+      background-size: cover;
+      background-position: center center;
+      background-repeat: no-repeat;
+    }
+
+    .nav-blur {
+      background: rgba(3, 7, 18, 0.8);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+  </style>
+</head>
+<body class="selection:bg-rose-100 selection:text-rose-900 min-h-screen flex flex-col justify-between">
+
+  <!-- Header / Navigation -->
+  <header class="fixed top-0 inset-x-0 z-50 nav-blur">
+    <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+      
+      <!-- Brand Logo -->
+      <a href="#" class="flex items-center space-x-2.5 group">
+        <img src="./assets/logo.svg" alt="PinkInAu Logo" class="w-8 h-8 object-contain transition-transform duration-200 group-hover:scale-105" />
+        <span class="text-base font-bold tracking-tight text-white group-hover:text-rose-200 transition">PinkInAu</span>
+      </a>
+
+      <!-- Minimal Nav Links -->
+      <nav class="hidden sm:flex items-center space-x-8 text-xs font-medium text-stone-300">
+        <a href="#about" class="hover:text-white transition" data-i18n="nav.about">О компании</a>
+        <a href="#products" class="hover:text-white transition" data-i18n="nav.products">Продукты</a>
+        <a href="#principles" class="hover:text-white transition" data-i18n="nav.principles">Принципы</a>
+      </nav>
+
+      <!-- Language Selector & Action CTA -->
+      <div class="flex items-center space-x-3">
+        
+        <!-- 5-Language Selector Dropdown -->
+        <div class="relative inline-block text-left" id="lang-dropdown-wrapper">
+          <button 
+            type="button" 
+            id="lang-btn" 
+            onclick="toggleLangMenu()"
+            class="flex items-center space-x-1 px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-medium border border-white/10 transition"
+          >
+            <span id="current-flag">🇷🇺</span>
+            <span id="current-lang-name" class="hidden sm:inline font-semibold">RU</span>
+            <svg class="w-3 h-3 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+          </button>
+
+          <div 
+            id="lang-menu" 
+            class="hidden absolute right-0 mt-1.5 w-36 rounded-xl bg-stone-900/95 backdrop-blur-md border border-white/15 shadow-2xl py-1 z-50 text-xs text-stone-200"
+          >
+            <button onclick="setLanguage('kk')" class="w-full text-left px-3 py-1.5 hover:bg-white/10 flex items-center justify-between">
+              <span>🇰🇿 Қазақша</span>
+              <span id="chk-kk" class="text-brand-pink hidden font-bold">✓</span>
+            </button>
+            <button onclick="setLanguage('uk')" class="w-full text-left px-3 py-1.5 hover:bg-white/10 flex items-center justify-between">
+              <span>🇺🇦 Українська</span>
+              <span id="chk-uk" class="text-brand-pink hidden font-bold">✓</span>
+            </button>
+            <button onclick="setLanguage('ru')" class="w-full text-left px-3 py-1.5 hover:bg-white/10 flex items-center justify-between">
+              <span>🇷🇺 Русский</span>
+              <span id="chk-ru" class="text-brand-pink hidden font-bold">✓</span>
+            </button>
+            <button onclick="setLanguage('en')" class="w-full text-left px-3 py-1.5 hover:bg-white/10 flex items-center justify-between">
+              <span>🇺🇸 English</span>
+              <span id="chk-en" class="text-brand-pink hidden font-bold">✓</span>
+            </button>
+            <button onclick="setLanguage('ja')" class="w-full text-left px-3 py-1.5 hover:bg-white/10 flex items-center justify-between">
+              <span>🇯🇵 日本語</span>
+              <span id="chk-ja" class="text-brand-pink hidden font-bold">✓</span>
+            </button>
+          </div>
+        </div>
+
+        <a 
+          href="https://learn.pinkinau.space" 
+          id="btn-nav-learn-os"
+          class="px-4 py-1.5 rounded-lg bg-brand-pink hover:bg-brand-pink-dark text-white text-xs font-semibold transition flex items-center space-x-1"
+        >
+          <span>Learning OS</span>
+          <span class="opacity-80 text-[10px]">↗</span>
+        </a>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- Hero Section: Natural Space Background + Clean Pink Title (No Neon) -->
+  <main class="flex-1">
+    <section class="hero-space min-h-[75vh] sm:min-h-[80vh] flex items-center justify-center pt-20 pb-16 px-6 relative">
+      <div class="max-w-3xl mx-auto text-center space-y-6">
+        
+        <!-- Clean Status Tag -->
+        <div class="inline-block px-3 py-1 rounded-full bg-white/10 border border-white/10 text-stone-300 text-xs font-normal tracking-wide" data-i18n="hero.tag">
+          Компания PinkInAu
+        </div>
+
+        <!-- Solid Pink Title (Minimalist, No Neon, Crisp) -->
+        <h1 class="text-5xl sm:text-7xl md:text-8xl font-bold tracking-tight text-brand-pink">
+          PinkInAu
+        </h1>
+
+        <!-- Crisp Subtitle -->
+        <p class="text-lg sm:text-xl font-normal text-stone-200 max-w-xl mx-auto leading-relaxed" data-i18n="hero.subtitle">
+          Разрабатываем программные продукты, платформы и операционные среды для человека
+        </p>
+
+        <!-- Minimal Subtext -->
+        <p class="text-sm text-stone-400 max-w-lg mx-auto font-light leading-relaxed" data-i18n="hero.desc">
+          Создаем экосистему удобных и надежных цифровых инструментов для работы, структурирования знаний и решения прикладных задач.
+        </p>
+
+        <!-- Action Buttons -->
+        <div class="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
+          <a 
+            href="https://learn.pinkinau.space" 
+            id="btn-hero-learn-os"
+            class="w-full sm:w-auto px-6 py-3 rounded-lg bg-brand-pink hover:bg-brand-pink-dark text-white font-medium text-sm transition duration-150 flex items-center justify-center space-x-2"
+          >
+            <span data-i18n="hero.btn.start">Запустить Learning OS</span>
+            <span class="opacity-80">↗</span>
+          </a>
+
+          <a 
+            href="#products" 
+            class="w-full sm:w-auto px-6 py-3 rounded-lg bg-white/10 hover:bg-white/15 text-stone-200 hover:text-white font-medium text-sm border border-white/10 transition duration-150"
+            data-i18n="hero.btn.products"
+          >
+            Наши продукты
+          </a>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Products Section (Clean White & Pink Palette) -->
+    <section id="products" class="py-20 bg-white">
+      <div class="max-w-5xl mx-auto px-6">
+        
+        <div class="mb-12 pb-4 border-b border-stone-100 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+          <div>
+            <span class="text-xs font-semibold uppercase tracking-wider text-brand-pink" data-i18n="products.sectionTag">Каталог</span>
+            <h2 class="text-2xl sm:text-3xl font-bold text-stone-900 mt-1" data-i18n="products.title">Продукты компании</h2>
+          </div>
+          <p class="text-xs sm:text-sm text-stone-500 max-w-sm" data-i18n="products.desc">
+            Линейка независимых программных решений для разных сценариев использования.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          
+          <!-- Product 1: Learning OS (Flagship) -->
+          <div class="p-8 rounded-2xl border border-stone-200 bg-stone-50/50 hover:bg-white hover:border-brand-pink-border transition duration-200 flex flex-col justify-between space-y-6">
+            <div class="space-y-4">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold font-mono px-2.5 py-1 rounded bg-brand-pink-light text-brand-pink border border-brand-pink-border" data-i18n="products.p1.badge">
+                  Флагманский продукт
+                </span>
+                <span class="text-xs font-medium text-emerald-600" data-i18n="products.p1.status">
+                  Доступно
+                </span>
+              </div>
+
+              <div>
+                <h3 class="text-xl font-bold text-stone-900">Learning OS</h3>
+                <p class="text-xs text-stone-400 mt-0.5">learn.pinkinau.space</p>
+              </div>
+
+              <p class="text-sm text-stone-600 leading-relaxed font-normal" data-i18n="products.p1.desc">
+                Персональная операционная веб-среда для структурированного обучения. Включает адаптивные графы понятий, методику «Чистый лист», интерактивные практические задания и инструменты контроля прогресса.
+              </p>
+            </div>
+
+            <div class="pt-4 border-t border-stone-200/60">
+              <a 
+                href="https://learn.pinkinau.space" 
+                id="btn-card-learn-os"
+                class="w-full py-2.5 px-4 rounded-lg bg-stone-900 hover:bg-brand-pink text-white font-medium text-xs text-center transition duration-150 flex items-center justify-center space-x-1.5"
+              >
+                <span data-i18n="products.p1.btn">Перейти в Learning OS (learn.pinkinau.space)</span>
+                <span>↗</span>
+              </a>
+            </div>
+          </div>
+
+          <!-- Product 2: PinkInAu Studio -->
+          <div class="p-8 rounded-2xl border border-stone-200 bg-white flex flex-col justify-between space-y-6">
+            <div class="space-y-4">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-mono px-2.5 py-1 rounded bg-stone-100 text-stone-600" data-i18n="products.p2.badge">
+                  Инструменты
+                </span>
+                <span class="text-xs font-medium text-stone-400" data-i18n="products.p2.status">
+                  В разработке
+                </span>
+              </div>
+
+              <div>
+                <h3 class="text-xl font-bold text-stone-900">PinkInAu Studio</h3>
+                <p class="text-xs text-stone-400 mt-0.5">studio.pinkinau.space</p>
+              </div>
+
+              <p class="text-sm text-stone-600 leading-relaxed font-normal" data-i18n="products.p2.desc">
+                Программная среда для проектирования и верстки интерактивных материалов, курсов и документации с поддержкой визуальных схем и графов.
+              </p>
+            </div>
+
+            <div class="pt-4 border-t border-stone-100 text-xs text-stone-400 flex items-center justify-between">
+              <span data-i18n="products.p2.schedule">Запуск запланирован</span>
+              <span class="font-mono text-stone-400">2026</span>
+            </div>
+          </div>
+
+          <!-- Product 3: PinkInAu Core & Cloud -->
+          <div class="p-8 rounded-2xl border border-stone-200 bg-white flex flex-col justify-between space-y-6">
+            <div class="space-y-4">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-mono px-2.5 py-1 rounded bg-stone-100 text-stone-600" data-i18n="products.p3.badge">
+                  Платформа
+                </span>
+                <span class="text-xs font-medium text-emerald-600" data-i18n="products.p3.status">
+                  Стабильно
+                </span>
+              </div>
+
+              <div>
+                <h3 class="text-xl font-bold text-stone-900">PinkInAu Core</h3>
+                <p class="text-xs text-stone-400 mt-0.5">api.pinkinau.space</p>
+              </div>
+
+              <p class="text-sm text-stone-600 leading-relaxed font-normal" data-i18n="products.p3.desc">
+                Инфраструктурные сервисы, синхронизация данных в реальном времени, безопасная авторизация и серверные шлюзы для продуктов экосистемы.
+              </p>
+            </div>
+
+            <div class="pt-4 border-t border-stone-100 text-xs text-stone-400 flex items-center justify-between">
+              <span data-i18n="products.p3.stack">Инфраструктурный слой</span>
+              <span class="font-mono text-stone-400">API Gateway</span>
+            </div>
+          </div>
+
+          <!-- Product 4: PinkInAu Labs -->
+          <div class="p-8 rounded-2xl border border-stone-200 bg-white flex flex-col justify-between space-y-6">
+            <div class="space-y-4">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-mono px-2.5 py-1 rounded bg-stone-100 text-stone-600" data-i18n="products.p4.badge">
+                  R&D
+                </span>
+                <span class="text-xs font-medium text-stone-400" data-i18n="products.p4.status">
+                  Инициативы
+                </span>
+              </div>
+
+              <div>
+                <h3 class="text-xl font-bold text-stone-900">PinkInAu Labs</h3>
+                <p class="text-xs text-stone-400 mt-0.5">labs.pinkinau.space</p>
+              </div>
+
+              <p class="text-sm text-stone-600 leading-relaxed font-normal" data-i18n="products.p4.desc">
+                Экспериментальное направление: прототипы интерфейсов, алгоритмы обработки структурированных данных и прикладные утилиты.
+              </p>
+            </div>
+
+            <div class="pt-4 border-t border-stone-100 text-xs text-stone-400 flex items-center justify-between">
+              <span data-i18n="products.p4.type">Исследования и концепты</span>
+              <span class="font-mono text-stone-400">Open R&D</span>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- About Section: Clean & Minimalist -->
+    <section id="about" class="py-20 bg-stone-50 border-t border-stone-200/70">
+      <div class="max-w-5xl mx-auto px-6">
+        
+        <div class="max-w-2xl space-y-4 mb-14">
+          <span class="text-xs font-semibold uppercase tracking-wider text-brand-pink" data-i18n="about.tag">О компании</span>
+          <h2 class="text-2xl sm:text-3xl font-bold text-stone-900" data-i18n="about.title">
+            О компании PinkInAu
+          </h2>
+          <p class="text-sm text-stone-600 leading-relaxed" data-i18n="about.desc">
+            PinkInAu — независимая технологическая компания. Мы создаем прикладное программное обеспечение, уделяя ключевое внимание практической пользе, лаконичности интерфейсов и технической стабильности.
+          </p>
+        </div>
+
+        <!-- Principles Grid -->
+        <div id="principles" class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+          
+          <div class="bg-white p-6 rounded-xl border border-stone-200 space-y-2.5">
+            <span class="text-xs font-bold text-brand-pink">01</span>
+            <h3 class="text-base font-bold text-stone-900" data-i18n="principles.p1.title">Минимализм</h3>
+            <p class="text-xs text-stone-500 leading-relaxed" data-i18n="principles.p1.desc">
+              Чистые визуальные формы без перегруженных деталей и навязчивых элементов.
+            </p>
+          </div>
+
+          <div class="bg-white p-6 rounded-xl border border-stone-200 space-y-2.5">
+            <span class="text-xs font-bold text-brand-pink">02</span>
+            <h3 class="text-base font-bold text-stone-900" data-i18n="principles.p2.title">Надежность</h3>
+            <p class="text-xs text-stone-500 leading-relaxed" data-i18n="principles.p2.desc">
+              Устойчивая архитектура, безопасность данных и высокая скорость работы сервисов.
+            </p>
+          </div>
+
+          <div class="bg-white p-6 rounded-xl border border-stone-200 space-y-2.5">
+            <span class="text-xs font-bold text-brand-pink">03</span>
+            <h3 class="text-base font-bold text-stone-900" data-i18n="principles.p3.title">Польза</h3>
+            <p class="text-xs text-stone-500 leading-relaxed" data-i18n="principles.p3.desc">
+              Фокус на реальных задачах человека и сокращении рутинных действий.
+            </p>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <!-- Clean Minimal Footer -->
+  <footer class="border-t border-stone-200 bg-white py-8">
+    <div class="max-w-5xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
+      
+      <div class="flex items-center space-x-2.5 text-stone-900 font-bold">
+        <img src="./assets/logo.svg" alt="PinkInAu Logo" class="w-6 h-6 object-contain" />
+        <span>PinkInAu</span>
+      </div>
+
+      <div class="text-stone-400" data-i18n="footer.copy">
+        © 2026 PinkInAu. Все права защищены.
+      </div>
+
+      <div>
+        <a href="https://learn.pinkinau.space" class="text-brand-pink hover:text-brand-pink-dark font-medium transition">
+          Learning OS ↗
+        </a>
+      </div>
+
+    </div>
+  </footer>
+
+  <!-- Complete 5-Language Translation & Auto-Geo Script -->
+  <script>
+    const translations = {
+      kk: {
+        'nav.about': 'Компания туралы',
+        'nav.products': 'Өнімдер',
+        'nav.principles': 'Принциптер',
+        'hero.tag': 'PinkInAu Компаниясы',
+        'hero.subtitle': 'Адамға арналған цифрлық өнімдер мен операциялық орталарды әзірлейміз',
+        'hero.desc': 'Жұмыс істеуге, білімді жүйелеуге және қолданбалы есептерді шешуге арналған ыңғайлы әрі сенімді цифрлық экожүйе.',
+        'hero.btn.start': 'Learning OS іске қосу',
+        'hero.btn.products': 'Біздің өнімдер',
+        'products.sectionTag': 'Каталог',
+        'products.title': 'Компания өнімдері',
+        'products.desc': 'Әртүрлі сценарийлерге арналған тәуелсіз бағдарламалық шешімдер.',
+        'products.p1.badge': 'Флагмандық жүйе',
+        'products.p1.status': 'Қолжетімді',
+        'products.p1.desc': 'Құрылымдалған оқуға арналған дербес операциялық веб-орта. Ұғымдардың бейімделген графы, «Таза парақ» әдістемесі және тәжірибелік тапсырмалар.',
+        'products.p1.btn': 'Learning OS ашу (learn.pinkinau.space)',
+        'products.p2.badge': 'Құралдар',
+        'products.p2.status': 'Әзірленуде',
+        'products.p2.desc': 'Интерактивті материалдар мен оқу сызбаларын құрастыруға арналған бағдарламалық орта.',
+        'products.p2.schedule': 'Іске қосу жоспарланған',
+        'products.p3.badge': 'Платформа',
+        'products.p3.status': 'Тұрақты',
+        'products.p3.desc': 'Инфрақұрылымдық сервистер, нақты уақыттағы деректер синхронизациясы және қауіпсіз API шлюзі.',
+        'products.p3.stack': 'Инфрақұрылымдық қабат',
+        'products.p4.badge': 'R&D',
+        'products.p4.status': 'Бастамалар',
+        'products.p4.desc': 'Тәжірибелік бағыт: интерфейс прототиптері, деректерді өңдеу алгоритмдері және қолданбалы утилиталар.',
+        'products.p4.type': 'Зерттеулер мен концептілер',
+        'about.tag': 'Компания туралы',
+        'about.title': 'PinkInAu компаниясы жайлы',
+        'about.desc': 'PinkInAu — тәуелсіз технологиялық компания. Біз бағдарламалық шешімдерді әзірлеп, практикалық пайдаға, интерфейстің ықшамдылығына және техникалық тұрақтылыққа баса назар аударамыз.',
+        'principles.p1.title': 'Минимализм',
+        'principles.p1.desc': 'Артық детальдарсыз және кедергісіз таза визуалды пішіндер.',
+        'principles.p2.title': 'Сенімділік',
+        'principles.p2.desc': 'Тұрақты архитектура, деректер қауіпсіздігі және қызметтердің жоғары жылдамдығы.',
+        'principles.p3.title': 'Пайда',
+        'principles.p3.desc': 'Адамның нақты міндеттеріне және күнделікті қайталанатын жұмыстарды жеңілдетуге бағытталған.',
+        'footer.copy': '© 2026 PinkInAu. Барлық құқықтар қорғалған.'
+      },
+      uk: {
+        'nav.about': 'Про компанію',
+        'nav.products': 'Продукти',
+        'nav.principles': 'Принципи',
+        'hero.tag': 'Компанія PinkInAu',
+        'hero.subtitle': 'Створюємо цифрові продукти, платформи та операційні середовища для людини',
+        'hero.desc': 'Розробляємо екосистему зручних і надійних цифрових інструментів для роботи, структурування знань та вирішення прикладних завдань.',
+        'hero.btn.start': 'Запустити Learning OS',
+        'hero.btn.products': 'Наші продукти',
+        'products.sectionTag': 'Каталог',
+        'products.title': 'Продукти компанії',
+        'products.desc': 'Лінійка незалежних програмних рішень для різноманітних сценаріїв використання.',
+        'products.p1.badge': 'Флагманський продукт',
+        'products.p1.status': 'Доступно зараз',
+        'products.p1.desc': 'Персональне операційне веб-середовище для структурованого навчання. Включає адаптивні графи понять, методику «Чистий аркуш», інтерактивні завдання та контроль прогресу.',
+        'products.p1.btn': 'Перейти в Learning OS (learn.pinkinau.space)',
+        'products.p2.badge': 'Інструменти',
+        'products.p2.status': 'У розробці',
+        'products.p2.desc': 'Програмне середовище для проектування та верстки інтерактивних матеріалів, курсів і документації з підтримкою візуальних схем.',
+        'products.p2.schedule': 'Запуск заплановано',
+        'products.p3.badge': 'Платформа',
+        'products.p3.status': 'Стабільно',
+        'products.p3.desc': 'Інфраструктурні сервіси, синхронізація даних у реальному часі, безпечна авторизація та API-шлюзи.',
+        'products.p3.stack': 'Інфраструктурний шар',
+        'products.p4.badge': 'R&D',
+        'products.p4.status': 'Ініціативи',
+        'products.p4.desc': 'Експериментальний напрямок: прототипи інтерфейсів, алгоритми обробки структурованих даних та утиліти.',
+        'products.p4.type': 'Дослідження та концепти',
+        'about.tag': 'Про компанію',
+        'about.title': 'Про компанію PinkInAu',
+        'about.desc': 'PinkInAu — незалежна технологічна компанія. Ми створюємо прикладне програмне забезпечення, приділяючи ключову увагу практичній користі, лаконічності інтерфейсів та стабільності.',
+        'principles.p1.title': 'Мінімалізм',
+        'principles.p1.desc': 'Чисті візуальні форми без перевантажених деталей та нав’язливих елементів.',
+        'principles.p2.title': 'Надійність',
+        'principles.p2.desc': 'Стійка архітектура, безпека даних і висока швидкість роботи сервісів.',
+        'principles.p3.title': 'Користь',
+        'principles.p3.desc': 'Фокус на реальних завданнях людини та скороченні рутинних дій.',
+        'footer.copy': '© 2026 PinkInAu. Всі права захищені.'
+      },
+      ru: {
+        'nav.about': 'О компании',
+        'nav.products': 'Продукты',
+        'nav.principles': 'Принципы',
+        'hero.tag': 'Компания PinkInAu',
+        'hero.subtitle': 'Разрабатываем программные продукты, платформы и операционные среды для человека',
+        'hero.desc': 'Создаем экосистему удобных и надежных цифровых инструментов для работы, структурирования знаний и решения прикладных задач.',
+        'hero.btn.start': 'Запустить Learning OS',
+        'hero.btn.products': 'Наши продукты',
+        'products.sectionTag': 'Каталог',
+        'products.title': 'Продукты компании',
+        'products.desc': 'Линейка независимых программных решений для разных сценариев использования.',
+        'products.p1.badge': 'Флагманский продукт',
+        'products.p1.status': 'Доступно',
+        'products.p1.desc': 'Персональная операционная веб-среда для структурированного обучения. Включает адаптивные графы понятий, методику «Чистый лист», интерактивные практические задания и инструменты контроля прогресса.',
+        'products.p1.btn': 'Перейти в Learning OS (learn.pinkinau.space)',
+        'products.p2.badge': 'Инструменты',
+        'products.p2.status': 'В разработке',
+        'products.p2.desc': 'Программная среда для проектирования и верстки интерактивных материалов, курсов и документации с поддержкой визуальных схем и графов.',
+        'products.p2.schedule': 'Запуск запланирован',
+        'products.p3.badge': 'Платформа',
+        'products.p3.status': 'Стабильно',
+        'products.p3.desc': 'Инфраструктурные сервисы, синхронизация данных в реальном времени, безопасная авторизация и серверные шлюзы для продуктов экосистемы.',
+        'products.p3.stack': 'Инфраструктурный слой',
+        'products.p4.badge': 'R&D',
+        'products.p4.status': 'Инициативы',
+        'products.p4.desc': 'Экспериментальное направление: прототипы интерфейсов, алгоритмы обработки структурированных данных и прикладные утилиты.',
+        'products.p4.type': 'Исследования и концепты',
+        'about.tag': 'О компании',
+        'about.title': 'О компании PinkInAu',
+        'about.desc': 'PinkInAu — независимая технологическая компания. Мы создаем прикладное программное обеспечение, уделяя ключевое внимание практической пользе, лаконичности интерфейсов и технической стабильности.',
+        'principles.p1.title': 'Минимализм',
+        'principles.p1.desc': 'Чистые визуальные формы без перегруженных деталей и навязчивых элементов.',
+        'principles.p2.title': 'Надежность',
+        'principles.p2.desc': 'Устойчивая архитектура, безопасность данных и высокая скорость работы сервисов.',
+        'principles.p3.title': 'Польза',
+        'principles.p3.desc': 'Фокус на реальных задачах человека и сокращении рутинных действий.',
+        'footer.copy': '© 2026 PinkInAu. Все права защищены.'
+      },
+      en: {
+        'nav.about': 'About',
+        'nav.products': 'Products',
+        'nav.principles': 'Principles',
+        'hero.tag': 'PinkInAu Company',
+        'hero.subtitle': 'Building digital products, platforms, and operating environments for the future',
+        'hero.desc': 'Creating an ecosystem of reliable and elegant software tools for work, knowledge structuring, and real-world problem solving.',
+        'hero.btn.start': 'Launch Learning OS',
+        'hero.btn.products': 'Our Products',
+        'products.sectionTag': 'Catalog',
+        'products.title': 'Company Products',
+        'products.desc': 'A lineup of independent software solutions designed for various specialized workflows.',
+        'products.p1.badge': 'Flagship System',
+        'products.p1.status': 'Available',
+        'products.p1.desc': 'Personal web desktop environment for structured mastery. Features adaptive concept DAGs, blind blank-page recall, hands-on tasks, and progress analytics.',
+        'products.p1.btn': 'Open Learning OS (learn.pinkinau.space)',
+        'products.p2.badge': 'Tools',
+        'products.p2.status': 'In Development',
+        'products.p2.desc': 'Authoring and publishing suite for interactive technical courses and visual graph documentation.',
+        'products.p2.schedule': 'Target Launch',
+        'products.p3.badge': 'Platform',
+        'products.p3.status': 'Stable',
+        'products.p3.desc': 'Infrastructure services, real-time synchronization, zero-trust authentication, and distributed API gateways.',
+        'products.p3.stack': 'Infrastructure Layer',
+        'products.p4.badge': 'R&D',
+        'products.p4.status': 'Initiatives',
+        'products.p4.desc': 'Frontier experiments: novel interface paradigms, structured data synthesis algorithms, and developer utilities.',
+        'products.p4.type': 'Research & Concept Labs',
+        'about.tag': 'About Us',
+        'about.title': 'About PinkInAu',
+        'about.desc': 'PinkInAu is an independent technology company. We build software platforms with a relentless focus on human utility, interface simplicity, and engineering resilience.',
+        'principles.p1.title': 'Minimalism',
+        'principles.p1.desc': 'Pure visual forms free of unnecessary noise and intrusive clutter.',
+        'principles.p2.title': 'Resilience',
+        'principles.p2.desc': 'Robust architecture, high performance, and uncompromising data security.',
+        'principles.p3.title': 'Utility',
+        'principles.p3.desc': 'Focused on solving genuine intellectual challenges and eliminating friction.',
+        'footer.copy': '© 2026 PinkInAu. All rights reserved.'
+      },
+      ja: {
+        'nav.about': '企業情報',
+        'nav.products': 'プロダクト',
+        'nav.principles': '設計思想',
+        'hero.tag': 'PinkInAu 企業概要',
+        'hero.subtitle': '人間の知性を拡張するデジタルプロダクトと動作環境を開発する',
+        'hero.desc': '知識の体系化、実務、複雑な課題解決を支える、信頼性と美しさを兼ね備えたデジタルエコシステムを構築しています。',
+        'hero.btn.start': 'Learning OS を起動',
+        'hero.btn.products': '製品一覧を見る',
+        'products.sectionTag': '製品群',
+        'products.title': '提供プロダクト',
+        'products.desc': '多彩なユースケースに対応する独立したソフトウェアソリューション群。',
+        'products.p1.badge': 'フラッグシップ',
+        'products.p1.status': '提供中',
+        'products.p1.desc': '体系的学習のための個人向けWebデスクトップ環境。適応型DAGグラフ、白紙想起テスト、実践型課題、進捗管理機能を完備。',
+        'products.p1.btn': 'Learning OS を開く (learn.pinkinau.space)',
+        'products.p2.badge': 'ツール',
+        'products.p2.status': '開発中',
+        'products.p2.desc': 'インタラクティブ教材やグラフ構造ドキュメントを作成・配信するためのデザイン環境。',
+        'products.p2.schedule': '公開予定',
+        'products.p3.badge': '基盤',
+        'products.p3.status': '稼働中',
+        'products.p3.desc': 'リアルタイム同期、安全な認証基盤、高速APIゲートウェイを提供するバックエンドサービス。',
+        'products.p3.stack': 'インフラストラクチャ層',
+        'products.p4.badge': 'R&D',
+        'products.p4.status': '実験プロジェクト',
+        'products.p4.desc': '次世代インターフェース、構造化データ処理アルゴリズム、プロトタイプを研究する実験部門。',
+        'products.p4.type': '研究開発ラボ',
+        'about.tag': '企業について',
+        'about.title': 'PinkInAu について',
+        'about.desc': 'PinkInAu は独立系テクノロジー企業です。実用性、無駄のないUI、そして揺るぎない技術的信頼性を追求したソフトウェアを創造しています。',
+        'principles.p1.title': 'ミニマリズム',
+        'principles.p1.desc': 'ノイズを排除し、本質のみを残したクリーンなデザイン。',
+        'principles.p2.title': '堅牢性',
+        'principles.p2.desc': '高速な動作と強固なセキュリティを担保するシステム設計。',
+        'principles.p3.title': '実用性',
+        'principles.p3.desc': 'ユーザーの思考を邪魔せず、本質的な生産性を最大化。',
+        'footer.copy': '© 2026 PinkInAu. 無断転載を禁じます。'
+      }
+    };
+
+    const flags = { kk: '🇰🇿', uk: '🇺🇦', ru: '🇷🇺', en: '🇺🇸', ja: '🇯🇵' };
+    const langNames = { kk: 'KZ', uk: 'UA', ru: 'RU', en: 'EN', ja: 'JA' };
+
+    let currentLang = 'ru';
+
+    function toggleLangMenu() {
+      const menu = document.getElementById('lang-menu');
+      menu.classList.toggle('hidden');
+    }
+
+    document.addEventListener('click', function(e) {
+      const wrapper = document.getElementById('lang-dropdown-wrapper');
+      if (wrapper && !wrapper.contains(e.target)) {
+        document.getElementById('lang-menu')?.classList.add('hidden');
+      }
+    });
+
+    function setLanguage(lang) {
+      if (!translations[lang]) lang = 'ru';
+      currentLang = lang;
+      localStorage.setItem('pinkinau_lang', lang);
+
+      // Update Header Flag
+      document.getElementById('current-flag').textContent = flags[lang] || '🇷🇺';
+      document.getElementById('current-lang-name').textContent = langNames[lang] || 'RU';
+
+      // Update Checks
+      ['kk', 'uk', 'ru', 'en', 'ja'].forEach(code => {
+        const el = document.getElementById('chk-' + code);
+        if (el) {
+          if (code === lang) el.classList.remove('hidden');
+          else el.classList.add('hidden');
+        }
+      });
+
+      // Update text in DOM
+      const dict = translations[lang];
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (dict[key]) {
+          el.textContent = dict[key];
+        }
+      });
+
+      document.getElementById('lang-menu')?.classList.add('hidden');
+    }
+
+    // Auto Geo IP & Browser detection on page load
+    async function autoDetectLanguage() {
+      const saved = localStorage.getItem('pinkinau_lang');
+      if (saved && translations[saved]) {
+        setLanguage(saved);
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/geo/lang');
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.lang && translations[data.lang]) {
+            setLanguage(data.lang);
+            return;
+          }
+        }
+      } catch (e) {}
+
+      const browser = (navigator.language || '').toLowerCase();
+      if (browser.startsWith('kk') || browser.startsWith('kz')) setLanguage('kk');
+      else if (browser.startsWith('uk') || browser.startsWith('ua')) setLanguage('uk');
+      else if (browser.startsWith('ja') || browser.startsWith('jp')) setLanguage('ja');
+      else if (browser.startsWith('ru') || browser.startsWith('be') || browser.startsWith('ky')) setLanguage('ru');
+      else setLanguage('en');
+    }
+
+    autoDetectLanguage();
+  </script>
+
+</body>
+</html>

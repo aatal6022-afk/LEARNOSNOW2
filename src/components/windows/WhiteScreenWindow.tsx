@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { peerCollabSync, PeerCursor } from '../../services/peerCollabSync.ts';
 import { playChime } from '../../utils/audio.ts';
+import { CloudflareTurnstile } from '../common/CloudflareTurnstile.tsx';
 
 export interface StickyNoteItem {
   id: string;
@@ -98,6 +99,7 @@ export const WhiteScreenWindow: React.FC<WhiteScreenWindowProps> = ({
   } | null>(null);
   const [showAiModal, setShowAiModal] = useState(false);
   const [warningNotice, setWarningNotice] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string>('');
 
   // Sticky Notes
   const [notes, setNotes] = useState<StickyNoteItem[]>([
@@ -402,6 +404,7 @@ export const WhiteScreenWindow: React.FC<WhiteScreenWindowProps> = ({
           userSubmission: submissionText,
           submissionMode: 'text_schema',
           timeSpentSeconds: 60,
+          turnstileToken,
         }),
       });
 
@@ -606,17 +609,19 @@ export const WhiteScreenWindow: React.FC<WhiteScreenWindowProps> = ({
             <Download className="w-4 h-4" />
           </button>
 
-          {/* Gemini AI Clean Slate Audit */}
-          <button
-            type="button"
-            onClick={handleAiAuditBoard}
-            disabled={isAiEvaluating}
-            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 shadow-2xs transition cursor-pointer disabled:opacity-50"
-            title="Отправить конспект/схему на белом экране на строгую проверку ИИ Gemini"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-            <span>{isAiEvaluating ? 'ИИ проверяет...' : 'ИИ-Аудит листа'}</span>
-          </button>
+          {/* Gemini AI Clean Slate Audit with Turnstile */}
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={handleAiAuditBoard}
+              disabled={isAiEvaluating}
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 shadow-2xs transition cursor-pointer disabled:opacity-50"
+              title="Отправить конспект/схему на белом экране на строгую проверку ИИ Gemini (Защищено Cloudflare Turnstile)"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+              <span>{isAiEvaluating ? 'ИИ проверяет...' : 'ИИ-Аудит листа'}</span>
+            </button>
+          </div>
 
           <div className="h-4 w-px bg-slate-200 mx-1" />
 

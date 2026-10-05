@@ -2,6 +2,7 @@ import express from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import { apiRouter } from './server/apiRouter';
+import { securityHeaders, apiRateLimiter, sanitizeInputMiddleware } from './server/securityMiddleware';
 
 process.on('unhandledRejection', (reason) => {
   console.warn('[Server Unhandled Rejection Caught]:', reason);
@@ -18,22 +19,37 @@ async function startServer() {
 
   app.disable('x-powered-by');
 
+  // OWASP Standard Security Headers
+  app.use(securityHeaders);
+
   // Universal CORS & Preflight headers for production VM
   app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-User-Id, Cache-Control, Accept');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-User-Id, Cache-Control, Accept, cf-turnstile-token, x-turnstile-token');
     if (req.method === 'OPTIONS') {
       return res.status(200).end();
     }
     next();
   });
 
-  app.use(express.json({ limit: '25mb' }));
-  app.use(express.urlencoded({ extended: true, limit: '25mb' }));
+  // Strict Payload Limit & Parsing with Anti-Prototype-Pollution Sanitization
+  app.use(express.json({ limit: '15mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '15mb' }));
+  app.use(sanitizeInputMiddleware);
+
+  // Anti-DDoS & Sliding Window Rate Limiting on /api
+  app.use('/api', apiRateLimiter);
 
   // API Endpoints mounted on real Express application
   app.use('/api', apiRouter);
+
+  // Serve Standalone PinkInAu Corporate Landing Page
+  const pinkinauLandingPath = path.resolve(process.cwd(), 'pinkinau-landing');
+  app.use('/pinkinau', express.static(pinkinauLandingPath));
+  app.use('/company', express.static(pinkinauLandingPath));
+  app.get('/company', (req, res) => res.sendFile(path.join(pinkinauLandingPath, 'index.html')));
+  app.get('/pinkinau', (req, res) => res.sendFile(path.join(pinkinauLandingPath, 'index.html')));
 
   // Vite middleware for development vs static build for production
   if (process.env.NODE_ENV !== 'production' && !process.env.SERVE_STATIC) {

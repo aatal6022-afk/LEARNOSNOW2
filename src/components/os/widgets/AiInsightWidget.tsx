@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { playChime } from '../../../utils/audio.ts';
 import { NoteItem } from '../../../types.ts';
+import { epistemicLedgerService } from '../../../services/epistemicLedgerService.ts';
 
 export interface BlockAdviceItem {
   id: string;
@@ -312,31 +313,32 @@ export const AiInsightWidget: React.FC<AiInsightWidgetProps> = ({
     setIsRefreshing(true);
     playChime('click');
     try {
-      const response = await fetch('/api/gemini/block-advice', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const data = await epistemicLedgerService.fetchAiWithEpistemicContext(
+        '/api/gemini/block-advice',
+        {
           blockTitle,
           blockPhase,
           blockTopics,
           currentTopic: currentTopicTitle,
           domain,
           studentLevel,
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data && Array.isArray(data.advices) && data.advices.length > 0) {
-          setAdvices(data.advices);
-          setCurrentIndex(0);
-          setIsAiGenerated(true);
-          setInlineElaborationText(null);
-          setExpandedElaboration(false);
-          playChime('success');
-          triggerToast('ИИ сформировал свежие советы по блоку');
-          return;
+        },
+        {
+          taskGoal: `Формирование прикладного совета и фокуса для блока «${blockTitle}»`,
+          domain: domain || 'Универсальное мастерство',
+          autoCrystallizeTopic: currentTopicTitle || blockTitle
         }
+      );
+
+      if (data && Array.isArray(data.advices) && data.advices.length > 0) {
+        setAdvices(data.advices);
+        setCurrentIndex(0);
+        setIsAiGenerated(true);
+        setInlineElaborationText(null);
+        setExpandedElaboration(false);
+        playChime('success');
+        triggerToast('ИИ сформировал свежие советы по блоку');
+        return;
       }
     } catch (e) {
       console.warn('[AiInsightWidget] Gemini block advice refresh error, keeping domain advice:', e);
@@ -421,10 +423,9 @@ export const AiInsightWidget: React.FC<AiInsightWidgetProps> = ({
       setIsLoadingElaboration(true);
       playChime('click');
       try {
-        const response = await fetch('/api/gemini/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+        const data = await epistemicLedgerService.fetchAiWithEpistemicContext(
+          '/api/gemini/chat',
+          {
             message: `Дай краткое практическое руководство (3 ключевых шага с примером) по теме: «${current.title}». Совет: «${current.advice}». Ответь емко и по делу за 3-4 предложения.`,
             history: [],
             context: {
@@ -432,15 +433,17 @@ export const AiInsightWidget: React.FC<AiInsightWidgetProps> = ({
               userLevel: studentLevel,
               activeNodeTitle: currentTopicTitle,
             },
-          }),
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data && data.reply) {
-            setInlineElaborationText(data.reply);
-            playChime('success');
+          },
+          {
+            taskGoal: `Практическая детализация совета по теме «${current.title}»`,
+            domain: domain || 'Универсальное мастерство',
+            autoCrystallizeTopic: current.title
           }
+        );
+
+        if (data && data.reply) {
+          setInlineElaborationText(data.reply);
+          playChime('success');
         }
       } catch (err) {
         setInlineElaborationText(

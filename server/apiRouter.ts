@@ -42,9 +42,42 @@ import { EpistemicLedger, type CastalianBridge } from './epistemicLedger';
 import { FirestoreKnowledgeCache } from './firestoreKnowledgeCache';
 import { TextbookDistiller } from './textbookDistiller';
 import { PdfDistillerService } from './pdfDistillerService';
+import { verifyTurnstileToken } from './turnstileVerifier';
 import appletConfig from '../firebase-applet-config.json';
 
 export const apiRouter = express.Router();
+
+// Auto Geo/IP Language Detection
+apiRouter.get('/geo/lang', (req, res) => {
+  const cfCountry = (req.headers['cf-ipcountry'] as string || req.headers['x-country-code'] as string || '').toUpperCase();
+  const acceptLang = (req.headers['accept-language'] as string || '').toLowerCase();
+
+  let detected = 'en';
+
+  if (cfCountry === 'KZ') {
+    detected = 'kk';
+  } else if (cfCountry === 'UA') {
+    detected = 'uk';
+  } else if (['RU', 'BY', 'KG'].includes(cfCountry)) {
+    detected = 'ru';
+  } else if (cfCountry === 'JP') {
+    detected = 'ja';
+  } else if (acceptLang.startsWith('kk') || acceptLang.includes('kk-') || acceptLang.includes('kaz')) {
+    detected = 'kk';
+  } else if (acceptLang.startsWith('uk') || acceptLang.includes('uk-') || acceptLang.includes('ukr')) {
+    detected = 'uk';
+  } else if (acceptLang.startsWith('ru') || acceptLang.includes('ru-')) {
+    detected = 'ru';
+  } else if (acceptLang.startsWith('ja') || acceptLang.includes('ja-') || acceptLang.includes('jp')) {
+    detected = 'ja';
+  }
+
+  res.json({
+    lang: detected,
+    country: cfCountry || null,
+    supported: ['kk', 'uk', 'ru', 'en', 'ja'],
+  });
+});
 
 function resolveFirebaseProjectId(): string | undefined {
   return (typeof appletConfig?.projectId === 'string' ? appletConfig.projectId : undefined) ||
@@ -113,6 +146,28 @@ async function getAuthenticatedUserId(req: express.Request): Promise<string | nu
   const queryUserId = req.query?.userId || req.query?.ownerId;
   if (queryUserId && typeof queryUserId === 'string') return queryUserId.trim();
   return null;
+}
+
+export function getUserLanguage(req: express.Request): string {
+  const headerLang = (req.header('x-user-language') || req.header('x-lang') || '').toLowerCase().trim();
+  if (headerLang && ['kk', 'uk', 'ru', 'en', 'ja'].includes(headerLang)) return headerLang;
+
+  const bodyLang = (req.body?.language || req.body?.userLanguage || req.body?.lang || '').toLowerCase().trim();
+  if (bodyLang && ['kk', 'uk', 'ru', 'en', 'ja'].includes(bodyLang)) return bodyLang;
+
+  const cfCountry = (req.headers['cf-ipcountry'] as string || '').toUpperCase();
+  if (cfCountry === 'KZ') return 'kk';
+  if (cfCountry === 'UA') return 'uk';
+  if (['RU', 'BY', 'KG'].includes(cfCountry)) return 'ru';
+  if (cfCountry === 'JP') return 'ja';
+
+  const acceptLang = (req.headers['accept-language'] as string || '').toLowerCase();
+  if (acceptLang.startsWith('kk') || acceptLang.includes('kaz')) return 'kk';
+  if (acceptLang.startsWith('uk') || acceptLang.includes('ukr')) return 'uk';
+  if (acceptLang.startsWith('ja') || acceptLang.includes('jp')) return 'ja';
+  if (acceptLang.startsWith('ru')) return 'ru';
+
+  return 'ru';
 }
 
 apiRouter.get('/health', (req, res) => {
@@ -1978,9 +2033,41 @@ apiRouter.post('/peer/collab/broadcast', (req, res) => {
   }
 });
 
-// Evaluate Blank Page Recall (Anti-fluency shield)
+// Verify Cloudflare Turnstile Token Endpoint for Auth and Client Pre-checks
+apiRouter.post('/auth/verify-turnstile', async (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  try {
+    const token = req.headers['cf-turnstile-token'] || req.headers['x-turnstile-token'] || req.body?.token || req.body?.turnstileToken;
+    const clientIp = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress;
+    const outcome = await verifyTurnstileToken(token as string, clientIp);
+    return res.json(outcome);
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err?.message || 'Turnstile verification error' });
+  }
+});
+
+// Evaluate Blank Page Recall (Anti-fluency shield + Cloudflare Turnstile Anti-bot Protection)
 apiRouter.post('/gemini/evaluate-blank-page', async (req, res) => {
   res.setHeader('Content-Type', 'application/json');
+  
+  // 1. Cloudflare Turnstile Anti-Abuse Check: Verify token before calling Gemini!
+  const turnstileToken = req.headers['cf-turnstile-token'] || req.headers['x-turnstile-token'] || req.body?.turnstileToken || req.body?.cfToken;
+  const clientIp = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress;
+
+  if (turnstileToken) {
+    const turnstileCheck = await verifyTurnstileToken(turnstileToken as string, clientIp);
+    if (!turnstileCheck.success) {
+      console.warn('[Cloudflare Turnstile] Blocked bot attempt on evaluate-blank-page:', turnstileCheck.error);
+      return res.status(403).json({
+        error: turnstileCheck.error || 'Проверка Cloudflare Turnstile не пройдена. Доступ заблокирован.',
+        evaluationStatus: 'turnstile_blocked',
+        isPassed: false,
+        score: 0,
+        verdict: 'Проверка отклонена: не пройден антибот-контроль Cloudflare Turnstile.',
+      });
+    }
+  }
+
   try {
     const result = await evaluateBlankPageSubmission(req.body);
     if (result.evaluationStatus === 'unavailable') {
@@ -2016,6 +2103,24 @@ apiRouter.post('/gemini/generate-diagram', async (req, res) => {
 // Evaluate Big Synthesis Milestone Capstone Project (10-block milestone)
 apiRouter.post('/gemini/evaluate-capstone-project', async (req, res) => {
   res.setHeader('Content-Type', 'application/json');
+
+  // Cloudflare Turnstile verification
+  const turnstileToken = req.headers['cf-turnstile-token'] || req.headers['x-turnstile-token'] || req.body?.turnstileToken || req.body?.cfToken;
+  const clientIp = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress;
+
+  if (turnstileToken) {
+    const turnstileCheck = await verifyTurnstileToken(turnstileToken as string, clientIp);
+    if (!turnstileCheck.success) {
+      console.warn('[Cloudflare Turnstile] Blocked bot attempt on evaluate-capstone-project:', turnstileCheck.error);
+      return res.status(403).json({
+        error: turnstileCheck.error || 'Проверка Cloudflare Turnstile не пройдена.',
+        evaluationStatus: 'turnstile_blocked',
+        passed: false,
+        score: 0,
+      });
+    }
+  }
+
   try {
     const result = await evaluateCapstoneProject(req.body);
     if (result.evaluationStatus === 'unavailable') {

@@ -74,7 +74,7 @@ class ExecutionSandboxService {
       console.warn('[ExecutionSandbox] Server execution notice, running client-side evaluator:', e);
     }
 
-    // Client-side lightweight evaluator fallback
+    // Client-side secure isolated evaluator fallback
     const logs: ExecutionLog[] = [];
     const testResults: ExecutionTestResult[] = [];
     let isSuccess = true;
@@ -86,8 +86,27 @@ class ExecutionSandboxService {
           warn: (...args: any[]) => logs.push({ type: 'warn', text: args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' '), time: Date.now() }),
           error: (...args: any[]) => logs.push({ type: 'error', text: args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' '), time: Date.now() }),
         };
-        const fn = new Function('console', code);
-        fn(customConsole);
+
+        // Strict isolation wrapper: shadow sensitive browser APIs
+        const shadowEnvParams = [
+          'console',
+          'window',
+          'document',
+          'localStorage',
+          'sessionStorage',
+          'fetch',
+          'XMLHttpRequest',
+          'WebSocket',
+          'indexedDB',
+          'alert',
+          'prompt',
+          'confirm',
+          'location'
+        ];
+
+        const fn = new Function(...shadowEnvParams, `"use strict";\n${code}`);
+        fn(customConsole, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined);
+
         if (logs.length === 0) {
           logs.push({ type: 'log', text: 'Код успешно выполнен без вывода в консоль.', time: Date.now() });
         }

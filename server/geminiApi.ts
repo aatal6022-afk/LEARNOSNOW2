@@ -28,6 +28,23 @@ export function isVertexAiEnabled(): boolean {
   return process.env.USE_VERTEX_AI === 'true';
 }
 
+export function getLanguagePromptDirective(lang?: string): string {
+  const code = (lang || 'ru').toLowerCase().trim();
+  if (code.startsWith('kk') || code === 'kazakh') {
+    return '\n[МАҢЫЗДЫ ТАЛАП: Барлық жауаптарды, түсініктемелерді, сократтық сұрақтар мен бағалауларды тек ҚАЗАҚ ТІЛІНДЕ (Kazakh language) жазыңыз.]\n';
+  }
+  if (code.startsWith('uk') || code === 'ukrainian') {
+    return '\n[ВАЖЛИВА ВИМОГА: Всі відповіді, пояснення, сократичні запитання та оцінювання надавайте виключно УКРАЇНСЬКОЮ МОВОЮ (Ukrainian language).]\n';
+  }
+  if (code.startsWith('en') || code === 'english') {
+    return '\n[CRITICAL REQUIREMENT: Respond, explain, ask Socratic questions, and provide feedback strictly in ENGLISH (English language).]\n';
+  }
+  if (code.startsWith('ja') || code === 'japanese') {
+    return '\n[重要指示: すべての解説・ソクラテス式問いかけ・フィードバック・評価は流暢な日本語 (Japanese language) で出力してください。]\n';
+  }
+  return '\n[ТРЕБОВАНИЕ: Отвечайте и ведите диалог с пользователем на РУССКОМ ЯЗЫКЕ.]\n';
+}
+
 let vertexCredentialsError: string | null = null;
 let vertexProjectFromCredentials: string | undefined;
 

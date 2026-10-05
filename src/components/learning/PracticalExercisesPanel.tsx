@@ -70,10 +70,9 @@ export const PracticalExercisesPanel: React.FC<PracticalExercisesPanelProps> = (
       }
 
       // 2. Request deep semantic analysis from Vertex AI backend
-      const res = await fetch('/api/gemini/analyze-project', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const data = await epistemicLedgerService.fetchAiWithEpistemicContext(
+        '/api/gemini/analyze-project',
+        {
           projectName: activeExercise.title,
           code: input,
           filename: 'student-submission.txt',
@@ -84,11 +83,14 @@ export const PracticalExercisesPanel: React.FC<PracticalExercisesPanelProps> = (
           ].join('\n'),
           businessScenario: activeExercise.scenario,
           fileType: 'text',
-        }),
-      });
+        },
+        {
+          taskGoal: `Анализ решения практического упражнения «${activeExercise.title}»`,
+          domain: unitTitle || 'Практика',
+          autoCrystallizeTopic: activeExercise.title
+        }
+      );
 
-      if (!res.ok) throw new Error(`Exercise evaluation failed: ${res.status}`);
-      const data = await res.json();
       const isPassed = data.passed === true && data.score >= 70;
 
       setVerifiedAnswers(prev => ({

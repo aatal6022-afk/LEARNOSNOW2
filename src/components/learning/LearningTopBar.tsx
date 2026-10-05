@@ -20,6 +20,7 @@ import {
 import { peerCollabSync } from '../../services/peerCollabSync.ts';
 import { telemetryEngine } from '../../services/telemetryEngine.ts';
 import { LoFiAudioWidget } from '../os/LoFiAudioWidget.tsx';
+import { LanguageSelector } from '../common/LanguageSelector.tsx';
 
 interface LearningTopBarProps {
   activeTab: string;
@@ -332,6 +333,9 @@ export const LearningTopBar: React.FC<LearningTopBarProps> = ({
             <span className="hidden xl:inline">О платформе</span>
           </button>
         )}
+
+        {/* 5-Language Switcher (Kazakh, Ukrainian, Russian, English, Japanese) */}
+        <LanguageSelector variant="compact" />
 
         {/* Theme Toggle */}
         <button

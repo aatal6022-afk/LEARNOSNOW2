@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { UserCheck, ShieldCheck, ArrowRight } from 'lucide-react';
 import { loginWithGoogle, User } from '../../firebase.ts';
 import { playChime } from '../../utils/audio.ts';
+import { CloudflareTurnstile } from '../common/CloudflareTurnstile.tsx';
 
 interface OsWelcomeLoginProps {
   onSuccess: (user: User | { uid: string; displayName: string; email: string; photoURL?: string }) => void;
@@ -14,6 +15,7 @@ export const OsWelcomeLogin: React.FC<OsWelcomeLoginProps> = ({
   const [loading, setLoading] = useState(false);
   const [customName, setCustomName] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string>('');
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
@@ -91,6 +93,15 @@ export const OsWelcomeLogin: React.FC<OsWelcomeLoginProps> = ({
 
       {/* Bottom Minimal Action Dock */}
       <div className="w-full max-w-md px-6 pb-12 flex flex-col items-center space-y-3.5 relative z-10">
+        {/* Anti-abuse Turnstile protection */}
+        <CloudflareTurnstile
+          action="os_login"
+          size="flexible"
+          className="w-full bg-white/90 border-stone-200"
+          onVerify={(token) => setTurnstileToken(token)}
+          onExpire={() => setTurnstileToken('')}
+        />
+
         {/* Google Sign-in Button */}
         <button
           id="btn-os-google-login"

@@ -1,4 +1,6 @@
 import { DAGNode, LearningUnit, UserArtifact } from '../types.ts';
+import { telemetryEngine } from './telemetryEngine.ts';
+import { i18n } from './i18nService.ts';
 
 export interface EpistemicFact {
   id: string;
@@ -96,6 +98,9 @@ export interface KnowledgePullRequest {
 
 export interface EpistemicLedgerData {
   version: number;
+  userPurpose?: string;
+  userPurposeDomain?: string;
+  userPurposeSetAt?: string;
   studentState: {
     targetDomain: string;
     masteredTopics: string[];
@@ -709,9 +714,249 @@ class EpistemicLedgerService {
     };
   }
 
+  // =========================================================================
+  // ⚡ PURE CONTEXT AI GATEWAY (Every AI request passes through this ledger)
+  // =========================================================================
+
+  /**
+   * Builds the pure, noise-free epistemic context prompt on the client side.
+   * Feeds the user's purpose, verified facts, core axioms, and active cognitive telemetry.
+   */
+  public buildCleanContextPrompt(taskGoal: string = 'Изучение материала'): string {
+    const ledger = this.getCachedLedger();
+    const purpose = ledger.userPurpose || 'Освоить инварианты и сделать практический результат без воды';
+
+    const facts = (ledger.provenFacts || [])
+      .slice(0, 15)
+      .map((f, i) => `[Факт ${i + 1} • ${f.domain}] ${f.topic}: ${f.statement}`)
+      .join('\n');
+
+    const coreAxioms = (ledger.crystallizedKnowledgeNodes || [])
+      .filter((n) => n.layer === 'core')
+      .slice(0, 8)
+      .map((n) => `• [ЯДРО] «${n.title}»: ${n.description}`)
+      .join('\n');
+
+    const resolvedConflicts = (this.conflicts || [])
+      .filter((c) => c.resolved)
+      .map((c) => `• [РАЗРЕШЕНО] «${c.topic}»: ${c.canonicalInvariant}`)
+      .join('\n');
+
+    const telemetry = telemetryEngine.getState();
+    const friction = telemetry.overallCognitiveLoad || 18;
+    const gaps = (telemetry.explicitConfusionFlags || []).slice(0, 3).join(', ');
+
+    return `
+=== ЧИСТЫЙ ЭПИСТЕМИЧЕСКИЙ РЕЕСТР ЗНАНИЙ (PURE CONTEXT) ===
+[ПРИКЛАДНАЯ ЦЕЛЬ ПОЛЬЗОВАТЕЛЯ]: «${purpose}»
+[ДИРЕКТИВА NO-WATER]: Запрещена абстрактная вода. Только то, что нужно для достижения цели «${purpose}».
+[КОГНИТИВНАЯ НАГРУЗКА]: ${friction}%${gaps ? ` | Активные затруднения: ${gaps}` : ''}
+
+ДОКАЗАННЫЕ ИНВАРИАНТЫ:
+${facts || 'Инварианты фиксируются по мере прохождения практики.'}
+
+АКСИОМЫ ЯДРА СФЕРЫ ЗНАНИЙ:
+${coreAxioms || 'Ядро формируется из подтвержденных концепций.'}
+
+${resolvedConflicts ? `УСТРАНЕННЫЕ ЗАБЛУЖДЕНИЯ (НЕ ПОВТОРЯТЬ):\n${resolvedConflicts}\n` : ''}
+ТЕКУЩАЯ ЦЕЛЕВАЯ ЗАДАЧА АГЕНТА: "${taskGoal}"
+`.trim();
+  }
+
+  /**
+   * Universal AI Request Fetcher with automatic Epistemic Context Enrichment & Memory Assimilation.
+   * Wraps any call to /api/gemini/*, attaches pure context, and updates the ledger from response metadata.
+   */
+  public async fetchAiWithEpistemicContext<T = any>(
+    endpoint: string,
+    payload: any = {},
+    options?: {
+      taskGoal?: string;
+      domain?: string;
+      autoCrystallizeTopic?: string;
+      customHeaders?: Record<string, string>;
+    }
+  ): Promise<T> {
+    const taskGoal = options?.taskGoal || payload.taskGoal || payload.unitTitle || 'Генерация учебного контента';
+    const domain = options?.domain || payload.domain || payload.category || this.cache?.studentState.targetDomain || 'Архитектура & Системы';
+
+    const cleanContext = this.buildCleanContextPrompt(taskGoal);
+    const telemetrySnapshot = telemetryEngine.getState();
+
+    const currentLanguage = i18n.getLanguage();
+
+    const enrichedPayload = {
+      ...payload,
+      language: payload.language || currentLanguage,
+      userLanguage: payload.userLanguage || currentLanguage,
+      epistemicContext: cleanContext,
+      cleanLedgerContext: cleanContext,
+      userPurpose: this.cache?.userPurpose,
+      targetDomain: domain,
+      telemetrySnapshot: {
+        cognitiveLoad: telemetrySnapshot.overallCognitiveLoad,
+        indecisionIndex: telemetrySnapshot.indecisionIndex,
+        coreResonance: telemetrySnapshot.coreResonancePercentage,
+        activeGaps: telemetrySnapshot.explicitConfusionFlags,
+      },
+      enableCleanMemory: true,
+    };
+
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-language': currentLanguage,
+          ...(options?.customHeaders || {}),
+        },
+        body: JSON.stringify(enrichedPayload),
+      });
+
+      if (!res.ok) {
+        throw new Error(`AI API returned status ${res.status}`);
+      }
+
+      const data = await res.json();
+
+      // Automatically assimilate server-returned ledger or clean memory metadata
+      if (data && typeof data === 'object') {
+        if (data.ledger) {
+          this.updateFromPulse(data.ledger);
+        } else if (data._cleanMemory) {
+          this.recordAiExecutionFeedback(data._cleanMemory);
+        }
+
+        // If newly crystallized axioms were discovered, register them
+        if (data.crystallizedFact) {
+          this.recordFact(
+            data.crystallizedFact.topic,
+            data.crystallizedFact.statement,
+            data.crystallizedFact.domain,
+            data.crystallizedFact.layer
+          );
+        }
+      }
+
+      return data as T;
+    } catch (err) {
+      console.warn(`[Epistemic AI Gateway] Call to ${endpoint} failed, continuing with fallback:`, err);
+      throw err;
+    }
+  }
+
+  /**
+   * Ingests feedback metadata returned by AI agents and updates reasoning traces in memory.
+   */
+  public recordAiExecutionFeedback(metadata: {
+    agentName?: string;
+    taskGoal?: string;
+    domain?: string;
+    axiomCrystallized?: string;
+    isFallback?: boolean;
+  }) {
+    if (!this.cache) this.cache = this.getLocalFallback();
+
+    const trace: AgentReasoningTrace = {
+      id: `trace-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      agentName: metadata.agentName || 'AI-CleanMemoryAgent',
+      taskGoal: metadata.taskGoal || 'Обработка запроса',
+      premises: ['Чистый контекст из Epistemic Ledger', 'Изоляция транзитного шума'],
+      deduction: `Агент завершил задачу: ${metadata.taskGoal || 'успешно'}`,
+      verdict: metadata.isFallback ? 'Детерминированный инвариант зафиксирован.' : 'Ответ верифицирован.',
+    };
+
+    this.cache.recentTraces = [trace, ...(this.cache.recentTraces || []).slice(0, 19)];
+
+    if (metadata.axiomCrystallized) {
+      const topic = metadata.axiomCrystallized;
+      const exists = this.cache.provenFacts.some((f) => f.topic.toLowerCase() === topic.toLowerCase());
+      if (!exists) {
+        this.cache.provenFacts.push({
+          id: `fact-${Date.now()}`,
+          topic,
+          domain: metadata.domain || 'Архитектура',
+          statement: `Инвариант «${topic}» подтвержден практикой и зафиксирован в ядре.`,
+          confidence: 0.98,
+          discoveredByAgent: metadata.agentName || 'AI-CleanMemoryAgent',
+          verifiedAt: new Date().toISOString(),
+          layer: 'core_axiom',
+          impactWeight: 14,
+        });
+      }
+    }
+
+    this.saveToLocal(this.cache);
+  }
+
+  /**
+   * Sets the user's primary application goal ("А для чего?") and synchronizes with server.
+   */
+  public async setStudentPurpose(purpose: string, domain?: string): Promise<boolean> {
+    if (!purpose.trim()) return false;
+    if (!this.cache) this.cache = this.getLocalFallback();
+
+    this.cache.userPurpose = purpose.trim();
+    if (domain) this.cache.userPurposeDomain = domain;
+    this.cache.userPurposeSetAt = new Date().toISOString();
+    this.saveToLocal(this.cache);
+
+    try {
+      const res = await fetch('/api/epistemic/set-purpose', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ purpose: purpose.trim(), domain }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.ledger) this.updateFromPulse(data.ledger);
+        return true;
+      }
+    } catch {}
+    return true;
+  }
+
+  /**
+   * Directly record a proven fact/axiom into the ledger and broadcast to all listeners.
+   */
+  public recordFact(
+    topic: string,
+    statement: string,
+    domain: string = 'Архитектура & Системы',
+    layer: 'core_axiom' | 'mantle_skill' | 'orbit_artifact' = 'core_axiom',
+    confidence: number = 0.96
+  ) {
+    if (!this.cache) this.cache = this.getLocalFallback();
+    const fact: EpistemicFact = {
+      id: `fact-direct-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      topic: topic.trim(),
+      domain: domain.trim(),
+      statement: statement.trim(),
+      confidence,
+      discoveredByAgent: 'Epistemic Direct Invariant Recorder',
+      verifiedAt: new Date().toISOString(),
+      layer,
+      impactWeight: layer === 'core_axiom' ? 16 : 10,
+    };
+
+    const exists = this.cache.provenFacts.some(
+      (f) => f.topic.toLowerCase() === fact.topic.toLowerCase() || f.statement === fact.statement
+    );
+
+    if (!exists) {
+      this.cache.provenFacts = [fact, ...this.cache.provenFacts];
+      this.cache.provenInvariants = this.cache.provenFacts;
+      this.saveToLocal(this.cache);
+    }
+  }
+
   private getLocalFallback(): EpistemicLedgerData {
     return {
       version: 3,
+      userPurpose: 'Создать работающий практический результат и освоить ключевые инварианты без воды',
+      userPurposeDomain: 'Прикладные навыки & Системное проектирование',
+      userPurposeSetAt: new Date().toISOString(),
       studentState: {
         targetDomain: 'Прикладные навыки & Системное проектирование',
         masteredTopics: [],

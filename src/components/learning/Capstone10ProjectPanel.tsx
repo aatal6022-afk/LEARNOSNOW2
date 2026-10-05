@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { Capstone10Project, UserArtifact } from '../../types.ts';
 import { playChime } from '../../utils/audio.ts';
+import { epistemicLedgerService } from '../../services/epistemicLedgerService.ts';
 
 interface Capstone10ProjectPanelProps {
   capstone?: Capstone10Project;
@@ -112,10 +113,9 @@ export const Capstone10ProjectPanel: React.FC<Capstone10ProjectPanelProps> = ({
     playChime('click');
 
     try {
-      const res = await fetch('/api/gemini/evaluate-capstone-project', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const data = await epistemicLedgerService.fetchAiWithEpistemicContext(
+        '/api/gemini/evaluate-capstone-project',
+        {
           title: activeCapstone.title,
           milestoneNumber: milestone,
           coveredTopics: activeCapstone.coveredTopics,
@@ -124,18 +124,21 @@ export const Capstone10ProjectPanel: React.FC<Capstone10ProjectPanelProps> = ({
           requirements: activeCapstone.requirements,
           checklist: activeCapstone.checklist,
           studentSubmission: code,
-        })
-      });
+        },
+        {
+          taskGoal: `Оценка и аудит Capstone-проекта «${activeCapstone.title}»`,
+          domain: 'Инженерия & Capstone',
+          autoCrystallizeTopic: activeCapstone.title
+        }
+      );
 
-      if (res.ok) {
-        const data = await res.json();
-        if (data.evaluationStatus === 'unavailable') throw new Error('Evaluation provider unavailable');
-        const passed = data.passed === true && data.score >= 70;
-        setAuditResult({ ...data, passed, evaluationStatus: 'verified' });
+      if (data.evaluationStatus === 'unavailable') throw new Error('Evaluation provider unavailable');
+      const passed = data.passed === true && data.score >= 70;
+      setAuditResult({ ...data, passed, evaluationStatus: 'verified' });
 
-        if (passed) {
-          playChime('success');
-          onSaveArtifact({
+      if (passed) {
+        playChime('success');
+        onSaveArtifact({
             id: `capstone-${milestone}-${Date.now()}`,
             unitId: `milestone-${milestone}`,
             unitTitle: `🏆 Большой проект синтеза (${milestone} блоков)`,
@@ -155,9 +158,6 @@ export const Capstone10ProjectPanel: React.FC<Capstone10ProjectPanelProps> = ({
         } else {
           playChime('alert');
         }
-      } else {
-        throw new Error('Server returned non-200');
-      }
     } catch (err) {
       console.warn('Capstone evaluation unavailable:', err);
       setAuditResult({

@@ -10,6 +10,7 @@ import {
   UserCheck
 } from 'lucide-react';
 import { loginAsGuest, loginWithGoogle, User } from '../../firebase.ts';
+import { CloudflareTurnstile } from '../common/CloudflareTurnstile.tsx';
 
 interface GoogleAuthModalProps {
   onSuccess: (user: User | { uid: string; displayName: string; email: string; photoURL?: string }) => void;
@@ -22,6 +23,7 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
 }) => {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string>('');
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
@@ -114,6 +116,14 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
             {errorMsg}
           </div>
         )}
+
+        {/* Cloudflare Turnstile Anti-bot Protection */}
+        <CloudflareTurnstile
+          action="auth_login"
+          size="flexible"
+          onVerify={(token) => setTurnstileToken(token)}
+          onExpire={() => setTurnstileToken('')}
+        />
 
         {/* Action Buttons */}
         <div className="space-y-2.5 pt-1">

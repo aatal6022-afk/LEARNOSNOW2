@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ChangelogUpdatesView } from './ChangelogUpdatesView.tsx';
 import { AdminUpdatesModal } from './AdminUpdatesModal.tsx';
 import { releaseUpdatesService } from '../../services/releaseUpdatesService.ts';
+import { LanguageSelector } from '../common/LanguageSelector.tsx';
+import { useI18n } from '../../services/i18nService.ts';
 
 interface BitrixStyleLandingProps {
   onStartFree: () => void;
@@ -14,6 +16,7 @@ export const BitrixStyleLanding: React.FC<BitrixStyleLandingProps> = ({
   onLogin,
   onEnterDemoDesktop
 }) => {
+  const { t, lang } = useI18n();
   const [selectedTab, setSelectedTab] = useState<string>('graph');
   const [currentXp, setCurrentXp] = useState<number>(1240);
   const [targetXp, setTargetXp] = useState<number>(1240);
@@ -660,19 +663,22 @@ export const BitrixStyleLanding: React.FC<BitrixStyleLandingProps> = ({
         <div className="wrap">
           <a className="logo" href="#top" id="top">Pink<b>In</b>Au</a>
           <nav aria-label="Разделы">
-            <a href="#features">Возможности</a>
-            <a href="#how">Как это работает</a>
+            <a href="#features">{t('nav.products', 'Возможности')}</a>
+            <a href="#how">{t('nav.principles', 'Как это работает')}</a>
             <button
               type="button"
               onClick={() => setShowChangelog(true)}
               className="nav-btn-link"
             >
-              Что нового <span className="nav-pill-badge">{latestReleaseVersion}</span>
+              {t('nav.changelog', 'Что нового')} <span className="nav-pill-badge">{latestReleaseVersion}</span>
             </button>
-            <a href="#faq">Вопросы</a>
+            <a href="#faq">FAQ</a>
           </nav>
           <span className="spacer"></span>
-          <button type="button" onClick={onStartFree} className="btn btn-filled sm">Попробовать</button>
+          <div className="flex items-center space-x-2">
+            <LanguageSelector variant="compact" />
+            <button type="button" onClick={onStartFree} className="btn btn-filled sm">{t('nav.startFree', 'Попробовать')}</button>
+          </div>
         </div>
         <div className="prog" id="prog"></div>
       </div>
@@ -689,29 +695,29 @@ export const BitrixStyleLanding: React.FC<BitrixStyleLandingProps> = ({
               <div className="alpha-banner">
                 <span className="alpha-tag">Alpha {latestReleaseVersion}</span>
                 <span>
-                  ⚠️ Ранняя альфа-версия.{' '}
+                  ⚠️ {t('hero.badge', 'Ранняя альфа-версия.')}{' '}
                   <button
                     type="button"
                     onClick={() => setShowChangelog(true)}
                     className="alpha-link cursor-pointer bg-transparent border-none p-0 inline"
                   >
-                    Что нового?
+                    {t('nav.changelog', 'Что нового?')}
                   </button>{' '}
-                  • Нашли баг: <a href="https://t.me/pinkinauceo" target="_blank" rel="noopener noreferrer" className="alpha-link">@pinkinauceo</a>
+                  • Telegram: <a href="https://t.me/pinkinauceo" target="_blank" rel="noopener noreferrer" className="alpha-link">@pinkinauceo</a>
                 </span>
               </div>
 
               <div>
-                <span className="pill"><i></i>Pink Learn от PinkInAu</span>
+                <span className="pill"><i></i>PinkInAu Learning OS</span>
               </div>
-              <h1>Учитесь так, как <em>работает память</em></h1>
-              <p className="sub">Платформа, которая превращает тему в граф знаний, а каждый модуль в готовую работу для портфолио.</p>
+              <h1>{t('hero.subtitle', 'Учитесь так, как работает память')}</h1>
+              <p className="sub">{t('hero.desc', 'Платформа, которая превращает тему в граф знаний, а каждый модуль в готовую работу для портфолио.')}</p>
               <div className="cta-row">
                 <button type="button" onClick={onEnterDemoDesktop || onStartFree} className="btn btn-filled">
-                  Открыть демо без пароля
+                  {t('nav.demo', 'Открыть демо без пароля')}
                 </button>
                 <button type="button" onClick={onLogin} className="btn btn-tonal">
-                  Войти через Google
+                  {t('nav.login', 'Войти через Google')}
                 </button>
               </div>
               <p className="hint">Вход в один клик. Гостевой режим работает без регистрации.</p>
