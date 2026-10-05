@@ -1,24 +1,6 @@
-import { useState, useEffect } from 'react';
-import { COMPREHENSIVE_DICTIONARY } from './translationsData.ts';
+import { SupportedLanguage } from './i18nService';
 
-export type SupportedLanguage = 'kk' | 'uk' | 'ru' | 'en' | 'ja';
-
-export interface LanguageInfo {
-  code: SupportedLanguage;
-  name: string;
-  nativeName: string;
-  flag: string;
-}
-
-export const SUPPORTED_LANGUAGES: LanguageInfo[] = [
-  { code: 'kk', name: 'Kazakh', nativeName: 'Қазақша', flag: '🇰🇿' },
-  { code: 'uk', name: 'Ukrainian', nativeName: 'Українська', flag: '🇺🇦' },
-  { code: 'ru', name: 'Russian', nativeName: 'Русский', flag: '🇷🇺' },
-  { code: 'en', name: 'English', nativeName: 'English', flag: '🇺🇸' },
-  { code: 'ja', name: 'Japanese', nativeName: '日本語', flag: '🇯🇵' },
-];
-
-export const DICTIONARY: Record<SupportedLanguage, Record<string, string>> = {
+export const COMPREHENSIVE_DICTIONARY: Record<SupportedLanguage, Record<string, string>> = {
   // ==========================================================================
   // 1. ҚАЗАҚША (Kazakh)
   // ==========================================================================
@@ -26,14 +8,15 @@ export const DICTIONARY: Record<SupportedLanguage, Record<string, string>> = {
     // App & Nav
     'app.title': 'Learning OS',
     'app.subtitle': 'Когнитивті оқытудың операциялық жүйесі',
+    'appName': 'PinkInAu Learning OS',
     'nav.desktop': 'Жұмыс үстеліне',
     'nav.launch': 'Learning OS іске қосу',
     'nav.products': 'Өнімдер',
     'nav.about': 'Компания туралы',
     'nav.principles': 'Принциптер',
-    'nav.login': 'Кіру',
+    'nav.login': 'Google арқылы кіру',
     'nav.startFree': 'Тегін бастау',
-    'nav.demo': 'Демо жұмыс үстелі',
+    'nav.demo': 'Демо жұмыс үстелін ашу',
     'nav.logout': 'Шығу',
     'nav.settings': 'Баптаулар',
     'nav.profile': 'Профиль',
@@ -91,13 +74,80 @@ export const DICTIONARY: Record<SupportedLanguage, Record<string, string>> = {
     'app.shortcuts': 'Пернетақта пернелері',
     'app.notes': 'Жазбалар',
 
-    // Window Controls
-    'win.minimize': 'Терезені бүктеу',
-    'win.maximize': 'Үлкейту',
-    'win.restore': 'Қалпына келтіру',
-    'win.close': 'Жабу',
-    'win.autoFit': 'Бос орынға сәйкестендіру',
-    'win.remoteDragging': 'жылжытуда',
+    // Landing Page
+    'landing.heroTag': 'PinkInAu Компаниясы',
+    'landing.heroSubtitle': 'Жад қалай жұмыс істесе, солай оқыңыз',
+    'landing.heroDesc': 'Тақырыпты білім графына, ал әр модульді портфолиоға дайын жұмысқа айналдыратын оқу платформасы.',
+    'landing.openDemo': 'Демоны құпия сөзсіз ашу',
+    'landing.loginGoogle': 'Google арқылы кіру',
+    'landing.hintOneClick': 'Бір рет басу арқылы кіру. Қонақ режимі тіркелусіз жұмыс істейді.',
+    'landing.dagTitle': 'Граф: Алгоритмдер мен деректер құрылымдары',
+    'landing.dagAria': 'Интерактивті оқу графы. Өту үшін жарқыраған түйінді басыңыз.',
+    'landing.nodeBasics': 'Негіздер',
+    'landing.nodeTheory': 'Теория',
+    'landing.nodePractice': 'Практика',
+    'landing.nodeSparring': 'Спарринг',
+    'landing.nodeQuiz': 'Квиз',
+    'landing.nodeCapstone': 'Capstone',
+    'landing.legendDone': 'Өтілді',
+    'landing.legendReview': 'Қайталау уақыты',
+    'landing.legendOpen': 'Қолжетімді',
+    'landing.legendLock': 'Жабық',
+    'landing.tipDefault': 'Өту үшін жарқыраған түйінді басыңыз.',
+    'landing.tipFinished': 'Граф аяқталды! Жұмысты портфолиоға қосуға болады.',
+    'landing.resetDag': 'Қайта өту',
+    'landing.streak': 'Стрик',
+    'landing.streakDays': '12 күн',
+    'landing.repeat': 'Қайталау',
+    'landing.repeatAllDone': 'барлығы қайталанды',
+    'landing.blankSheet': 'Таза парақ',
+    'landing.recallFullness': 'Жауап толықтығы',
+    'landing.allInOneProduct': 'Барлығы бір өнімде',
+    'landing.sevenModules': 'Жеті модуль, бір жұмыс үстелі',
+    'landing.sevenModulesLead': 'Граф, студия, спарринг және портфолио бір ортада терезе түрінде ашылып, ортақ деректермен жұмыс істейді.',
+    'landing.tabGraph': 'Граф',
+    'landing.tabStudio': 'Фокус-студия',
+    'landing.tabSphere': 'Білім сферасы',
+    'landing.tabSparring': 'Спарринг',
+    'landing.tabGit': 'Білім Git',
+    'landing.tabPortfolio': 'Портфолио',
+    'landing.tabProductivity': 'Өнімділік',
+    'landing.stepsTitle': 'Алғашқы артефактқа дейінгі үш қадам',
+    'landing.step1Title': 'Бір басумен кіріңіз',
+    'landing.step1Desc': 'Google есептік жазбасымен немесе қонақ режимінде құпия сөзсіз.',
+    'landing.step2Title': 'Граф бойынша алға жылжыңыз',
+    'landing.step2Desc': 'Блоктарды жабыңыз, «Таза парақты» тапсырыңыз және белгіленген түйіндерді қайталаңыз.',
+    'landing.step3Title': 'Нәтижені көрсетіңіз',
+    'landing.step3Desc': 'Артефакттар сілтемесін бөлісуге болатын көпшілік портфолиоға жиналады.',
+    'landing.platformTitle': 'Сізге ыңғайлы жерде жұмыс істейді',
+    'landing.cardDesktopTitle': 'Браузердегі жұмыс үстелі',
+    'landing.cardDesktopDesc': 'Қалқымалы терезелер, қолданбалар догы, күй жолағы және көптапсырмалылық.',
+    'landing.cardMobileTitle': 'Смартфондағы блоктар',
+    'landing.cardMobileDesc': 'Интерфейс барлық функцияларымен ыңғайлы мобильді форматқа автоматты түрде бейімделеді.',
+    'landing.cardSyncTitle': 'Лезде синхрондау',
+    'landing.cardSyncDesc': 'Граф, жазбалар, тапсырмалар, XP және баптаулар бұлтта нақты уақытта сақталады.',
+    'landing.cardAuthTitle': 'Қауіпсіз кіру',
+    'landing.cardAuthDesc': 'Бір рет басу арқылы Google-кіру немесе парольсіз қонақ режимі.',
+    'landing.faqTitle': 'Негізгі сұрақтар',
+    'landing.ctaTitle': 'Алғашқы білім графыңызды құрыңыз',
+    'landing.ctaDesc': 'Демоны ашып, алғашқы блокты бірнеше минутта өтіңіз.',
+    'landing.openPinkLearn': 'Pink Learn ашу',
+    'landing.footerCompany': 'Оқуға және бірлесіп жұмыс істеуге арналған өнімдер жасайтын IT-компания.',
+    'landing.footerRights': '© 2026 PinkInAu. Барлық құқықтар қорғалған.',
+
+    // Focus Studio
+    'focus.theory': '20% Теория & Кванттар',
+    'focus.blank': '10% «Таза парақ» сынағы',
+    'focus.practice': '70% Практика & Код',
+    'focus.sparring': 'ИИ Сократтық диалог',
+    'focus.telemetry': 'Нейротелеметрия',
+    'focus.completeQuantum': 'Квантты аяқтау (+15 XP)',
+    'focus.submitRecall': 'Жадтан жауапты тексеру',
+    'focus.runCode': 'Кодты іске қосу',
+    'focus.nextStep': 'Келесі қадам',
+    'focus.reset': 'Қайтару',
+    'focus.evaluating': 'ИИ бағалауда...',
+    'focus.score': 'Нәтиже',
 
     // Widgets & Desktop
     'widget.clock': 'Уақыт & Күнтізбе',
@@ -123,20 +173,6 @@ export const DICTIONARY: Record<SupportedLanguage, Record<string, string>> = {
     'widget.noTasks': 'Тапсырмалар жоқ',
     'widget.addTask': 'Тапсырма енгізіңіз...',
     'widget.addHabit': 'Әдет енгізіңіз...',
-
-    // Focus Studio (20/10/70)
-    'focus.theory': '20% Теория & Кванттар',
-    'focus.blank': '10% «Таза парақ» сынағы',
-    'focus.practice': '70% Практика & Код',
-    'focus.sparring': 'ИИ Сократтық диалог',
-    'focus.telemetry': 'Нейротелеметрия',
-    'focus.completeQuantum': 'Квантты аяқтау (+15 XP)',
-    'focus.submitRecall': 'Жадтан жауапты тексеру',
-    'focus.runCode': 'Кодты іске қосу',
-    'focus.nextStep': 'Келесі қадам',
-    'focus.reset': 'Қайтару',
-    'focus.evaluating': 'ИИ бағалауда...',
-    'focus.score': 'Нәтиже',
 
     // Common Actions
     'action.save': 'Сақтау',
@@ -167,20 +203,24 @@ export const DICTIONARY: Record<SupportedLanguage, Record<string, string>> = {
     'action.success': 'Сәтті орындалды',
     'action.error': 'Қате орын алды',
 
-    // Lock Screen
+    // Lock & Splash
     'lock.title': 'Жүйе уақытша құлыпталды',
-    'lock.hint': 'Сеансты жалғастыру үшін «Құлыпты ашу» түймесін басыңыз',
+    'lock.hint': 'Сеансты жалғастыру үшін «Жүйеге кіру» түймесін басыңыз',
     'lock.button': 'Жүйеге кіру',
     'lock.sessionRestored': 'Сеанс сәтті жаңартылды',
+    'splash.sessionActive': 'Сессия белсенді',
+    'splash.hello': 'Сәлем',
+    'splash.ready': 'Жұмыс кеңістігі дайын',
+    'splash.skipPrompt': 'Кіру үшін басыңыз немесе бос орын пернесін басыңыз',
 
-    // Spotlight & Quick Search
+    // Spotlight
     'spotlight.placeholder': 'Команданы, пәнді, файлды немесе терезені іздеу...',
     'spotlight.apps': 'Қолданбалар мен терезелер',
     'spotlight.commands': 'Жүйелік пәрмендер',
     'spotlight.units': 'Оқу кванттары мен тақырыптар',
     'spotlight.noResults': 'Ештеңе табылмады',
 
-    // Spaced Repetition
+    // SRS & Profile
     'srs.title': 'Интервалды қайталау (SuperMemo-2)',
     'srs.flip': 'Жауапты көрсету (Бос орын)',
     'srs.again': 'Қайтадан (<1 мин)',
@@ -188,8 +228,6 @@ export const DICTIONARY: Record<SupportedLanguage, Record<string, string>> = {
     'srs.good': 'Жақсы (3 күн)',
     'srs.easy': 'Оңай (7 күн)',
     'srs.completed': 'Бүгінгі барлық карточкалар қайталанды!',
-
-    // Profile & Level
     'profile.title': 'Студент профилі',
     'profile.level': 'Деңгей',
     'profile.xp': 'XP Ұпайы',
@@ -198,41 +236,11 @@ export const DICTIONARY: Record<SupportedLanguage, Record<string, string>> = {
     'profile.stats': 'Оқу статистикасы',
     'profile.badges': 'Марапаттар мен белгілер',
     'profile.edit': 'Профильді өңдеу',
-
-    // Diagnostics & Personalization
     'survey.title': 'Адаптивті білім диагностикасы',
     'survey.subtitle': 'Деңгейіңізді анықтап, дербес DAG-траекториясын құрыңыз',
     'survey.start': 'Диагностикадан өту',
     'survey.generating': 'ИИ оқу траекториясын құруда...',
     'survey.ready': 'Жоспар дайын!',
-
-    // Splash, Dock & Interactive Tools
-    'splash.sessionActive': 'Сессия белсенді',
-    'splash.hello': 'Сәлем',
-    'splash.ready': 'Жұмыс кеңістігі дайын',
-    'splash.skipPrompt': 'Кіру үшін басыңыз немесе бос орын пернесін басыңыз',
-    'dock.aiOperator': 'ИИ-Оператор: жеке тьютор және фасилитатор',
-    'dock.openPeerChat': 'Напарникпен чатты ашу',
-    'dock.communityGroups': 'P2P Чат және оқу топтары: қауымдастықты ашу',
-    'dock.whiteboardTooltip': 'Интерактивті тақта (Ақ экран)',
-    'dock.chatWith': 'Напарникпен чат',
-    'dock.communityChat': 'Оқу тобы мен қауымдастық чаты',
-    'dock.tasksTooltip': 'Ағымдағы спринт тапсырмалары',
-    'whiteboard.title': 'Ақ экран (White Screen)',
-    'whiteboard.partner': 'Напарник',
-    'whiteboard.partnerActive': 'Напарник белсенді',
-    'whiteboard.demoPartner': 'Демо-напарник',
-    'whiteboard.save': 'Сақтау',
-    'whiteboard.clear': 'Тақта тазалау',
-    'whiteboard.grid': 'Тор',
-    'whiteboard.pen': 'Қалам',
-    'whiteboard.eraser': 'Өшіргіш',
-    'whiteboard.text': 'Мәтін',
-    'whiteboard.shapes': 'Фигуралар',
-    'whiteboard.export': 'Экспорт',
-    'hero.badge': 'Ерте альфа-нұсқа.',
-    'hero.subtitle': 'Жад қалай жұмыс істесе, солай оқыңыз',
-    'hero.desc': 'Тақырыпты білім графына, ал әр модульді портфолиоға дайын жұмысқа айналдыратын платформа.',
   },
 
   // ==========================================================================
@@ -242,14 +250,15 @@ export const DICTIONARY: Record<SupportedLanguage, Record<string, string>> = {
     // App & Nav
     'app.title': 'Learning OS',
     'app.subtitle': 'Операційна система когнітивного навчання',
+    'appName': 'PinkInAu Learning OS',
     'nav.desktop': 'На робочий стіл',
     'nav.launch': 'Запустити Learning OS',
     'nav.products': 'Продукти',
     'nav.about': 'Про компанію',
     'nav.principles': 'Принципи',
-    'nav.login': 'Увійти',
+    'nav.login': 'Увійти через Google',
     'nav.startFree': 'Почати безкоштовно',
-    'nav.demo': 'Демо-робочий стіл',
+    'nav.demo': 'Відкрити демо без пароля',
     'nav.logout': 'Вийти',
     'nav.settings': 'Налаштування',
     'nav.profile': 'Профіль',
@@ -307,13 +316,80 @@ export const DICTIONARY: Record<SupportedLanguage, Record<string, string>> = {
     'app.shortcuts': 'Гарячі клавіші',
     'app.notes': 'Нотатки',
 
-    // Window Controls
-    'win.minimize': 'Згорнути вікно',
-    'win.maximize': 'Розгорнути',
-    'win.restore': 'Відновити',
-    'win.close': 'Закрити',
-    'win.autoFit': 'Авто-підгонка під вільне місце',
-    'win.remoteDragging': 'переміщує',
+    // Landing Page
+    'landing.heroTag': 'Компанія PinkInAu',
+    'landing.heroSubtitle': 'Вчіться так, як працює пам’ять',
+    'landing.heroDesc': 'Платформа, що перетворює тему на граф знань, а кожен модуль — на готову роботу для портфоліо.',
+    'landing.openDemo': 'Відкрити демо без пароля',
+    'landing.loginGoogle': 'Увійти через Google',
+    'landing.hintOneClick': 'Вхід в один клік. Гостьовий режим працює без реєстрації.',
+    'landing.dagTitle': 'Граф: Алгоритми та структури даних',
+    'landing.dagAria': 'Інтерактивний граф навчання. Натисніть на вузол, щоб пройти його.',
+    'landing.nodeBasics': 'Основи',
+    'landing.nodeTheory': 'Теорія',
+    'landing.nodePractice': 'Практика',
+    'landing.nodeSparring': 'Спарринг',
+    'landing.nodeQuiz': 'Квіз',
+    'landing.nodeCapstone': 'Capstone',
+    'landing.legendDone': 'Пройдено',
+    'landing.legendReview': 'Час повторити',
+    'landing.legendOpen': 'Доступно',
+    'landing.legendLock': 'Закрито',
+    'landing.tipDefault': 'Натисніть на сяючий вузол, щоб пройти його.',
+    'landing.tipFinished': 'Граф пройдено! Роботу можна додати до портфоліо.',
+    'landing.resetDag': 'Пройти знову',
+    'landing.streak': 'Стрік',
+    'landing.streakDays': '12 днів',
+    'landing.repeat': 'Повторити',
+    'landing.repeatAllDone': 'все повторено',
+    'landing.blankSheet': 'Чистий аркуш',
+    'landing.recallFullness': 'Повнота відповіді',
+    'landing.allInOneProduct': 'Все в одному продукті',
+    'landing.sevenModules': 'Сім модулів, один робочий стіл',
+    'landing.sevenModulesLead': 'Граф, студія, спарринг та портфоліо відкриваються як вікна в єдиному середовищі та синхронізують спільні дані.',
+    'landing.tabGraph': 'Граф',
+    'landing.tabStudio': 'Фокус-студія',
+    'landing.tabSphere': 'Сфера знань',
+    'landing.tabSparring': 'Спарринг',
+    'landing.tabGit': 'Git знань',
+    'landing.tabPortfolio': 'Портфоліо',
+    'landing.tabProductivity': 'Продуктивність',
+    'landing.stepsTitle': 'Три кроки до першого артефакту',
+    'landing.step1Title': 'Увійдіть в один клік',
+    'landing.step1Desc': 'Через обліковий запис Google або в гостьовому демо-режимі без пароля.',
+    'landing.step2Title': 'Рухайтесь по графу',
+    'landing.step2Desc': 'Закривайте блоки, складайте «Чистий аркуш» та повторюйте підсвічені вузли.',
+    'landing.step3Title': 'Покажіть результат',
+    'landing.step3Desc': 'Артефакти збираються у публічне портфоліо, посиланням на яке можна поділитися.',
+    'landing.platformTitle': 'Працює там, де зручно вам',
+    'landing.cardDesktopTitle': 'Робочий стіл у браузері',
+    'landing.cardDesktopDesc': 'Плаваючі вікна, док програм, рядок стану та багатозадачність.',
+    'landing.cardMobileTitle': 'Блоки на смартфоні',
+    'landing.cardMobileDesc': 'Інтерфейс автоматично перебудовується у зручний мобільний формат із повним набором функцій.',
+    'landing.cardSyncTitle': 'Миттєва синхронізація',
+    'landing.cardSyncDesc': 'Граф, нотатки, завдання, XP та налаштування зберігаються у хмарі в реальному часі.',
+    'landing.cardAuthTitle': 'Безпечний вхід',
+    'landing.cardAuthDesc': 'Google-акаунт в один клік або гостьовий режим без пароля.',
+    'landing.faqTitle': 'Коротко про головне',
+    'landing.ctaTitle': 'Створіть свій перший граф знань',
+    'landing.ctaDesc': 'Відкрийте демо та пройдіть перший блок за кілька хвилин.',
+    'landing.openPinkLearn': 'Відкрити Pink Learn',
+    'landing.footerCompany': 'IT-компанія, що розробляє цифрові середовища для навчання та спільної роботи.',
+    'landing.footerRights': '© 2026 PinkInAu. Всі права захищені.',
+
+    // Focus Studio
+    'focus.theory': '20% Теорія & Кванти',
+    'focus.blank': '10% «Чистий аркуш»',
+    'focus.practice': '70% Практика & Код',
+    'focus.sparring': 'ШІ Сократичний спаринг',
+    'focus.telemetry': 'Нейротелеметрія',
+    'focus.completeQuantum': 'Завершити квант (+15 XP)',
+    'focus.submitRecall': 'Перевірити згадування з пам’яті',
+    'focus.runCode': 'Запустити код',
+    'focus.nextStep': 'Наступний крок',
+    'focus.reset': 'Скинути',
+    'focus.evaluating': 'ШІ оцінює...',
+    'focus.score': 'Оцінка',
 
     // Widgets & Desktop
     'widget.clock': 'Час & Календар',
@@ -339,20 +415,6 @@ export const DICTIONARY: Record<SupportedLanguage, Record<string, string>> = {
     'widget.noTasks': 'Немає активних завдань',
     'widget.addTask': 'Введіть нове завдання...',
     'widget.addHabit': 'Введіть назву звички...',
-
-    // Focus Studio (20/10/70)
-    'focus.theory': '20% Теорія & Кванти',
-    'focus.blank': '10% «Чистий аркуш»',
-    'focus.practice': '70% Практика & Код',
-    'focus.sparring': 'ШІ Сократичний спаринг',
-    'focus.telemetry': 'Нейротелеметрія',
-    'focus.completeQuantum': 'Завершити квант (+15 XP)',
-    'focus.submitRecall': 'Перевірити згадування з пам’яті',
-    'focus.runCode': 'Запустити код',
-    'focus.nextStep': 'Наступний крок',
-    'focus.reset': 'Скинути',
-    'focus.evaluating': 'ШІ оцінює...',
-    'focus.score': 'Оцінка',
 
     // Common Actions
     'action.save': 'Зберегти',
@@ -383,11 +445,15 @@ export const DICTIONARY: Record<SupportedLanguage, Record<string, string>> = {
     'action.success': 'Успішно виконано',
     'action.error': 'Виникла помилка',
 
-    // Lock Screen
+    // Lock & Splash
     'lock.title': 'Система тимчасово заблокована',
     'lock.hint': 'Натисніть «Увійти в систему» для відновлення сеансу',
     'lock.button': 'Увійти в систему',
     'lock.sessionRestored': 'Сеанс успішно відновлено',
+    'splash.sessionActive': 'Сесія активна',
+    'splash.hello': 'Привіт',
+    'splash.ready': 'Робочий простір готовий',
+    'splash.skipPrompt': 'Клікніть або натисніть пробіл для входу',
 
     // Spotlight
     'spotlight.placeholder': 'Пошук команди, модуля, файлу чи вікна...',
@@ -396,7 +462,7 @@ export const DICTIONARY: Record<SupportedLanguage, Record<string, string>> = {
     'spotlight.units': 'Кванти та теми курсу',
     'spotlight.noResults': 'Нічого не знайдено',
 
-    // Spaced Repetition
+    // SRS & Profile
     'srs.title': 'Інтервальне повторення (SuperMemo-2)',
     'srs.flip': 'Показати відповідь (Пробіл)',
     'srs.again': 'Знову (<1 хв)',
@@ -404,8 +470,6 @@ export const DICTIONARY: Record<SupportedLanguage, Record<string, string>> = {
     'srs.good': 'Добре (3 дні)',
     'srs.easy': 'Легко (7 днів)',
     'srs.completed': 'Всі картки на сьогодні повторено!',
-
-    // Profile & Diagnostics
     'profile.title': 'Профіль студента',
     'profile.level': 'Рівень',
     'profile.xp': 'Бали XP',
@@ -419,34 +483,6 @@ export const DICTIONARY: Record<SupportedLanguage, Record<string, string>> = {
     'survey.start': 'Пройти діагностику',
     'survey.generating': 'ШІ генерує навчальну траєкторію...',
     'survey.ready': 'План готовий!',
-
-    // Splash, Dock & Interactive Tools
-    'splash.sessionActive': 'Сесія активна',
-    'splash.hello': 'Привіт',
-    'splash.ready': 'Робочий простір готовий',
-    'splash.skipPrompt': 'Клікніть або натисніть пробіл для входу',
-    'dock.aiOperator': 'ШІ-Оператор: персональний тьютор та фасилітатор',
-    'dock.openPeerChat': 'Відкрити чат з напарником',
-    'dock.communityGroups': 'P2P Чат та навчальні групи: відкрити спільноту',
-    'dock.whiteboardTooltip': 'Інтерактивна дошка (Чистий екран)',
-    'dock.chatWith': 'Чат з напарником',
-    'dock.communityChat': 'Чат навчальної групи та спільноти',
-    'dock.tasksTooltip': 'Завдання поточного спринту',
-    'whiteboard.title': 'Чистий екран (White Screen)',
-    'whiteboard.partner': 'Напарник',
-    'whiteboard.partnerActive': 'Напарник активний',
-    'whiteboard.demoPartner': 'Демо-напарник',
-    'whiteboard.save': 'Зберегти',
-    'whiteboard.clear': 'Очистити дошку',
-    'whiteboard.grid': 'Сітка',
-    'whiteboard.pen': 'Олівець',
-    'whiteboard.eraser': 'Гумка',
-    'whiteboard.text': 'Текст',
-    'whiteboard.shapes': 'Фігури',
-    'whiteboard.export': 'Експорт',
-    'hero.badge': 'Рання альфа-версія.',
-    'hero.subtitle': 'Вчіться так, як працює пам’ять',
-    'hero.desc': 'Платформа, що перетворює тему на граф знань, а кожен модуль — на готову роботу для портфоліо.',
   },
 
   // ==========================================================================
@@ -456,14 +492,15 @@ export const DICTIONARY: Record<SupportedLanguage, Record<string, string>> = {
     // App & Nav
     'app.title': 'Learning OS',
     'app.subtitle': 'Операционная система когнитивного обучения',
+    'appName': 'PinkInAu Learning OS',
     'nav.desktop': 'На рабочий стол',
     'nav.launch': 'Запустить Learning OS',
     'nav.products': 'Продукты',
     'nav.about': 'О компании',
     'nav.principles': 'Принципы',
-    'nav.login': 'Войти',
+    'nav.login': 'Войти через Google',
     'nav.startFree': 'Начать бесплатно',
-    'nav.demo': 'Демо-рабочий стол',
+    'nav.demo': 'Открыть демо без пароля',
     'nav.logout': 'Выйти',
     'nav.settings': 'Настройки',
     'nav.profile': 'Профиль',
@@ -521,13 +558,80 @@ export const DICTIONARY: Record<SupportedLanguage, Record<string, string>> = {
     'app.shortcuts': 'Горячие клавиши',
     'app.notes': 'Заметки',
 
-    // Window Controls
-    'win.minimize': 'Свернуть окно',
-    'win.maximize': 'Развернуть',
-    'win.restore': 'Восстановить',
-    'win.close': 'Закрыть',
-    'win.autoFit': 'Авто-подгонка под свободное место',
-    'win.remoteDragging': 'перемещает',
+    // Landing Page
+    'landing.heroTag': 'Компания PinkInAu',
+    'landing.heroSubtitle': 'Учитесь так, как работает память',
+    'landing.heroDesc': 'Платформа, которая превращает тему в граф знаний, а каждый модуль в готовую работу для портфолио.',
+    'landing.openDemo': 'Открыть демо без пароля',
+    'landing.loginGoogle': 'Войти через Google',
+    'landing.hintOneClick': 'Вход в один клик. Гостевой режим работает без регистрации.',
+    'landing.dagTitle': 'Граф: Алгоритмы и структуры данных',
+    'landing.dagAria': 'Интерактивный граф обучения. Нажмите на светящийся узел, чтобы пройти его.',
+    'landing.nodeBasics': 'Основы',
+    'landing.nodeTheory': 'Теория',
+    'landing.nodePractice': 'Практика',
+    'landing.nodeSparring': 'Спарринг',
+    'landing.nodeQuiz': 'Квиз',
+    'landing.nodeCapstone': 'Capstone',
+    'landing.legendDone': 'Пройдено',
+    'landing.legendReview': 'Пора повторить',
+    'landing.legendOpen': 'Доступно',
+    'landing.legendLock': 'Закрыто',
+    'landing.tipDefault': 'Нажмите на светящийся узел, чтобы пройти его.',
+    'landing.tipFinished': 'Граф пройден. Теперь работу можно добавить в портфолио.',
+    'landing.resetDag': 'Пройти заново',
+    'landing.streak': 'Стрик',
+    'landing.streakDays': '12 дней',
+    'landing.repeat': 'Повторить',
+    'landing.repeatAllDone': 'всё повторено',
+    'landing.blankSheet': 'Чистый лист',
+    'landing.recallFullness': 'Полнота ответа',
+    'landing.allInOneProduct': 'Всё в одном продукте',
+    'landing.sevenModules': 'Семь модулей, один рабочий стол',
+    'landing.sevenModulesLead': 'Граф, студия, спарринг и портфолио открываются как окна в одном окружении и делят общие данные.',
+    'landing.tabGraph': 'Граф',
+    'landing.tabStudio': 'Фокус-студия',
+    'landing.tabSphere': 'Сфера знаний',
+    'landing.tabSparring': 'Спарринг',
+    'landing.tabGit': 'Git знаний',
+    'landing.tabPortfolio': 'Портфолио',
+    'landing.tabProductivity': 'Продуктивность',
+    'landing.stepsTitle': 'Три шага до первого артефакта',
+    'landing.step1Title': 'Войдите в один клик',
+    'landing.step1Desc': 'Через аккаунт Google или в гостевом демо-режиме. Пароль не нужен.',
+    'landing.step2Title': 'Идите по графу',
+    'landing.step2Desc': 'Закрывайте блоки, сдавайте «Чистый лист» и повторяйте узлы, которые подсвечены.',
+    'landing.step3Title': 'Покажите результат',
+    'landing.step3Desc': 'Артефакты собираются в публичное портфолио, ссылкой на которое можно поделиться.',
+    'landing.platformTitle': 'Работает там, где удобно вам',
+    'landing.cardDesktopTitle': 'Рабочий стол в браузере',
+    'landing.cardDesktopDesc': 'Плавающие окна, док приложений, строка состояния и многозадачность.',
+    'landing.cardMobileTitle': 'Блоки на телефоне',
+    'landing.cardMobileDesc': 'Интерфейс сам перестраивается в привычный мобильный формат с полным набором функций.',
+    'landing.cardSyncTitle': 'Мгновенная синхронизация',
+    'landing.cardSyncDesc': 'Граф, заметки, задачи, XP и настройки сохраняются в облаке в реальном времени.',
+    'landing.cardAuthTitle': 'Безопасный вход',
+    'landing.cardAuthDesc': 'Google-аккаунт в один клик или гостевой режим без пароля.',
+    'landing.faqTitle': 'Коротко о главном',
+    'landing.ctaTitle': 'Постройте свой первый граф знаний',
+    'landing.ctaDesc': 'Откройте демо и пройдите первый блок за несколько минут.',
+    'landing.openPinkLearn': 'Открыть Pink Learn',
+    'landing.footerCompany': 'IT-компания, которая делает продукты для обучения и совместной работы.',
+    'landing.footerRights': '© 2026 PinkInAu. Все права защищены.',
+
+    // Focus Studio
+    'focus.theory': '20% Теория & Кванты',
+    'focus.blank': '10% «Чистый лист»',
+    'focus.practice': '70% Практика & Код',
+    'focus.sparring': 'ИИ Сократический спарринг',
+    'focus.telemetry': 'Нейротелеметрия',
+    'focus.completeQuantum': 'Завершить квант (+15 XP)',
+    'focus.submitRecall': 'Проверить слепое воспроизведение',
+    'focus.runCode': 'Запустить код',
+    'focus.nextStep': 'Следующий шаг',
+    'focus.reset': 'Сбросить',
+    'focus.evaluating': 'ИИ оценивает...',
+    'focus.score': 'Оценка',
 
     // Widgets & Desktop
     'widget.clock': 'Время & Календарь',
@@ -553,20 +657,6 @@ export const DICTIONARY: Record<SupportedLanguage, Record<string, string>> = {
     'widget.noTasks': 'Нет активных задач',
     'widget.addTask': 'Введите новую задачу...',
     'widget.addHabit': 'Введите название привычки...',
-
-    // Focus Studio (20/10/70)
-    'focus.theory': '20% Теория & Кванты',
-    'focus.blank': '10% «Чистый лист»',
-    'focus.practice': '70% Практика & Код',
-    'focus.sparring': 'ИИ Сократический спарринг',
-    'focus.telemetry': 'Нейротелеметрия',
-    'focus.completeQuantum': 'Завершить квант (+15 XP)',
-    'focus.submitRecall': 'Проверить слепое воспроизведение',
-    'focus.runCode': 'Запустить код',
-    'focus.nextStep': 'Следующий шаг',
-    'focus.reset': 'Сбросить',
-    'focus.evaluating': 'ИИ оценивает...',
-    'focus.score': 'Оценка',
 
     // Common Actions
     'action.save': 'Сохранить',
@@ -597,11 +687,15 @@ export const DICTIONARY: Record<SupportedLanguage, Record<string, string>> = {
     'action.success': 'Успешно выполнено',
     'action.error': 'Произошла ошибка',
 
-    // Lock Screen
+    // Lock & Splash
     'lock.title': 'Система временно заблокирована',
     'lock.hint': 'Нажмите «Войти в систему» для возобновления сеанса',
     'lock.button': 'Войти в систему',
     'lock.sessionRestored': 'Сеанс успешно возобновлен',
+    'splash.sessionActive': 'Сессия активна',
+    'splash.hello': 'Привет',
+    'splash.ready': 'Рабочее пространство готово',
+    'splash.skipPrompt': 'Кликните или нажмите пробел для входа',
 
     // Spotlight
     'spotlight.placeholder': 'Поиск команды, модуля, файла или окна...',
@@ -610,7 +704,7 @@ export const DICTIONARY: Record<SupportedLanguage, Record<string, string>> = {
     'spotlight.units': 'Кванты и темы курса',
     'spotlight.noResults': 'Ничего не найдено',
 
-    // Spaced Repetition
+    // SRS & Profile
     'srs.title': 'Интервальное повторение (SuperMemo-2)',
     'srs.flip': 'Показать ответ (Пробел)',
     'srs.again': 'Снова (<1 мин)',
@@ -618,8 +712,6 @@ export const DICTIONARY: Record<SupportedLanguage, Record<string, string>> = {
     'srs.good': 'Хорошо (3 дня)',
     'srs.easy': 'Легко (7 дней)',
     'srs.completed': 'Все карточки на сегодня повторены!',
-
-    // Profile & Diagnostics
     'profile.title': 'Профиль студента',
     'profile.level': 'Уровень',
     'profile.xp': 'Очки XP',
@@ -633,34 +725,6 @@ export const DICTIONARY: Record<SupportedLanguage, Record<string, string>> = {
     'survey.start': 'Пройти диагностику',
     'survey.generating': 'ИИ генерирует учебную траекторию...',
     'survey.ready': 'План готов!',
-
-    // Splash, Dock & Interactive Tools
-    'splash.sessionActive': 'Сессия активна',
-    'splash.hello': 'Привет',
-    'splash.ready': 'Рабочее пространство готово',
-    'splash.skipPrompt': 'Кликните или нажмите пробел для входа',
-    'dock.aiOperator': 'ИИ-Оператор: персональный тьютор и фасилитатор',
-    'dock.openPeerChat': 'Открыть чат с напарником',
-    'dock.communityGroups': 'P2P Чат и учебные группы: открыть сообщество',
-    'dock.whiteboardTooltip': 'Интерактивная доска (Белый экран)',
-    'dock.chatWith': 'Чат с напарником',
-    'dock.communityChat': 'Чат учебной группы & сообщества',
-    'dock.tasksTooltip': 'Задачи текущего спринта',
-    'whiteboard.title': 'Белый экран (White Screen)',
-    'whiteboard.partner': 'Напарник',
-    'whiteboard.partnerActive': 'Напарник активен',
-    'whiteboard.demoPartner': 'Демо-напарник',
-    'whiteboard.save': 'Сохранить',
-    'whiteboard.clear': 'Очистить доску',
-    'whiteboard.grid': 'Сетка',
-    'whiteboard.pen': 'Перо',
-    'whiteboard.eraser': 'Ластик',
-    'whiteboard.text': 'Текст',
-    'whiteboard.shapes': 'Фигуры',
-    'whiteboard.export': 'Экспорт',
-    'hero.badge': 'Ранняя альфа-версия.',
-    'hero.subtitle': 'Учитесь так, как работает память',
-    'hero.desc': 'Платформа, которая превращает тему в граф знаний, а каждый модуль в готовую работу для портфолио.',
   },
 
   // ==========================================================================
@@ -670,14 +734,15 @@ export const DICTIONARY: Record<SupportedLanguage, Record<string, string>> = {
     // App & Nav
     'app.title': 'Learning OS',
     'app.subtitle': 'Cognitive Learning Operating System',
+    'appName': 'PinkInAu Learning OS',
     'nav.desktop': 'To Desktop',
     'nav.launch': 'Launch Learning OS',
     'nav.products': 'Products',
     'nav.about': 'About Us',
     'nav.principles': 'Principles',
-    'nav.login': 'Sign In',
+    'nav.login': 'Sign In with Google',
     'nav.startFree': 'Start Free',
-    'nav.demo': 'Demo Desktop',
+    'nav.demo': 'Open Demo Desktop',
     'nav.logout': 'Sign Out',
     'nav.settings': 'Settings',
     'nav.profile': 'Profile',
@@ -735,13 +800,80 @@ export const DICTIONARY: Record<SupportedLanguage, Record<string, string>> = {
     'app.shortcuts': 'Keyboard Shortcuts',
     'app.notes': 'Notes',
 
-    // Window Controls
-    'win.minimize': 'Minimize',
-    'win.maximize': 'Maximize',
-    'win.restore': 'Restore',
-    'win.close': 'Close',
-    'win.autoFit': 'Auto-fit empty space',
-    'win.remoteDragging': 'is moving',
+    // Landing Page
+    'landing.heroTag': 'PinkInAu Company',
+    'landing.heroSubtitle': 'Learn the way memory works',
+    'landing.heroDesc': 'A platform that turns topics into knowledge DAGs, and every module into portfolio-ready work.',
+    'landing.openDemo': 'Open Demo without Password',
+    'landing.loginGoogle': 'Sign In with Google',
+    'landing.hintOneClick': 'One-click sign in. Guest mode requires no registration.',
+    'landing.dagTitle': 'DAG Graph: Algorithms & Data Structures',
+    'landing.dagAria': 'Interactive learning DAG graph. Click a glowing node to complete it.',
+    'landing.nodeBasics': 'Basics',
+    'landing.nodeTheory': 'Theory',
+    'landing.nodePractice': 'Practice',
+    'landing.nodeSparring': 'Sparring',
+    'landing.nodeQuiz': 'Quiz',
+    'landing.nodeCapstone': 'Capstone',
+    'landing.legendDone': 'Completed',
+    'landing.legendReview': 'Time to Review',
+    'landing.legendOpen': 'Available',
+    'landing.legendLock': 'Locked',
+    'landing.tipDefault': 'Click a glowing node to complete it.',
+    'landing.tipFinished': 'Graph complete! You can now add your project to your portfolio.',
+    'landing.resetDag': 'Restart Graph',
+    'landing.streak': 'Streak',
+    'landing.streakDays': '12 days',
+    'landing.repeat': 'Review',
+    'landing.repeatAllDone': 'all reviewed',
+    'landing.blankSheet': 'Blank Page',
+    'landing.recallFullness': 'Recall Completeness',
+    'landing.allInOneProduct': 'All in One Environment',
+    'landing.sevenModules': 'Seven Modules, One Desktop',
+    'landing.sevenModulesLead': 'Graph, studio, sparring, and portfolio open as windows in a unified workspace sharing real-time state.',
+    'landing.tabGraph': 'DAG Graph',
+    'landing.tabStudio': 'Focus Studio',
+    'landing.tabSphere': 'Knowledge Sphere',
+    'landing.tabSparring': 'Sparring',
+    'landing.tabGit': 'Knowledge Git',
+    'landing.tabPortfolio': 'Portfolio',
+    'landing.tabProductivity': 'Productivity',
+    'landing.stepsTitle': 'Three Steps to Your First Artifact',
+    'landing.step1Title': 'Sign In in One Click',
+    'landing.step1Desc': 'Via Google account or passwordless instant guest demo mode.',
+    'landing.step2Title': 'Follow the Graph',
+    'landing.step2Desc': 'Complete units, submit Blank Page recall, and review spaced repetition nodes.',
+    'landing.step3Title': 'Showcase Your Work',
+    'landing.step3Desc': 'Artifacts compile automatically into a verified public portfolio link.',
+    'landing.platformTitle': 'Works Everywhere You Need',
+    'landing.cardDesktopTitle': 'Browser Desktop',
+    'landing.cardDesktopDesc': 'Floating windows, application dock, status bar, and real multi-tasking.',
+    'landing.cardMobileTitle': 'Adaptive Mobile Blocks',
+    'landing.cardMobileDesc': 'Automatically reorganizes into a fluid mobile view with full feature parity.',
+    'landing.cardSyncTitle': 'Instant Cloud Sync',
+    'landing.cardSyncDesc': 'Graph state, notes, tasks, XP, and settings stay backed up in real time.',
+    'landing.cardAuthTitle': 'Secure Access',
+    'landing.cardAuthDesc': 'One-click Google authentication or zero-friction guest demo.',
+    'landing.faqTitle': 'Frequently Asked Questions',
+    'landing.ctaTitle': 'Build Your First Knowledge Graph',
+    'landing.ctaDesc': 'Launch the demo and complete your first block in minutes.',
+    'landing.openPinkLearn': 'Launch Pink Learn',
+    'landing.footerCompany': 'An engineering company building intuitive software tools and learning OS environments.',
+    'landing.footerRights': '© 2026 PinkInAu. All rights reserved.',
+
+    // Focus Studio
+    'focus.theory': '20% Theory & Quanta',
+    'focus.blank': '10% Blank Page Recall',
+    'focus.practice': '70% Code & Practice',
+    'focus.sparring': 'AI Socratic Sparring',
+    'focus.telemetry': 'Neuro Telemetry',
+    'focus.completeQuantum': 'Complete Quantum (+15 XP)',
+    'focus.submitRecall': 'Verify Active Recall',
+    'focus.runCode': 'Run Code',
+    'focus.nextStep': 'Next Step',
+    'focus.reset': 'Reset',
+    'focus.evaluating': 'AI is evaluating...',
+    'focus.score': 'Score',
 
     // Widgets & Desktop
     'widget.clock': 'Clock & Calendar',
@@ -767,20 +899,6 @@ export const DICTIONARY: Record<SupportedLanguage, Record<string, string>> = {
     'widget.noTasks': 'No active tasks',
     'widget.addTask': 'Add a new task...',
     'widget.addHabit': 'Add a habit name...',
-
-    // Focus Studio (20/10/70)
-    'focus.theory': '20% Theory & Quanta',
-    'focus.blank': '10% Blank Page Recall',
-    'focus.practice': '70% Code & Practice',
-    'focus.sparring': 'AI Socratic Sparring',
-    'focus.telemetry': 'Neuro Telemetry',
-    'focus.completeQuantum': 'Complete Quantum (+15 XP)',
-    'focus.submitRecall': 'Verify Active Recall',
-    'focus.runCode': 'Run Code',
-    'focus.nextStep': 'Next Step',
-    'focus.reset': 'Reset',
-    'focus.evaluating': 'AI is evaluating...',
-    'focus.score': 'Score',
 
     // Common Actions
     'action.save': 'Save',
@@ -811,11 +929,15 @@ export const DICTIONARY: Record<SupportedLanguage, Record<string, string>> = {
     'action.success': 'Operation successful',
     'action.error': 'An error occurred',
 
-    // Lock Screen
+    // Lock & Splash
     'lock.title': 'System is Locked',
     'lock.hint': 'Click "Sign In / Unlock" to resume your active session',
     'lock.button': 'Sign In / Unlock',
     'lock.sessionRestored': 'Session successfully resumed',
+    'splash.sessionActive': 'Session active',
+    'splash.hello': 'Hello',
+    'splash.ready': 'Workspace is ready',
+    'splash.skipPrompt': 'Click or press Space to enter',
 
     // Spotlight
     'spotlight.placeholder': 'Search command, module, file, or window...',
@@ -824,7 +946,7 @@ export const DICTIONARY: Record<SupportedLanguage, Record<string, string>> = {
     'spotlight.units': 'Knowledge Quanta & Topics',
     'spotlight.noResults': 'No results found',
 
-    // Spaced Repetition
+    // SRS & Profile
     'srs.title': 'Spaced Repetition (SuperMemo-2)',
     'srs.flip': 'Show Answer (Spacebar)',
     'srs.again': 'Again (<1m)',
@@ -832,8 +954,6 @@ export const DICTIONARY: Record<SupportedLanguage, Record<string, string>> = {
     'srs.good': 'Good (3d)',
     'srs.easy': 'Easy (7d)',
     'srs.completed': 'All cards for today completed!',
-
-    // Profile & Diagnostics
     'profile.title': 'Student Profile',
     'profile.level': 'Level',
     'profile.xp': 'XP Points',
@@ -847,34 +967,6 @@ export const DICTIONARY: Record<SupportedLanguage, Record<string, string>> = {
     'survey.start': 'Start Diagnostic',
     'survey.generating': 'AI is compiling learning trajectory...',
     'survey.ready': 'Path is ready!',
-
-    // Splash, Dock & Interactive Tools
-    'splash.sessionActive': 'Session active',
-    'splash.hello': 'Hello',
-    'splash.ready': 'Workspace is ready',
-    'splash.skipPrompt': 'Click or press Space to enter',
-    'dock.aiOperator': 'AI Operator: personal tutor and facilitator',
-    'dock.openPeerChat': 'Open chat with study partner',
-    'dock.communityGroups': 'P2P Chat & Study Groups: open community',
-    'dock.whiteboardTooltip': 'Interactive Whiteboard (White Screen)',
-    'dock.chatWith': 'Partner Chat',
-    'dock.communityChat': 'Study Group & Community Chat',
-    'dock.tasksTooltip': 'Current Sprint Tasks',
-    'whiteboard.title': 'White Screen',
-    'whiteboard.partner': 'Partner',
-    'whiteboard.partnerActive': 'Partner active',
-    'whiteboard.demoPartner': 'Demo partner',
-    'whiteboard.save': 'Save',
-    'whiteboard.clear': 'Clear board',
-    'whiteboard.grid': 'Grid',
-    'whiteboard.pen': 'Pen',
-    'whiteboard.eraser': 'Eraser',
-    'whiteboard.text': 'Text',
-    'whiteboard.shapes': 'Shapes',
-    'whiteboard.export': 'Export',
-    'hero.badge': 'Early alpha version.',
-    'hero.subtitle': 'Learn the way memory works',
-    'hero.desc': 'A platform that turns topics into knowledge DAGs, and every module into portfolio-ready work.',
   },
 
   // ==========================================================================
@@ -884,14 +976,15 @@ export const DICTIONARY: Record<SupportedLanguage, Record<string, string>> = {
     // App & Nav
     'app.title': 'Learning OS',
     'app.subtitle': '認知的学習オペレーティングシステム',
+    'appName': 'PinkInAu Learning OS',
     'nav.desktop': 'デスクトップへ',
     'nav.launch': 'Learning OS を起動',
     'nav.products': 'プロダクト',
     'nav.about': '企業情報',
     'nav.principles': '設計理念',
-    'nav.login': 'ログイン',
+    'nav.login': 'Googleでログイン',
     'nav.startFree': '無料で開始',
-    'nav.demo': 'デモデスクトップ',
+    'nav.demo': 'パスワード不要でデモを開く',
     'nav.logout': 'ログアウト',
     'nav.settings': '設定',
     'nav.profile': 'プロフィール',
@@ -949,13 +1042,80 @@ export const DICTIONARY: Record<SupportedLanguage, Record<string, string>> = {
     'app.shortcuts': 'ショートカットキー',
     'app.notes': 'メモ帳',
 
-    // Window Controls
-    'win.minimize': '最小化',
-    'win.maximize': '最大化',
-    'win.restore': '元に戻す',
-    'win.close': '閉じる',
-    'win.autoFit': '空きスペースに自動調整',
-    'win.remoteDragging': 'が移動中',
+    // Landing Page
+    'landing.heroTag': 'PinkInAu 企業概要',
+    'landing.heroSubtitle': '脳と記憶のメカニズムに沿って学ぶ',
+    'landing.heroDesc': 'トピックを知識グラフへ、各モジュールをポートフォリオ実績へと昇華させる学習OS環境。',
+    'landing.openDemo': 'パスワード不要でデモを開く',
+    'landing.loginGoogle': 'Googleでログイン',
+    'landing.hintOneClick': 'ワンクリックで開始。ゲストモードは登録不要で利用可能です。',
+    'landing.dagTitle': 'DAGグラフ: アルゴリズムとデータ構造',
+    'landing.dagAria': 'インタラクティブな学習グラフ。光るノードをクリックして完了させてください。',
+    'landing.nodeBasics': '基礎',
+    'landing.nodeTheory': '理論',
+    'landing.nodePractice': '実践',
+    'landing.nodeSparring': 'スパーリング',
+    'landing.nodeQuiz': 'クイズ',
+    'landing.nodeCapstone': 'Capstone',
+    'landing.legendDone': '完了済み',
+    'landing.legendReview': '復習時期',
+    'landing.legendOpen': '利用可能',
+    'landing.legendLock': 'ロック中',
+    'landing.tipDefault': '光るノードをクリックして完了してください。',
+    'landing.tipFinished': 'グラフ完了！ポートフォリオに成果物を追加できます。',
+    'landing.resetDag': 'もう一度受講',
+    'landing.streak': '連続記録',
+    'landing.streakDays': '12日',
+    'landing.repeat': '復習',
+    'landing.repeatAllDone': 'すべて復習済み',
+    'landing.blankSheet': '白紙想起',
+    'landing.recallFullness': '想起網羅度',
+    'landing.allInOneProduct': 'オールインワン動作環境',
+    'landing.sevenModules': '7つのモジュール、ひとつのデスクトップ',
+    'landing.sevenModulesLead': 'グラフ、スタジオ、スパーリング、ポートフォリオが単一環境のウィンドウとして開き、データをリアルタイム共有します。',
+    'landing.tabGraph': 'DAGグラフ',
+    'landing.tabStudio': 'フォーカススタジオ',
+    'landing.tabSphere': '知識スフィア',
+    'landing.tabSparring': 'スパーリング',
+    'landing.tabGit': '知識 Git',
+    'landing.tabPortfolio': 'ポートフォリオ',
+    'landing.tabProductivity': '生産性',
+    'landing.stepsTitle': '最初の成果物までの3ステップ',
+    'landing.step1Title': 'ワンクリックで入場',
+    'landing.step1Desc': 'Googleアカウントまたは登録不要のゲストデモモードで即座に開始。',
+    'landing.step2Title': 'グラフに沿って前進',
+    'landing.step2Desc': 'ブロックを完了し、「白紙想起」を行い、復習推奨ノードを反復学習。',
+    'landing.step3Title': '成果物を証明・共有',
+    'landing.step3Desc': '成果物は公開ポートフォリオに自動蓄積され、URLを共有可能。',
+    'landing.platformTitle': 'どんな環境でもシームレスに動作',
+    'landing.cardDesktopTitle': 'ブラウザ上のデスクトップ',
+    'landing.cardDesktopDesc': 'フローティングウィンドウ、アプリアイコンドック、ステータスバー、本格的なマルチタスク。',
+    'landing.cardMobileTitle': 'スマートフォン最適化ブロック',
+    'landing.cardMobileDesc': '全機能を維持しながら、スマートフォン向けに自動で直感的なレイアウトへ再構築。',
+    'landing.cardSyncTitle': 'リアルタイムクラウド同期',
+    'landing.cardSyncDesc': 'グラフ、メモ、タスク、XP、環境設定がクラウド上で瞬時に同期・永続化されます。',
+    'landing.cardAuthTitle': '安全な認証基盤',
+    'landing.cardAuthDesc': 'Googleログインまたはパスワード不要のゲストアクセス。',
+    'landing.faqTitle': 'よくあるご質問',
+    'landing.ctaTitle': '最初の知識グラフを構築しよう',
+    'landing.ctaDesc': 'デモを開き、数分で最初の学習ブロックを体験してください。',
+    'landing.openPinkLearn': 'Pink Learn を開く',
+    'landing.footerCompany': '知的生産性と学習を支援するデジタル製品を創出するテクノロジー企業。',
+    'landing.footerRights': '© 2026 PinkInAu. All rights reserved.',
+
+    // Focus Studio
+    'focus.theory': '20% 理論 & クオンタ',
+    'focus.blank': '10% 白紙想起テスト',
+    'focus.practice': '70% 実践 & コード',
+    'focus.sparring': 'AI ソクラテス対話',
+    'focus.telemetry': '神経テレメトリ',
+    'focus.completeQuantum': 'クオンタ完了 (+15 XP)',
+    'focus.submitRecall': '想起内容を検証',
+    'focus.runCode': 'コード実行',
+    'focus.nextStep': '次のステップ',
+    'focus.reset': 'リセット',
+    'focus.evaluating': 'AI が評価中...',
+    'focus.score': 'スコア',
 
     // Widgets & Desktop
     'widget.clock': '時計 & カレンダー',
@@ -981,20 +1141,6 @@ export const DICTIONARY: Record<SupportedLanguage, Record<string, string>> = {
     'widget.noTasks': 'タスクはありません',
     'widget.addTask': '新しいタスクを入力...',
     'widget.addHabit': '習慣名を入力...',
-
-    // Focus Studio (20/10/70)
-    'focus.theory': '20% 理論 & クオンタ',
-    'focus.blank': '10% 白紙想起テスト',
-    'focus.practice': '70% 実践 & コード',
-    'focus.sparring': 'AI ソクラテス対話',
-    'focus.telemetry': '神経テレメトリ',
-    'focus.completeQuantum': 'クオンタ完了 (+15 XP)',
-    'focus.submitRecall': '想起内容を検証',
-    'focus.runCode': 'コード実行',
-    'focus.nextStep': '次のステップ',
-    'focus.reset': 'リセット',
-    'focus.evaluating': 'AI が評価中...',
-    'focus.score': 'スコア',
 
     // Common Actions
     'action.save': '保存',
@@ -1025,11 +1171,15 @@ export const DICTIONARY: Record<SupportedLanguage, Record<string, string>> = {
     'action.success': '成功しました',
     'action.error': 'エラーが発生しました',
 
-    // Lock Screen
+    // Lock & Splash
     'lock.title': 'システムがロックされています',
-    'lock.hint': 'セッションを再開するには「ロック解除」をクリックしてください',
+    'lock.hint': 'セッションを再開するには「ログイン / ロック解除」をクリックしてください',
     'lock.button': 'ログイン / ロック解除',
     'lock.sessionRestored': 'セッションを復帰しました',
+    'splash.sessionActive': 'セッション有効',
+    'splash.hello': 'こんにちは',
+    'splash.ready': 'ワークスペースの準備完了',
+    'splash.skipPrompt': 'クリックまたはスペースキーで開始',
 
     // Spotlight
     'spotlight.placeholder': 'コマンド、モジュール、ファイル、ウィンドウを検索...',
@@ -1038,7 +1188,7 @@ export const DICTIONARY: Record<SupportedLanguage, Record<string, string>> = {
     'spotlight.units': '知識クオンタとトピック',
     'spotlight.noResults': '見つかりませんでした',
 
-    // Spaced Repetition
+    // SRS & Profile
     'srs.title': '間隔反復学習 (SuperMemo-2)',
     'srs.flip': '答えを表示 (スペースキー)',
     'srs.again': 'もう一度 (<1分)',
@@ -1046,8 +1196,6 @@ export const DICTIONARY: Record<SupportedLanguage, Record<string, string>> = {
     'srs.good': '普通 (3日)',
     'srs.easy': '簡単 (7日)',
     'srs.completed': '本日のカードはすべて復習完了しました！',
-
-    // Profile & Diagnostics
     'profile.title': '受講者プロフィール',
     'profile.level': 'レベル',
     'profile.xp': 'XPポイント',
@@ -1061,298 +1209,5 @@ export const DICTIONARY: Record<SupportedLanguage, Record<string, string>> = {
     'survey.start': '診断を開始',
     'survey.generating': 'AI が学習軌道を生成中...',
     'survey.ready': 'プランが完成しました！',
-
-    // Splash, Dock & Interactive Tools
-    'splash.sessionActive': 'セッション有効',
-    'splash.hello': 'こんにちは',
-    'splash.ready': 'ワークスペースの準備完了',
-    'splash.skipPrompt': 'クリックまたはスペースキーで開始',
-    'dock.aiOperator': 'AIオペレーター: 個人チューター&ファシリテーター',
-    'dock.openPeerChat': 'パートナーとのチャットを開く',
-    'dock.communityGroups': 'P2P チャット & 学習グループ: コミュニティを開く',
-    'dock.whiteboardTooltip': 'インタラクティブホワイトボード (White Screen)',
-    'dock.chatWith': 'パートナーチャット',
-    'dock.communityChat': '学習グループ・コミュニティチャット',
-    'dock.tasksTooltip': '今週のスプリントタスク',
-    'whiteboard.title': 'ホワイトボード (White Screen)',
-    'whiteboard.partner': 'パートナー',
-    'whiteboard.partnerActive': 'パートナー稼働中',
-    'whiteboard.demoPartner': 'デモパートナー',
-    'whiteboard.save': '保存',
-    'whiteboard.clear': 'ボードをクリア',
-    'whiteboard.grid': 'グリッド',
-    'whiteboard.pen': 'ペン',
-    'whiteboard.eraser': '消しゴム',
-    'whiteboard.text': 'テキスト',
-    'whiteboard.shapes': '図形',
-    'whiteboard.export': 'エクスポート',
-    'hero.badge': '初期アルファ版。',
-    'hero.subtitle': '脳と記憶のメカニズムに沿って学ぶ',
-    'hero.desc': 'トピックを知識グラフへ、各モジュールをポートフォリオ実績へと昇華させる学習OS。',
   },
 };
-
-// AI Language Directives for Gemini API
-export const AI_LANGUAGE_DIRECTIVES: Record<SupportedLanguage, string> = {
-  kk: 'МАҢЫЗДЫ ТАЛАП: Сіз қолданушымен тек таза ҚАЗАҚ ТІЛІНДЕ (Kazakh language) сөйлесуіңіз керек. Барлық түсіндірмелер, сократтық сұрақтар мен кері байланыс қазақша берілсін.',
-  uk: 'ВАЖЛИВА ВИМОГА: Ви повинні відповідати та спілкуватися з користувачем виключно УКРАЇНСЬКОЮ МОВОЮ (Ukrainian language). Всі пояснення, сократичні запитання та аналіз надавайте українською.',
-  ru: 'ТРЕБОВАНИЕ: Отвечайте и ведите весь диалог с пользователем на РУССКОМ ЯЗЫКЕ (Russian language).',
-  en: 'CRITICAL REQUIREMENT: You MUST interact and respond strictly in ENGLISH (English language). All explanations and feedback must be in fluent English.',
-  ja: '重要指示: ユーザーへの返信・解説・ソクラテス式問いかけ・フィードバックは、すべて流暢な日本語 (Japanese language) で行ってください。',
-};
-
-export interface GeoLocationMeta {
-  country: string | null;
-  ip: string | null;
-  detectedBy: string;
-  isAuto: boolean;
-}
-
-class I18nService {
-  private currentLanguage: SupportedLanguage = 'ru';
-  private listeners: Array<(lang: SupportedLanguage) => void> = [];
-  private geoMeta: GeoLocationMeta = {
-    country: null,
-    ip: null,
-    detectedBy: 'init',
-    isAuto: true,
-  };
-  private isDetecting = false;
-
-  constructor() {
-    this.initLanguage();
-  }
-
-  private async initLanguage() {
-    const isManual = localStorage.getItem('pinkinau_lang_manual') === 'true';
-    const saved = localStorage.getItem('pinkinau_lang') as SupportedLanguage;
-
-    if (isManual && saved && (['kk', 'uk', 'ru', 'en', 'ja'] as SupportedLanguage[]).includes(saved)) {
-      this.currentLanguage = saved;
-      this.geoMeta.isAuto = false;
-      syncGoogleTranslate(saved);
-      this.notify();
-      return;
-    }
-
-    // Always run IP Geo detection automatically
-    await this.detectLanguageFromEnvironment(true);
-  }
-
-  public async detectLanguageFromEnvironment(force = false): Promise<SupportedLanguage> {
-    if (this.isDetecting && !force) return this.currentLanguage;
-    this.isDetecting = true;
-
-    try {
-      // 1. Try server-side enhanced /api/geo/lang (uses CDN country headers + IP Geo database)
-      const res = await fetch('/api/geo/lang', { method: 'GET' });
-      if (res.ok) {
-        const data = await res.json();
-        if (data?.lang && (['kk', 'uk', 'ru', 'en', 'ja'] as SupportedLanguage[]).includes(data.lang)) {
-          this.geoMeta = {
-            country: data.country || null,
-            ip: data.ip || null,
-            detectedBy: data.detectedBy || 'server_ip_geo',
-            isAuto: true,
-          };
-          this.setLanguage(data.lang, false, true);
-          this.isDetecting = false;
-          return data.lang;
-        }
-      }
-    } catch {}
-
-    // 2. Client-side fallback to direct country IP lookup if server is unavailable
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 1500);
-      const res = await fetch('https://api.country.is/', { signal: controller.signal });
-      clearTimeout(timeout);
-      if (res.ok) {
-        const data = await res.json();
-        if (data?.country) {
-          const country = String(data.country).toUpperCase();
-          let matched: SupportedLanguage = 'en';
-          if (country === 'KZ') matched = 'kk';
-          else if (country === 'UA') matched = 'uk';
-          else if (['RU', 'BY', 'KG', 'TJ', 'UZ', 'AM', 'AZ', 'MD', 'TM', 'GE'].includes(country)) matched = 'ru';
-          else if (country === 'JP') matched = 'ja';
-
-          this.geoMeta = {
-            country,
-            ip: data.ip || null,
-            detectedBy: 'client_ip_geo',
-            isAuto: true,
-          };
-          this.setLanguage(matched, false, true);
-          this.isDetecting = false;
-          return matched;
-        }
-      }
-    } catch {}
-
-    // 3. Fallback to Browser languages
-    const browserLang = (navigator.language || (navigator as any).userLanguage || 'en').toLowerCase();
-    let detected: SupportedLanguage = 'en';
-
-    if (browserLang.startsWith('kk') || browserLang.startsWith('kz')) {
-      detected = 'kk';
-    } else if (browserLang.startsWith('uk') || browserLang.startsWith('ua')) {
-      detected = 'uk';
-    } else if (browserLang.startsWith('ru') || browserLang.startsWith('be') || browserLang.startsWith('ky')) {
-      detected = 'ru';
-    } else if (browserLang.startsWith('ja') || browserLang.startsWith('jp')) {
-      detected = 'ja';
-    } else {
-      detected = 'en';
-    }
-
-    this.geoMeta = {
-      country: null,
-      ip: null,
-      detectedBy: 'browser_lang',
-      isAuto: true,
-    };
-    this.setLanguage(detected, false, true);
-    this.isDetecting = false;
-    return detected;
-  }
-
-  public getLanguage(): SupportedLanguage {
-    return this.currentLanguage;
-  }
-
-  public getGeoMeta(): GeoLocationMeta {
-    return this.geoMeta;
-  }
-
-  public setLanguage(lang: SupportedLanguage, isManual = true, keepAutoFlag = false) {
-    if (this.currentLanguage === lang && !isManual) return;
-    this.currentLanguage = lang;
-    
-    if (isManual) {
-      this.geoMeta.isAuto = false;
-      localStorage.setItem('pinkinau_lang_manual', 'true');
-      localStorage.setItem('pinkinau_lang', lang);
-    } else if (!keepAutoFlag) {
-      localStorage.removeItem('pinkinau_lang_manual');
-    }
-    syncGoogleTranslate(lang);
-    this.notify();
-  }
-
-  public resetToAutoIp(): Promise<SupportedLanguage> {
-    localStorage.removeItem('pinkinau_lang_manual');
-    this.geoMeta.isAuto = true;
-    return this.detectLanguageFromEnvironment(true);
-  }
-
-  public t(key: string, defaultText?: string): string {
-    const compDict = COMPREHENSIVE_DICTIONARY[this.currentLanguage];
-    if (compDict && compDict[key]) return compDict[key];
-
-    const langDict = DICTIONARY[this.currentLanguage] || DICTIONARY.ru;
-    if (langDict && langDict[key]) return langDict[key];
-
-    const compRu = COMPREHENSIVE_DICTIONARY.ru;
-    if (compRu && compRu[key]) return compRu[key];
-
-    const compEn = COMPREHENSIVE_DICTIONARY.en;
-    if (compEn && compEn[key]) return compEn[key];
-
-    return DICTIONARY.ru[key] || DICTIONARY.en[key] || defaultText || key;
-  }
-
-  public getAppTitle(appId: string): string {
-    return this.t(`app.${appId}`, appId);
-  }
-
-  public getWidgetTitle(type: string): string {
-    return this.t(`widget.${type}`, type);
-  }
-
-  public getAiDirective(): string {
-    return AI_LANGUAGE_DIRECTIVES[this.currentLanguage] || AI_LANGUAGE_DIRECTIVES.ru;
-  }
-
-  public subscribe(cb: (lang: SupportedLanguage) => void): () => void {
-    this.listeners.push(cb);
-    return () => {
-      this.listeners = this.listeners.filter((l) => l !== cb);
-    };
-  }
-
-  private notify() {
-    this.listeners.forEach((cb) => {
-      try {
-        cb(this.currentLanguage);
-      } catch (err) {
-        console.error('[i18n] listener error:', err);
-      }
-    });
-  }
-}
-
-export const i18n = new I18nService();
-
-export function syncGoogleTranslate(targetLang: SupportedLanguage) {
-  if (typeof document === 'undefined') return;
-
-  const cookieVal = targetLang === 'ru' ? '' : `/ru/${targetLang}`;
-  const host = window.location.hostname;
-  
-  try {
-    if (!cookieVal) {
-      document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-      document.cookie = `googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${host};`;
-      if (host.includes('.')) {
-        document.cookie = `googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.${host};`;
-      }
-    } else {
-      document.cookie = `googtrans=${cookieVal}; path=/;`;
-      document.cookie = `googtrans=${cookieVal}; path=/; domain=${host};`;
-      if (host.includes('.')) {
-        document.cookie = `googtrans=${cookieVal}; path=/; domain=.${host};`;
-      }
-    }
-  } catch (e) {}
-
-  const tryTriggerCombo = () => {
-    const combo = document.querySelector('.goog-te-combo') as HTMLSelectElement | null;
-    if (combo) {
-      if (combo.value !== targetLang) {
-        combo.value = targetLang;
-        combo.dispatchEvent(new Event('change'));
-      }
-    }
-  };
-
-  tryTriggerCombo();
-  setTimeout(tryTriggerCombo, 200);
-  setTimeout(tryTriggerCombo, 600);
-  setTimeout(tryTriggerCombo, 1200);
-}
-
-export function useI18n() {
-  const [lang, setLang] = useState<SupportedLanguage>(() => i18n.getLanguage());
-  const [geoMeta, setGeoMeta] = useState<GeoLocationMeta>(() => i18n.getGeoMeta());
-
-  useEffect(() => {
-    return i18n.subscribe((newLang) => {
-      setLang(newLang);
-      setGeoMeta(i18n.getGeoMeta());
-    });
-  }, []);
-
-  return {
-    lang,
-    geoMeta,
-    t: (key: string, defaultText?: string) => i18n.t(key, defaultText),
-    getAppTitle: (appId: string) => i18n.getAppTitle(appId),
-    getWidgetTitle: (type: string) => i18n.getWidgetTitle(type),
-    setLanguage: (newLang: SupportedLanguage, isManual = true) => i18n.setLanguage(newLang, isManual),
-    resetToAutoIp: () => i18n.resetToAutoIp(),
-    languages: SUPPORTED_LANGUAGES,
-    aiDirective: i18n.getAiDirective(),
-  };
-}

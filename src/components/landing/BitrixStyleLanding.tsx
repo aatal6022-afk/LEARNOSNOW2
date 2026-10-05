@@ -723,11 +723,11 @@ export const BitrixStyleLanding: React.FC<BitrixStyleLandingProps> = ({
               <p className="hint">Вход в один клик. Гостевой режим работает без регистрации.</p>
             </div>
 
-            <div className="desk" aria-label="Пример окна Pink Learn">
+            <div className="desk" aria-label={t('landing.dagAria', 'Пример окна Pink Learn')}>
               <div className="win main">
-                <div className="tb"><i></i><i></i><i></i><span>Граф: Алгоритмы и структуры данных</span></div>
+                <div className="tb"><i></i><i></i><i></i><span>{t('landing.dagTitle', 'Граф: Алгоритмы и структуры данных')}</span></div>
                 <div className="body dag">
-                  <svg viewBox="0 0 560 280" role="group" id="dagsvg" aria-label="Интерактивный граф обучения. Нажмите на светящийся узел, чтобы пройти его.">
+                  <svg viewBox="0 0 560 280" role="group" id="dagsvg" aria-label={t('landing.dagAria', 'Интерактивный граф обучения. Нажмите на светящийся узел, чтобы пройти его.')}>
                     <path className={`edge ${dagState.n0 === 'done' ? 'on' : ''}`} id="e1" d="M70 140 C120 140 120 70 175 70"/>
                     <path className={`edge ${dagState.n0 === 'done' ? 'on' : ''}`} id="e2" d="M70 140 C120 140 120 210 175 210"/>
                     <path className={`edge ${dagState.n1 === 'done' ? 'on' : ''}`} id="e3" d="M235 70 C300 70 300 105 350 105"/>
@@ -736,48 +736,48 @@ export const BitrixStyleLanding: React.FC<BitrixStyleLandingProps> = ({
                     <path className={`edge ${dagState.n4 === 'done' ? 'on' : ''}`} id="e6" d="M410 175 C455 175 455 140 480 140"/>
 
                     <g className={`node s-${dagState.n0} ${dagState.n0 === 'open' || dagState.n0 === 'review' ? 'act' : ''}`} data-id="n0" style={{ ['--d' as any]: '0s' }} onClick={(e) => handleNodeClick('n0', e)}>
-                      <circle className="pulse" cx="42" cy="140" r="30"/><circle className="c" cx="42" cy="140" r="30"/><text x="42" y="145" textAnchor="middle">Основы</text>
+                      <circle className="pulse" cx="42" cy="140" r="30"/><circle className="c" cx="42" cy="140" r="30"/><text x="42" y="145" textAnchor="middle">{t('landing.nodeBasics', 'Основы')}</text>
                     </g>
                     <g className={`node s-${dagState.n1} ${dagState.n1 === 'open' || dagState.n1 === 'review' ? 'act' : ''}`} data-id="n1" style={{ ['--d' as any]: '.12s' }} onClick={(e) => handleNodeClick('n1', e)}>
-                      <circle className="pulse" cx="205" cy="70" r="32"/><circle className="c" cx="205" cy="70" r="32"/><text x="205" y="75" textAnchor="middle">Теория</text>
+                      <circle className="pulse" cx="205" cy="70" r="32"/><circle className="c" cx="205" cy="70" r="32"/><text x="205" y="75" textAnchor="middle">{t('landing.nodeTheory', 'Теория')}</text>
                     </g>
                     <g className={`node s-${dagState.n2} ${dagState.n2 === 'open' || dagState.n2 === 'review' ? 'act' : ''}`} data-id="n2" style={{ ['--d' as any]: '.24s' }} onClick={(e) => handleNodeClick('n2', e)}>
-                      <circle className="pulse" cx="205" cy="210" r="32"/><circle className="c" cx="205" cy="210" r="32"/><text x="205" y="215" textAnchor="middle">Практика</text>
+                      <circle className="pulse" cx="205" cy="210" r="32"/><circle className="c" cx="205" cy="210" r="32"/><text x="205" y="215" textAnchor="middle">{t('landing.nodePractice', 'Практика')}</text>
                     </g>
                     <g className={`node s-${dagState.n3} ${dagState.n3 === 'open' || dagState.n3 === 'review' ? 'act' : ''}`} data-id="n3" style={{ ['--d' as any]: '.36s' }} onClick={(e) => handleNodeClick('n3', e)}>
-                      <circle className="pulse" cx="380" cy="105" r="32"/><circle className="c" cx="380" cy="105" r="32"/><text x="380" y="110" textAnchor="middle">Спарринг</text>
+                      <circle className="pulse" cx="380" cy="105" r="32"/><circle className="c" cx="380" cy="105" r="32"/><text x="380" y="110" textAnchor="middle">{t('landing.nodeSparring', 'Спарринг')}</text>
                     </g>
                     <g className={`node s-${dagState.n4} ${dagState.n4 === 'open' || dagState.n4 === 'review' ? 'act' : ''}`} data-id="n4" style={{ ['--d' as any]: '.48s' }} onClick={(e) => handleNodeClick('n4', e)}>
-                      <circle className="pulse" cx="380" cy="175" r="32"/><circle className="c" cx="380" cy="175" r="32"/><text x="380" y="180" textAnchor="middle">Квиз</text>
+                      <circle className="pulse" cx="380" cy="175" r="32"/><circle className="c" cx="380" cy="175" r="32"/><text x="380" y="180" textAnchor="middle">{t('landing.nodeQuiz', 'Квиз')}</text>
                     </g>
                     <g className={`node s-${dagState.n5} ${dagState.n5 === 'open' || dagState.n5 === 'review' ? 'act' : ''}`} data-id="n5" style={{ ['--d' as any]: '.6s' }} onClick={(e) => handleNodeClick('n5', e)}>
-                      <circle className="pulse" cx="510" cy="140" r="34"/><circle className="c" cx="510" cy="140" r="34"/><text x="510" y="145" textAnchor="middle">Capstone</text>
+                      <circle className="pulse" cx="510" cy="140" r="34"/><circle className="c" cx="510" cy="140" r="34"/><text x="510" y="145" textAnchor="middle">{t('landing.nodeCapstone', 'Capstone')}</text>
                     </g>
                   </svg>
                   <div className="legend">
-                    <span><i className="l-done"></i>Пройдено</span>
-                    <span><i className="l-review"></i>Пора повторить</span>
-                    <span><i className="l-open"></i>Доступно</span>
-                    <span><i className="l-lock"></i>Закрыто</span>
+                    <span><i className="l-done"></i>{t('landing.legendDone', 'Пройдено')}</span>
+                    <span><i className="l-review"></i>{t('landing.legendReview', 'Пора повторить')}</span>
+                    <span><i className="l-open"></i>{t('landing.legendOpen', 'Доступно')}</span>
+                    <span><i className="l-lock"></i>{t('landing.legendLock', 'Закрыто')}</span>
                   </div>
                   <div className="tip" aria-live="polite">
                     <span id="tip">{tipText}</span>
                     {isFinished && (
                       <button className="btn btn-text sm" id="resetDag" type="button" onClick={handleResetDag}>
-                        Пройти заново
+                        {t('landing.resetDag', 'Пройти заново')}
                       </button>
                     )}
                   </div>
                 </div>
                 <div className="status">
-                  <span>XP <b id="xp">{currentXp.toLocaleString('ru-RU')}</b></span>
-                  <span>Стрик <b>12 дней</b></span>
-                  <span>Повторить <b id="revn">{reviewCount ? `${reviewCount} тема` : 'всё повторено'}</b></span>
+                  <span>{t('profile.xp', 'XP')} <b id="xp">{currentXp.toLocaleString(lang === 'kk' ? 'kk-KZ' : lang === 'uk' ? 'uk-UA' : lang === 'ja' ? 'ja-JP' : lang === 'en' ? 'en-US' : 'ru-RU')}</b></span>
+                  <span>{t('landing.streak', 'Стрик')} <b>{t('landing.streakDays', '12 дней')}</b></span>
+                  <span>{t('landing.repeat', 'Повторить')} <b id="revn">{reviewCount ? `${reviewCount}` : t('landing.repeatAllDone', 'всё повторено')}</b></span>
                 </div>
               </div>
 
               <div className="win float" aria-hidden="true">
-                <div className="tb"><i></i><i></i><i></i><span>Чистый лист</span></div>
+                <div className="tb"><i></i><i></i><i></i><span>{t('landing.blankSheet', 'Чистый лист')}</span></div>
                 <div className="body">
                   <div className="skel w1"></div><div className="skel w2"></div><div className="skel w3"></div>
                   <div className="mini"><span>Полнота ответа</span><b>72%</b></div>
@@ -834,19 +834,19 @@ export const BitrixStyleLanding: React.FC<BitrixStyleLandingProps> = ({
         <section id="features">
           <div className="wrap">
             <div className="center">
-              <p className="eyebrow">Всё в одном продукте</p>
-              <h2>Семь модулей, один рабочий стол</h2>
-              <p className="lead">Граф, студия, спарринг и портфолио открываются как окна в одном окружении и делят общие данные.</p>
+              <p className="eyebrow">{t('landing.allInOneProduct', 'Всё в одном продукте')}</p>
+              <h2>{t('landing.sevenModules', 'Семь модулей, один рабочий стол')}</h2>
+              <p className="lead">{t('landing.sevenModulesLead', 'Граф, студия, спарринг и портфолио открываются как окна в одном окружении и делят общие данные.')}</p>
             </div>
 
             <div className="tabs" role="tablist" aria-label="Модули Pink Learn">
-              <button className="tab" role="tab" id="tab-graph" aria-controls="p-graph" aria-selected={selectedTab === 'graph'} onClick={() => setSelectedTab('graph')}>Граф</button>
-              <button className="tab" role="tab" id="tab-studio" aria-controls="p-studio" aria-selected={selectedTab === 'studio'} onClick={() => setSelectedTab('studio')}>Фокус-студия</button>
-              <button className="tab" role="tab" id="tab-sphere" aria-controls="p-sphere" aria-selected={selectedTab === 'sphere'} onClick={() => setSelectedTab('sphere')}>Сфера знаний</button>
-              <button className="tab" role="tab" id="tab-spar" aria-controls="p-spar" aria-selected={selectedTab === 'spar'} onClick={() => setSelectedTab('spar')}>Спарринг</button>
-              <button className="tab" role="tab" id="tab-git" aria-controls="p-git" aria-selected={selectedTab === 'git'} onClick={() => setSelectedTab('git')}>Git знаний</button>
-              <button className="tab" role="tab" id="tab-folio" aria-controls="p-folio" aria-selected={selectedTab === 'folio'} onClick={() => setSelectedTab('folio')}>Портфолио</button>
-              <button className="tab" role="tab" id="tab-focus" aria-controls="p-focus" aria-selected={selectedTab === 'focus'} onClick={() => setSelectedTab('focus')}>Продуктивность</button>
+              <button className="tab" role="tab" id="tab-graph" aria-controls="p-graph" aria-selected={selectedTab === 'graph'} onClick={() => setSelectedTab('graph')}>{t('landing.tabGraph', 'Граф')}</button>
+              <button className="tab" role="tab" id="tab-studio" aria-controls="p-studio" aria-selected={selectedTab === 'studio'} onClick={() => setSelectedTab('studio')}>{t('landing.tabStudio', 'Фокус-студия')}</button>
+              <button className="tab" role="tab" id="tab-sphere" aria-controls="p-sphere" aria-selected={selectedTab === 'sphere'} onClick={() => setSelectedTab('sphere')}>{t('landing.tabSphere', 'Сфера знаний')}</button>
+              <button className="tab" role="tab" id="tab-spar" aria-controls="p-spar" aria-selected={selectedTab === 'spar'} onClick={() => setSelectedTab('spar')}>{t('landing.tabSparring', 'Спарринг')}</button>
+              <button className="tab" role="tab" id="tab-git" aria-controls="p-git" aria-selected={selectedTab === 'git'} onClick={() => setSelectedTab('git')}>{t('landing.tabGit', 'Git знаний')}</button>
+              <button className="tab" role="tab" id="tab-folio" aria-controls="p-folio" aria-selected={selectedTab === 'folio'} onClick={() => setSelectedTab('folio')}>{t('landing.tabPortfolio', 'Портфолио')}</button>
+              <button className="tab" role="tab" id="tab-focus" aria-controls="p-focus" aria-selected={selectedTab === 'focus'} onClick={() => setSelectedTab('focus')}>{t('landing.tabProductivity', 'Продуктивность')}</button>
             </div>
 
             {/* graph */}
@@ -1034,13 +1034,13 @@ export const BitrixStyleLanding: React.FC<BitrixStyleLandingProps> = ({
         <section id="how" style={{ paddingTop: 0 }}>
           <div className="wrap">
             <div className="center">
-              <p className="eyebrow">Старт</p>
-              <h2>Три шага до первого артефакта</h2>
+              <p className="eyebrow">{t('action.start', 'Старт')}</p>
+              <h2>{t('landing.stepsTitle', 'Три шага до первого артефакта')}</h2>
             </div>
             <div className="steps">
-              <div className="step"><div className="n">1</div><h3>Войдите в один клик</h3><p>Через аккаунт Google или в гостевом демо-режиме. Пароль не нужен.</p></div>
-              <div className="step"><div className="n">2</div><h3>Идите по графу</h3><p>Закрывайте блоки, сдавайте «Чистый лист» и повторяйте узлы, которые подсвечены.</p></div>
-              <div className="step"><div className="n">3</div><h3>Покажите результат</h3><p>Артефакты собираются в публичное портфолио, ссылкой на которое можно поделиться.</p></div>
+              <div className="step"><div className="n">1</div><h3>{t('landing.step1Title', 'Войдите в один клик')}</h3><p>{t('landing.step1Desc', 'Через аккаунт Google или в гостевом демо-режиме. Пароль не нужен.')}</p></div>
+              <div className="step"><div className="n">2</div><h3>{t('landing.step2Title', 'Идите по графу')}</h3><p>{t('landing.step2Desc', 'Закрывайте блоки, сдавайте «Чистый лист» и повторяйте узлы, которые подсвечены.')}</p></div>
+              <div className="step"><div className="n">3</div><h3>{t('landing.step3Title', 'Покажите результат')}</h3><p>{t('landing.step3Desc', 'Артефакты собираются в публичное портфолио, ссылкой на которое можно поделиться.')}</p></div>
             </div>
           </div>
         </section>
@@ -1049,14 +1049,14 @@ export const BitrixStyleLanding: React.FC<BitrixStyleLandingProps> = ({
         <section style={{ paddingTop: 0 }}>
           <div className="wrap">
             <div className="center">
-              <p className="eyebrow">Платформа</p>
-              <h2>Работает там, где удобно вам</h2>
+              <p className="eyebrow">{t('landing.cardDesktopTitle', 'Платформа')}</p>
+              <h2>{t('landing.platformTitle', 'Работает там, где удобно вам')}</h2>
             </div>
             <div className="cards">
-              <div className="cc"><div className="ic"><svg><use href="#i-desk"/></svg></div><h3>Рабочий стол в браузере</h3><p>Плавающие окна, док приложений, строка состояния и многозадачность.</p></div>
-              <div className="cc"><div className="ic"><svg><use href="#i-phone"/></svg></div><h3>Блоки на телефоне</h3><p>Интерфейс сам перестраивается в привычный мобильный формат с полным набором функций.</p></div>
-              <div className="cc"><div className="ic"><svg><use href="#i-sync"/></svg></div><h3>Мгновенная синхронизация</h3><p>Граф, заметки, задачи, XP и настройки сохраняются в облаке в реальном времени.</p></div>
-              <div className="cc"><div className="ic"><svg><use href="#i-key"/></svg></div><h3>Безопасный вход</h3><p>Google-аккаунт в один клик или гостевой режим без пароля.</p></div>
+              <div className="cc"><div className="ic"><svg><use href="#i-desk"/></svg></div><h3>{t('landing.cardDesktopTitle', 'Рабочий стол в браузере')}</h3><p>{t('landing.cardDesktopDesc', 'Плавающие окна, док приложений, строка состояния и многозадачность.')}</p></div>
+              <div className="cc"><div className="ic"><svg><use href="#i-phone"/></svg></div><h3>{t('landing.cardMobileTitle', 'Блоки на телефоне')}</h3><p>{t('landing.cardMobileDesc', 'Интерфейс сам перестраивается в привычный мобильный формат с полным набором функций.')}</p></div>
+              <div className="cc"><div className="ic"><svg><use href="#i-sync"/></svg></div><h3>{t('landing.cardSyncTitle', 'Мгновенная синхронизация')}</h3><p>{t('landing.cardSyncDesc', 'Граф, заметки, задачи, XP и настройки сохраняются в облаке в реальном времени.')}</p></div>
+              <div className="cc"><div className="ic"><svg><use href="#i-key"/></svg></div><h3>{t('landing.cardAuthTitle', 'Безопасный вход')}</h3><p>{t('landing.cardAuthDesc', 'Google-аккаунт в один клик или гостевой режим без пароля.')}</p></div>
             </div>
           </div>
         </section>
@@ -1065,15 +1065,15 @@ export const BitrixStyleLanding: React.FC<BitrixStyleLandingProps> = ({
         <section id="faq" style={{ paddingTop: 0 }}>
           <div className="wrap">
             <div className="center">
-              <p className="eyebrow">Вопросы</p>
-              <h2>Коротко о главном</h2>
+              <p className="eyebrow">{t('nav.principles', 'Вопросы')}</p>
+              <h2>{t('landing.faqTitle', 'Коротко о главном')}</h2>
             </div>
             <div className="faq">
-              <details open><summary>Нужна ли регистрация?</summary><p>Нет. Можно войти через Google-аккаунт в один клик или открыть гостевой демо-режим без пароля.</p></details>
-              <details><summary>Как открываются новые блоки в графе?</summary><p>Узел становится доступным, когда закрыты все предшествующие блоки с баллом не ниже проходного порога.</p></details>
-              <details><summary>Что такое «Чистый лист»?</summary><p>Это режим, в котором вы по памяти записываете ключевые идеи темы. ИИ проверяет полноту ответа, показывает пробелы и даёт точную обратную связь.</p></details>
-              <details><summary>Можно ли учиться с телефона?</summary><p>Да. На смартфоне рабочий стол автоматически превращается в блочный интерфейс со всеми функциями.</p></details>
-              <details><summary>Как показать результаты другим?</summary><p>Все сданные артефакты собираются на публичной странице портфолио. Ссылкой можно поделиться с работодателем или коллегами.</p></details>
+              <details open><summary>{t('faq.q1', 'Нужна ли регистрация?')}</summary><p>{t('faq.a1', 'Нет. Можно войти через Google-аккаунт в один клик или открыть гостевой демо-режим без пароля.')}</p></details>
+              <details><summary>{t('faq.q2', 'Как открываются новые блоки в графе?')}</summary><p>{t('faq.a2', 'Узел становится доступным, когда закрыты все предшествующие блоки с баллом не ниже проходного порога.')}</p></details>
+              <details><summary>{t('faq.q3', 'Что такое «Чистый лист»?')}</summary><p>{t('faq.a3', 'Это режим, в котором вы по памяти записываете ключевые идеи темы. ИИ проверяет полноту ответа, показывает пробелы и даёт точную обратную связь.')}</p></details>
+              <details><summary>{t('faq.q4', 'Можно ли учиться с телефона?')}</summary><p>{t('faq.a4', 'Да. На смартфоне рабочий стол автоматически превращается в блочный интерфейс со всеми функциями.')}</p></details>
+              <details><summary>{t('faq.q5', 'Как показать результаты другим?')}</summary><p>{t('faq.a5', 'Все сданные артефакты собираются на публичной странице портфолио. Ссылкой можно поделиться с работодателем или коллегами.')}</p></details>
             </div>
           </div>
         </section>
@@ -1083,10 +1083,10 @@ export const BitrixStyleLanding: React.FC<BitrixStyleLandingProps> = ({
           <div className="wrap">
             <div className="cta">
               <i className="orb o1" aria-hidden="true"></i><i className="orb o2" aria-hidden="true"></i><i className="orb o3" aria-hidden="true"></i><i className="orb o4" aria-hidden="true"></i>
-              <h2>Постройте свой первый граф знаний</h2>
-              <p>Откройте демо и пройдите первый блок за несколько минут.</p>
+              <h2>{t('landing.ctaTitle', 'Постройте свой первый граф знаний')}</h2>
+              <p>{t('landing.ctaDesc', 'Откройте демо и пройдите первый блок за несколько минут.')}</p>
               <button type="button" onClick={onStartFree} className="btn btn-filled">
-                Открыть Pink Learn
+                {t('landing.openPinkLearn', 'Открыть Pink Learn')}
               </button>
             </div>
           </div>

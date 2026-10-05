@@ -47,34 +47,153 @@ import appletConfig from '../firebase-applet-config.json';
 
 export const apiRouter = express.Router();
 
+// In-memory GeoIP cache (24h TTL)
+const geoIpCache = new Map<string, { country: string; lang: string; timestamp: number }>();
+const GEOIP_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+
+function isPrivateOrLocalIp(ip: string): boolean {
+  if (!ip) return true;
+  const clean = ip.replace(/^::ffff:/, '').trim();
+  if (clean === '127.0.0.1' || clean === '::1' || clean === 'localhost') return true;
+  if (clean.startsWith('10.') || clean.startsWith('192.168.') || clean.startsWith('169.254.')) return true;
+  if (/^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(clean)) return true;
+  if (clean.startsWith('fc00:') || clean.startsWith('fe80:')) return true;
+  return false;
+}
+
+function mapCountryToLanguage(countryCode: string): string {
+  const code = (countryCode || '').toUpperCase().trim();
+  if (code === 'KZ') return 'kk';
+  if (code === 'UA') return 'uk';
+  if (['RU', 'BY', 'KG', 'TJ', 'UZ', 'AM', 'AZ', 'MD', 'TM', 'GE'].includes(code)) return 'ru';
+  if (code === 'JP') return 'ja';
+  return 'en';
+}
+
+function extractClientIp(req: express.Request): string {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (typeof forwarded === 'string') {
+    const first = forwarded.split(',')[0].trim();
+    if (first) return first;
+  }
+  const headersToCheck = [
+    'cf-connecting-ip',
+    'x-real-ip',
+    'x-client-ip',
+    'fastly-client-ip',
+    'true-client-ip',
+    'x-appengine-user-ip',
+    'x-forwarded',
+    'forwarded-for',
+  ];
+  for (const h of headersToCheck) {
+    const val = req.headers[h];
+    if (typeof val === 'string' && val.trim()) return val.trim().split(',')[0].trim();
+  }
+  const remote = req.socket?.remoteAddress || '';
+  return remote.replace(/^::ffff:/, '').trim();
+}
+
+async function fetchCountryFromIp(ip: string): Promise<string | null> {
+  if (isPrivateOrLocalIp(ip)) return null;
+
+  const cached = geoIpCache.get(ip);
+  if (cached && Date.now() - cached.timestamp < GEOIP_CACHE_TTL_MS) {
+    return cached.country;
+  }
+
+  // 1. Try ip-api.com (free, high speed, reliable)
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 1200);
+    const res = await fetch(`http://ip-api.com/json/${ip}?fields=status,countryCode`, {
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.status === 'success' && data.countryCode) {
+        const country = String(data.countryCode).toUpperCase();
+        geoIpCache.set(ip, { country, lang: mapCountryToLanguage(country), timestamp: Date.now() });
+        return country;
+      }
+    }
+  } catch {}
+
+  // 2. Fallback to api.country.is
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 1200);
+    const res = await fetch(`https://api.country.is/${ip}`, {
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.country) {
+        const country = String(data.country).toUpperCase();
+        geoIpCache.set(ip, { country, lang: mapCountryToLanguage(country), timestamp: Date.now() });
+        return country;
+      }
+    }
+  } catch {}
+
+  return null;
+}
+
 // Auto Geo/IP Language Detection
-apiRouter.get('/geo/lang', (req, res) => {
-  const cfCountry = (req.headers['cf-ipcountry'] as string || req.headers['x-country-code'] as string || '').toUpperCase();
+apiRouter.get('/geo/lang', async (req, res) => {
+  // 1. Check direct Cloud / CDN country headers
+  const headerCountry = (
+    (req.headers['cf-ipcountry'] as string) ||
+    (req.headers['x-country-code'] as string) ||
+    (req.headers['x-appengine-country'] as string) ||
+    (req.headers['x-vercel-ip-country'] as string) ||
+    (req.headers['geoip-country-code'] as string) ||
+    ''
+  ).toUpperCase().trim();
+
+  const clientIp = extractClientIp(req);
+  let detectedCountry = headerCountry && headerCountry !== 'XX' && headerCountry !== 'T1' && headerCountry !== 'UNKNOWN'
+    ? headerCountry
+    : null;
+  let detectedBy = detectedCountry ? 'country_header' : 'none';
+
+  // 2. If no valid header country, perform fast IP Geo lookup
+  if (!detectedCountry && clientIp && !isPrivateOrLocalIp(clientIp)) {
+    const ipCountry = await fetchCountryFromIp(clientIp);
+    if (ipCountry) {
+      detectedCountry = ipCountry;
+      detectedBy = 'ip_geo';
+    }
+  }
+
+  // 3. Determine language from country if found
+  let detectedLang = detectedCountry ? mapCountryToLanguage(detectedCountry) : '';
+
+  // 4. If still undetected or local, fallback to Accept-Language header
   const acceptLang = (req.headers['accept-language'] as string || '').toLowerCase();
-
-  let detected = 'en';
-
-  if (cfCountry === 'KZ') {
-    detected = 'kk';
-  } else if (cfCountry === 'UA') {
-    detected = 'uk';
-  } else if (['RU', 'BY', 'KG'].includes(cfCountry)) {
-    detected = 'ru';
-  } else if (cfCountry === 'JP') {
-    detected = 'ja';
-  } else if (acceptLang.startsWith('kk') || acceptLang.includes('kk-') || acceptLang.includes('kaz')) {
-    detected = 'kk';
-  } else if (acceptLang.startsWith('uk') || acceptLang.includes('uk-') || acceptLang.includes('ukr')) {
-    detected = 'uk';
-  } else if (acceptLang.startsWith('ru') || acceptLang.includes('ru-')) {
-    detected = 'ru';
-  } else if (acceptLang.startsWith('ja') || acceptLang.includes('ja-') || acceptLang.includes('jp')) {
-    detected = 'ja';
+  if (!detectedLang) {
+    detectedBy = 'accept_language';
+    if (acceptLang.startsWith('kk') || acceptLang.includes('kk-') || acceptLang.includes('kaz')) {
+      detectedLang = 'kk';
+    } else if (acceptLang.startsWith('uk') || acceptLang.includes('uk-') || acceptLang.includes('ukr')) {
+      detectedLang = 'uk';
+    } else if (acceptLang.startsWith('ru') || acceptLang.includes('ru-') || acceptLang.includes('be') || acceptLang.includes('ky')) {
+      detectedLang = 'ru';
+    } else if (acceptLang.startsWith('ja') || acceptLang.includes('ja-') || acceptLang.includes('jp')) {
+      detectedLang = 'ja';
+    } else {
+      detectedLang = 'en';
+      detectedBy = 'fallback_en';
+    }
   }
 
   res.json({
-    lang: detected,
-    country: cfCountry || null,
+    lang: detectedLang,
+    country: detectedCountry || null,
+    ip: clientIp || null,
+    detectedBy,
     supported: ['kk', 'uk', 'ru', 'en', 'ja'],
   });
 });

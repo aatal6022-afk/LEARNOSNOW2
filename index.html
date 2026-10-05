@@ -14,6 +14,88 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Roboto:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
+    <style>
+      /* Completely suppress and hide any Google Translate banners, bars, widgets, toolbars, and popups */
+      .goog-te-banner-frame,
+      .goog-te-banner-frame.skiptranslate,
+      iframe.goog-te-banner-frame,
+      .VIpgJd-ZVi9od-ORHb-OEVmcb,
+      .VIpgJd-ZVi9od-aZ2wEe-wOHMyf,
+      .VIpgJd-ZVi9od-aZ2wEe-wOHMyf-ti6hGc,
+      .VIpgJd-ZVi9od-SmfZ-OEVmcb,
+      .VIpgJd-yAWNEb-VIpgJd-fmcmS-sn54Q,
+      .VIpgJd-ZVi9od-xl07Ob-OEVmcb,
+      #goog-gt-tt,
+      .goog-te-balloon-frame,
+      .goog-tooltip,
+      .goog-tooltip:hover,
+      .goog-te-gadget,
+      .goog-te-gadget-simple,
+      body > .skiptranslate,
+      div.skiptranslate:not(.google-translate-custom-control),
+      #google_translate_element {
+        display: none !important;
+        visibility: hidden !important;
+        height: 0px !important;
+        max-height: 0px !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+      }
+      
+      html, body {
+        top: 0px !important;
+        position: static !important;
+        margin-top: 0px !important;
+        padding-top: 0px !important;
+      }
+
+      .goog-text-highlight {
+        background-color: transparent !important;
+        box-shadow: none !important;
+      }
+    </style>
+    <script type="text/javascript">
+      function googleTranslateElementInit() {
+        if (window.google && window.google.translate) {
+          new window.google.translate.TranslateElement({
+            pageLanguage: 'ru',
+            includedLanguages: 'kk,uk,ru,en,ja',
+            autoDisplay: false,
+            layout: window.google.translate.TranslateElement.InlineLayout.SIMPLE
+          }, 'google_translate_element');
+        }
+      }
+
+      // Continuous lock to ensure top is always 0px and banner never shifts or displays
+      (function() {
+        function killTranslateBanner() {
+          var frames = document.querySelectorAll('.goog-te-banner-frame, .VIpgJd-ZVi9od-ORHb-OEVmcb, .VIpgJd-ZVi9od-aZ2wEe-wOHMyf, iframe[id*="container"], iframe[id*="banner"]');
+          for (var i = 0; i < frames.length; i++) {
+            frames[i].style.display = 'none';
+            frames[i].style.visibility = 'hidden';
+            frames[i].style.height = '0px';
+          }
+          if (document.body) {
+            if (document.body.style.top && document.body.style.top !== '0px') {
+              document.body.style.top = '0px';
+            }
+            if (document.body.style.marginTop && document.body.style.marginTop !== '0px') {
+              document.body.style.marginTop = '0px';
+            }
+          }
+          if (document.documentElement) {
+            if (document.documentElement.style.top && document.documentElement.style.top !== '0px') {
+              document.documentElement.style.top = '0px';
+            }
+            if (document.documentElement.style.marginTop && document.documentElement.style.marginTop !== '0px') {
+              document.documentElement.style.marginTop = '0px';
+            }
+          }
+        }
+        setInterval(killTranslateBanner, 80);
+      })();
+    </script>
+    <script type="text/javascript" src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async></script>
     <script>
       // Suppress transient dev WebSocket / HMR disconnect noise in iframe preview
       (function() {
@@ -36,6 +118,7 @@
     </script>
   </head>
   <body>
+    <div id="google_translate_element"></div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

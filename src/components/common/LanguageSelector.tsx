@@ -12,11 +12,19 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
   variant = 'compact',
   dark = false,
 }) => {
-  const { lang, setLanguage, languages } = useI18n();
+  const { lang, setLanguage, languages, geoMeta, resetToAutoIp } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
+  const [isDetecting, setIsDetecting] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const currentLangInfo = languages.find((l) => l.code === lang) || languages[2];
+
+  const handleResetToAuto = async () => {
+    setIsDetecting(true);
+    await resetToAutoIp();
+    setIsDetecting(false);
+    setIsOpen(false);
+  };
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -40,7 +48,7 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
           return (
             <button
               key={item.code}
-              onClick={() => setLanguage(item.code)}
+              onClick={() => setLanguage(item.code, true)}
               className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all ${
                 isActive
                   ? 'bg-rose-500 text-white shadow-sm font-semibold'
@@ -72,6 +80,11 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
       >
         <span>{currentLangInfo.flag}</span>
         <span className="font-semibold">{currentLangInfo.nativeName}</span>
+        {geoMeta?.isAuto && (
+          <span className="text-[10px] px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-600 font-mono" title={`Авто по IP (${geoMeta.country || 'Geo'})`}>
+            IP
+          </span>
+        )}
         <svg
           className={`w-3 h-3 transition-transform ${isOpen ? 'rotate-180' : ''} ${dark ? 'text-stone-400' : 'text-stone-500'}`}
           fill="none"
@@ -84,7 +97,7 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
 
       {isOpen && (
         <div
-          className={`absolute right-0 mt-1.5 w-44 rounded-xl shadow-xl z-50 overflow-hidden border transition-all ${
+          className={`absolute right-0 mt-1.5 w-48 rounded-xl shadow-xl z-50 overflow-hidden border transition-all ${
             dark
               ? 'bg-stone-900/95 backdrop-blur-md border-white/15 text-white'
               : 'bg-white/95 backdrop-blur-md border-stone-200 text-stone-800'
@@ -97,7 +110,7 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
                 <button
                   key={item.code}
                   onClick={() => {
-                    setLanguage(item.code);
+                    setLanguage(item.code, true);
                     setIsOpen(false);
                   }}
                   className={`w-full text-left px-3.5 py-2 text-xs flex items-center justify-between transition-colors ${
@@ -118,6 +131,32 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
                 </button>
               );
             })}
+
+            <div className={`my-1 border-t ${dark ? 'border-white/10' : 'border-stone-100'}`} />
+
+            <button
+              onClick={handleResetToAuto}
+              disabled={isDetecting}
+              className={`w-full text-left px-3.5 py-2 text-[11px] flex items-center justify-between transition-colors ${
+                geoMeta?.isAuto
+                  ? dark
+                    ? 'text-emerald-400 bg-emerald-500/10'
+                    : 'text-emerald-700 bg-emerald-50'
+                  : dark
+                  ? 'text-stone-400 hover:bg-white/10'
+                  : 'text-stone-500 hover:bg-stone-50'
+              }`}
+            >
+              <span className="flex items-center space-x-1.5">
+                <span>{isDetecting ? '⏳' : '🌐'}</span>
+                <span>{isDetecting ? 'Определение IP...' : 'Автовыбор по IP'}</span>
+              </span>
+              {geoMeta?.country && (
+                <span className="font-mono text-[10px] opacity-75 font-semibold">
+                  {geoMeta.country}
+                </span>
+              )}
+            </button>
           </div>
         </div>
       )}

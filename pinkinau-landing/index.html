@@ -35,6 +35,45 @@
   </script>
 
   <style>
+    /* Completely suppress and hide any Google Translate banners, bars, widgets, toolbars, and popups */
+    .goog-te-banner-frame,
+    .goog-te-banner-frame.skiptranslate,
+    iframe.goog-te-banner-frame,
+    .VIpgJd-ZVi9od-ORHb-OEVmcb,
+    .VIpgJd-ZVi9od-aZ2wEe-wOHMyf,
+    .VIpgJd-ZVi9od-aZ2wEe-wOHMyf-ti6hGc,
+    .VIpgJd-ZVi9od-SmfZ-OEVmcb,
+    .VIpgJd-yAWNEb-VIpgJd-fmcmS-sn54Q,
+    .VIpgJd-ZVi9od-xl07Ob-OEVmcb,
+    #goog-gt-tt,
+    .goog-te-balloon-frame,
+    .goog-tooltip,
+    .goog-tooltip:hover,
+    .goog-te-gadget,
+    .goog-te-gadget-simple,
+    body > .skiptranslate,
+    div.skiptranslate:not(.google-translate-custom-control),
+    #google_translate_element {
+      display: none !important;
+      visibility: hidden !important;
+      height: 0px !important;
+      max-height: 0px !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+    
+    html, body {
+      top: 0px !important;
+      position: static !important;
+      margin-top: 0px !important;
+      padding-top: 0px !important;
+    }
+
+    .goog-text-highlight {
+      background-color: transparent !important;
+      box-shadow: none !important;
+    }
+
     body {
       background-color: #FFFFFF;
       color: #111827;
@@ -611,10 +650,31 @@
       }
     });
 
-    function setLanguage(lang) {
+    function syncGoogleTranslate(targetLang) {
+      const cookieVal = targetLang === 'ru' ? '' : `/ru/${targetLang}`;
+      const host = window.location.hostname;
+      if (!cookieVal) {
+        document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+        document.cookie = `googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${host};`;
+      } else {
+        document.cookie = `googtrans=${cookieVal}; path=/;`;
+        document.cookie = `googtrans=${cookieVal}; path=/; domain=${host};`;
+      }
+      const combo = document.querySelector('.goog-te-combo');
+      if (combo && combo.value !== targetLang) {
+        combo.value = targetLang;
+        combo.dispatchEvent(new Event('change'));
+      }
+    }
+
+    function setLanguage(lang, isManual = true) {
       if (!translations[lang]) lang = 'ru';
       currentLang = lang;
-      localStorage.setItem('pinkinau_lang', lang);
+      if (isManual) {
+        localStorage.setItem('pinkinau_lang_manual', 'true');
+        localStorage.setItem('pinkinau_lang', lang);
+      }
+      syncGoogleTranslate(lang);
 
       // Update Header Flag
       document.getElementById('current-flag').textContent = flags[lang] || '🇷🇺';
@@ -643,33 +703,94 @@
 
     // Auto Geo IP & Browser detection on page load
     async function autoDetectLanguage() {
+      const isManual = localStorage.getItem('pinkinau_lang_manual') === 'true';
       const saved = localStorage.getItem('pinkinau_lang');
-      if (saved && translations[saved]) {
-        setLanguage(saved);
+      if (isManual && saved && translations[saved]) {
+        setLanguage(saved, false);
         return;
       }
 
+      // 1. Fetch from server-side GeoIP endpoint
       try {
         const res = await fetch('/api/geo/lang');
         if (res.ok) {
           const data = await res.json();
           if (data && data.lang && translations[data.lang]) {
-            setLanguage(data.lang);
+            setLanguage(data.lang, false);
             return;
           }
         }
       } catch (e) {}
 
+      // 2. Client-side IP Geo fallback
+      try {
+        const res = await fetch('https://api.country.is/');
+        if (res.ok) {
+          const data = await res.json();
+          const country = (data?.country || '').toUpperCase();
+          let matched = 'en';
+          if (country === 'KZ') matched = 'kk';
+          else if (country === 'UA') matched = 'uk';
+          else if (['RU', 'BY', 'KG', 'TJ', 'UZ', 'AM', 'AZ', 'MD', 'TM', 'GE'].includes(country)) matched = 'ru';
+          else if (country === 'JP') matched = 'ja';
+          setLanguage(matched, false);
+          return;
+        }
+      } catch (e) {}
+
+      // 3. Browser Language fallback
       const browser = (navigator.language || '').toLowerCase();
-      if (browser.startsWith('kk') || browser.startsWith('kz')) setLanguage('kk');
-      else if (browser.startsWith('uk') || browser.startsWith('ua')) setLanguage('uk');
-      else if (browser.startsWith('ja') || browser.startsWith('jp')) setLanguage('ja');
-      else if (browser.startsWith('ru') || browser.startsWith('be') || browser.startsWith('ky')) setLanguage('ru');
-      else setLanguage('en');
+      if (browser.startsWith('kk') || browser.startsWith('kz')) setLanguage('kk', false);
+      else if (browser.startsWith('uk') || browser.startsWith('ua')) setLanguage('uk', false);
+      else if (browser.startsWith('ja') || browser.startsWith('jp')) setLanguage('ja', false);
+      else if (browser.startsWith('ru') || browser.startsWith('be') || browser.startsWith('ky')) setLanguage('ru', false);
+      else setLanguage('en', false);
     }
 
     autoDetectLanguage();
   </script>
 
+  <div id="google_translate_element"></div>
+  <script type="text/javascript">
+    function googleTranslateElementInit() {
+      if (window.google && window.google.translate) {
+        new window.google.translate.TranslateElement({
+          pageLanguage: 'ru',
+          includedLanguages: 'kk,uk,ru,en,ja',
+          autoDisplay: false,
+          layout: window.google.translate.TranslateElement.InlineLayout.SIMPLE
+        }, 'google_translate_element');
+      }
+    }
+
+    (function() {
+      function killTranslateBanner() {
+        var frames = document.querySelectorAll('.goog-te-banner-frame, .VIpgJd-ZVi9od-ORHb-OEVmcb, .VIpgJd-ZVi9od-aZ2wEe-wOHMyf, iframe[id*="container"], iframe[id*="banner"]');
+        for (var i = 0; i < frames.length; i++) {
+          frames[i].style.display = 'none';
+          frames[i].style.visibility = 'hidden';
+          frames[i].style.height = '0px';
+        }
+        if (document.body) {
+          if (document.body.style.top && document.body.style.top !== '0px') {
+            document.body.style.top = '0px';
+          }
+          if (document.body.style.marginTop && document.body.style.marginTop !== '0px') {
+            document.body.style.marginTop = '0px';
+          }
+        }
+        if (document.documentElement) {
+          if (document.documentElement.style.top && document.documentElement.style.top !== '0px') {
+            document.documentElement.style.top = '0px';
+          }
+          if (document.documentElement.style.marginTop && document.documentElement.style.marginTop !== '0px') {
+            document.documentElement.style.marginTop = '0px';
+          }
+        }
+      }
+      setInterval(killTranslateBanner, 80);
+    })();
+  </script>
+  <script type="text/javascript" src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async></script>
 </body>
 </html>
