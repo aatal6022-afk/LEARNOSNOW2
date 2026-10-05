@@ -963,6 +963,19 @@ export interface UserProfile {
   completedNodesCount?: number;
 }
 
+export interface AdminSticker {
+  id: string;
+  name: string;
+  category: string;
+  imageUrl: string; // PNG base64 Data URL or public PNG URL
+  width?: number;
+  height?: number;
+  fileSizeKb?: number;
+  uploadedBy?: string;
+  createdAt: string;
+  isActive: boolean;
+}
+
 export interface NodeStickyNote {
   id: string;
   nodeId: string;
@@ -972,6 +985,8 @@ export interface NodeStickyNote {
   authorAvatar?: string;
   text: string;
   color?: 'yellow' | 'blue' | 'pink' | 'green';
+  stickerImageUrl?: string;
+  stickerName?: string;
   createdAt: string;
 }
 
@@ -985,6 +1000,8 @@ export interface ArtifactComment {
   text: string;
   color?: 'yellow' | 'blue' | 'pink' | 'green';
   stickerType?: 'paper' | 'praise' | 'audit' | 'bug';
+  stickerImageUrl?: string;
+  stickerName?: string;
   createdAt: string;
 }
 

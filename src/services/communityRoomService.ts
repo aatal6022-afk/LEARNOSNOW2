@@ -79,6 +79,12 @@ export interface RoomChatMessage {
     createdAt?: string;
   }>;
   attachedBlockSnapshot?: BlockGraphicSnapshot;
+  attachedSticker?: {
+    id: string;
+    name: string;
+    imageUrl: string;
+    category?: string;
+  };
   reactions?: Record<string, string[]>;
 }
 

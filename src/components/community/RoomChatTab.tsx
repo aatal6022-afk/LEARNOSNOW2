@@ -31,7 +31,8 @@ import {
   Globe,
   Compass,
   LogOut,
-  Ban
+  Ban,
+  Smile
 } from 'lucide-react';
 import { playChime } from '../../utils/audio.ts';
 import { peerCollabSync } from '../../services/peerCollabSync.ts';
@@ -41,6 +42,8 @@ import { INITIAL_NOTES, INITIAL_DAG_NODES, LEARNING_UNITS } from '../../data/ini
 import { BlockGraphicSnapshotCard } from '../learning/BlockGraphicSnapshotCard.tsx';
 import { auth } from '../../firebase.ts';
 import { socialProfileService } from '../../services/socialProfileService.ts';
+import { StickerPickerPopover } from '../common/StickerPickerPopover.tsx';
+import { AdminSticker } from '../../services/stickerService.ts';
 
 export interface NoteAttachment {
   id: string;
@@ -210,6 +213,7 @@ export const RoomChatTab: React.FC<RoomChatTabProps> = ({
   const [activeViewingNote, setActiveViewingNote] = useState<NoteAttachment | null>(null);
   const [copiedNoteContent, setCopiedNoteContent] = useState(false);
   const [showParticipantsSidebar, setShowParticipantsSidebar] = useState(false);
+  const [isStickerPickerOpen, setIsStickerPickerOpen] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -971,6 +975,40 @@ export const RoomChatTab: React.FC<RoomChatTabProps> = ({
     peerCollabSync.broadcastAction('room_chat_message', { message: newMsg, roomId: effectiveRoomId });
   };
 
+  const handleSendSticker = async (sticker: AdminSticker) => {
+    const newMsg: RoomChatMessage = {
+      id: 'msg-stk-' + Date.now().toString(36) + '-' + Math.random().toString(36).substring(2, 6),
+      senderId: myUserId,
+      senderName: myUserName,
+      senderAvatar: myUserAvatar,
+      text: '',
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      attachedSticker: {
+        id: sticker.id,
+        name: sticker.name,
+        imageUrl: sticker.imageUrl,
+        category: sticker.category,
+      },
+    };
+
+    setMessages((prev) => [...prev, newMsg]);
+    setIsStickerPickerOpen(false);
+    playChime('click');
+
+    // Save to Firestore
+    communityRoomService.sendChatMessage(effectiveRoomId, {
+      senderId: newMsg.senderId,
+      senderName: newMsg.senderName,
+      senderAvatar: newMsg.senderAvatar,
+      text: '',
+      timestamp: newMsg.timestamp,
+      attachedSticker: newMsg.attachedSticker,
+    }).catch(err => console.warn('Chat Firestore save err:', err));
+
+    // WebRTC sync
+    peerCollabSync.broadcastAction('room_chat_message', { message: newMsg, roomId: effectiveRoomId });
+  };
+
   const handleCopyMessage = (msg: RoomChatMessage) => {
     navigator.clipboard.writeText(msg.text);
     setCopiedMsgId(msg.id);
@@ -1195,6 +1233,26 @@ export const RoomChatTab: React.FC<RoomChatTabProps> = ({
                         {msg.text && (
                           <div className="whitespace-pre-wrap break-words font-sans">
                             {renderMessageTextWithMentions(msg.text, isMe)}
+                          </div>
+                        )}
+
+                        {/* PNG Sticker */}
+                        {msg.attachedSticker && (
+                          <div className="py-1">
+                            <div 
+                              className="inline-block relative group/stk"
+                              title={`Стикер: ${msg.attachedSticker.name}`}
+                            >
+                              <img
+                                src={msg.attachedSticker.imageUrl}
+                                alt={msg.attachedSticker.name}
+                                className="max-w-[130px] max-h-[130px] sm:max-w-[160px] sm:max-h-[160px] object-contain drop-shadow-md hover:scale-105 transition-transform duration-150 cursor-pointer"
+                                onClick={() => playChime('click')}
+                              />
+                              <div className={`text-[10px] font-medium mt-1 ${isMe ? 'text-blue-100' : 'text-slate-500'}`}>
+                                {msg.attachedSticker.name}
+                              </div>
+                            </div>
                           </div>
                         )}
 
@@ -1462,7 +1520,31 @@ export const RoomChatTab: React.FC<RoomChatTabProps> = ({
             )}
 
             {/* Input Row */}
-            <div className="flex items-end gap-2 bg-slate-50 border border-slate-200/90 rounded-2xl p-1.5 focus-within:border-blue-500 focus-within:bg-white focus-within:ring-2 focus-within:ring-blue-100 transition shadow-2xs">
+            <div className="flex items-end gap-2 bg-slate-50 border border-slate-200/90 rounded-2xl p-1.5 focus-within:border-blue-500 focus-within:bg-white focus-within:ring-2 focus-within:ring-blue-100 transition shadow-2xs relative">
+              {/* Sticker Picker Popover */}
+              <StickerPickerPopover
+                isOpen={isStickerPickerOpen}
+                onClose={() => setIsStickerPickerOpen(false)}
+                onSelectSticker={handleSendSticker}
+                positionClassName="bottom-full mb-3 left-0 sm:left-2"
+              />
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsStickerPickerOpen((prev) => !prev);
+                  playChime('click');
+                }}
+                title="Отправить PNG-стикер"
+                className={`p-2 rounded-xl transition cursor-pointer shrink-0 ${
+                  isStickerPickerOpen 
+                    ? 'bg-rose-100 text-rose-600' 
+                    : 'text-slate-500 hover:text-rose-600 hover:bg-rose-50'
+                }`}
+              >
+                <Smile className="w-4 h-4" />
+              </button>
+
               <button
                 type="button"
                 onClick={() => {

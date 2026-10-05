@@ -22,11 +22,25 @@ import {
   AlertTriangle,
   X,
   Brain,
+  Smile
 } from 'lucide-react';
 import { peerCollabSync, PeerCursor } from '../../services/peerCollabSync.ts';
 import { playChime } from '../../utils/audio.ts';
 import { CloudflareTurnstile } from '../common/CloudflareTurnstile.tsx';
 import { useI18n } from '../../services/i18nService.ts';
+import { StickerPickerPopover } from '../common/StickerPickerPopover.tsx';
+import { AdminSticker } from '../../services/stickerService.ts';
+
+export interface BoardStickerItem {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  imageUrl: string;
+  name: string;
+  author: string;
+}
 
 export interface StickyNoteItem {
   id: string;
@@ -103,25 +117,26 @@ export const WhiteScreenWindow: React.FC<WhiteScreenWindowProps> = ({
   const [warningNotice, setWarningNotice] = useState<string | null>(null);
   const [turnstileToken, setTurnstileToken] = useState<string>('');
 
-  // Sticky Notes
-  const [notes, setNotes] = useState<StickyNoteItem[]>([
-    {
-      id: 'note-1',
-      x: 120,
-      y: 110,
-      text: 'Архитектура совместной системы: двусторонняя синхронизация через BroadcastChannel & Firestore.',
-      color: '#fef08a',
-      author: 'Напарник',
-    },
-    {
-      id: 'note-2',
-      x: 440,
-      y: 160,
-      text: 'Совместная работа:\nВаш курсор отображается как обычно без подсветки.\nКурсор напарника подсвечивается в реальном времени.',
-      color: '#bbf7d0',
-      author: 'Система',
-    },
-  ]);
+  // Sticky Notes & PNG Stickers (No hardcoded test notes - all test stickers removed!)
+  const [notes, setNotes] = useState<StickyNoteItem[]>([]);
+  const [boardStickers, setBoardStickers] = useState<BoardStickerItem[]>([]);
+  const [isStickerPickerOpen, setIsStickerPickerOpen] = useState(false);
+
+  const handlePlaceBoardSticker = (sticker: AdminSticker) => {
+    const newStk: BoardStickerItem = {
+      id: `ws-stk-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      x: 180 + Math.floor(Math.random() * 100),
+      y: 140 + Math.floor(Math.random() * 80),
+      width: 140,
+      height: 140,
+      imageUrl: sticker.imageUrl,
+      name: sticker.name,
+      author: partnerName || 'Участник',
+    };
+    setBoardStickers((prev) => [...prev, newStk]);
+    setIsStickerPickerOpen(false);
+    playChime('success');
+  };
 
   // Elements history for undo/redo
   const [strokes, setStrokes] = useState<
@@ -571,6 +586,32 @@ export const WhiteScreenWindow: React.FC<WhiteScreenWindowProps> = ({
             <span className="hidden md:inline">{t('widget.sticky', 'Стикер')}</span>
           </button>
 
+          {/* PNG Sticker Picker */}
+          <div className="relative">
+            <StickerPickerPopover
+              isOpen={isStickerPickerOpen}
+              onClose={() => setIsStickerPickerOpen(false)}
+              onSelectSticker={handlePlaceBoardSticker}
+              positionClassName="top-full mt-2 right-0"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                setIsStickerPickerOpen((prev) => !prev);
+                playChime('click');
+              }}
+              className={`flex items-center space-x-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer border ${
+                isStickerPickerOpen 
+                  ? 'bg-rose-100 text-rose-700 border-rose-300' 
+                  : 'text-rose-700 bg-rose-50 hover:bg-rose-100 border-rose-200'
+              }`}
+              title="Добавить PNG-стикер на белый экран"
+            >
+              <Smile className="w-3.5 h-3.5 text-rose-500" />
+              <span className="hidden md:inline">PNG-Стикер</span>
+            </button>
+          </div>
+
           {/* Undo / Redo */}
           <button
             type="button"
@@ -709,6 +750,39 @@ export const WhiteScreenWindow: React.FC<WhiteScreenWindowProps> = ({
               className="w-full bg-transparent resize-none outline-none font-medium leading-relaxed text-slate-900 border-none p-0 focus:ring-0"
               rows={3}
             />
+          </div>
+        ))}
+
+        {/* Placed Admin PNG Stickers on White Screen */}
+        {boardStickers.map((stk) => (
+          <div
+            key={stk.id}
+            className="absolute p-2 flex flex-col items-center justify-center cursor-move select-none animate-fade-in group hover:shadow-lg rounded-xl transition-shadow"
+            style={{
+              left: `${stk.x}px`,
+              top: `${stk.y}px`,
+              width: `${stk.width}px`,
+              height: `${stk.height}px`,
+            }}
+          >
+            <img
+              src={stk.imageUrl}
+              alt={stk.name}
+              className="max-w-full max-h-full object-contain drop-shadow-md pointer-events-none"
+            />
+            <div className="absolute -bottom-3 left-0 right-0 text-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <span className="text-[9px] bg-slate-900/80 text-white px-2 py-0.5 rounded-full font-medium">
+                {stk.name}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setBoardStickers((prev) => prev.filter((s) => s.id !== stk.id))}
+              className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 bg-white text-rose-600 hover:text-rose-800 p-1 rounded-full shadow-md border border-slate-200 cursor-pointer transition-opacity"
+              title="Удалить стикер"
+            >
+              ✕
+            </button>
           </div>
         ))}
 

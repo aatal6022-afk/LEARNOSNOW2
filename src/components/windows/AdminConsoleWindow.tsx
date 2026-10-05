@@ -33,6 +33,8 @@ import {
 import { AdminUnitRow, AdminMaterial } from '../../types.ts';
 import { INITIAL_ADMIN_MATERIALS } from '../../data/initialData.ts';
 import { playChime } from '../../utils/audio.ts';
+import { AdminStickersTab } from '../admin/AdminStickersTab.tsx';
+import { Smile } from 'lucide-react';
 
 interface AdminConsoleWindowProps {
   units: AdminUnitRow[];
@@ -40,7 +42,7 @@ interface AdminConsoleWindowProps {
   materials?: AdminMaterial[];
   onUpdateMaterials?: (materials: AdminMaterial[]) => void;
   onDeployMaterialToCourse?: (material: AdminMaterial, compiledPractice?: any) => void;
-  initialTab?: 'queue' | 'matrix' | 'royalties' | 'store';
+  initialTab?: 'queue' | 'matrix' | 'royalties' | 'store' | 'stickers';
   highlightMaterialId?: string | null;
 }
 
@@ -53,7 +55,7 @@ export const AdminConsoleWindow: React.FC<AdminConsoleWindowProps> = ({
   initialTab,
   highlightMaterialId,
 }) => {
-  const [activeTab, setActiveTab] = useState<'queue' | 'matrix' | 'royalties' | 'store'>(initialTab || 'store');
+  const [activeTab, setActiveTab] = useState<'queue' | 'matrix' | 'royalties' | 'store' | 'stickers'>(initialTab || 'store');
   const [selectedQueueUnit, setSelectedQueueUnit] = useState<AdminUnitRow>(units[2] || units[0]);
   const [authorPool, setAuthorPool] = useState(18450);
 
@@ -488,6 +490,15 @@ export const AdminConsoleWindow: React.FC<AdminConsoleWindowProps> = ({
               }`}
             >
               Магазин материалов
+            </button>
+            <button
+              onClick={() => setActiveTab('stickers')}
+              className={`px-3 py-1 rounded-xl text-[11px] font-medium transition cursor-pointer flex items-center space-x-1.5 ${
+                activeTab === 'stickers' ? 'bg-slate-900 text-white shadow-xs font-semibold' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Smile className="w-3.5 h-3.5 text-rose-500" />
+              <span>PNG-Стикеры</span>
             </button>
           </div>
 
@@ -1108,6 +1119,11 @@ export const AdminConsoleWindow: React.FC<AdminConsoleWindowProps> = ({
                 })}
             </div>
           </div>
+        )}
+
+        {/* TAB 5: PNG STICKERS MANAGEMENT */}
+        {activeTab === 'stickers' && (
+          <AdminStickersTab />
         )}
       </div>
 

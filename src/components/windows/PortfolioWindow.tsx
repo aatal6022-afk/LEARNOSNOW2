@@ -17,12 +17,15 @@ import {
   StickyNote,
   Send,
   X,
-  Layers
+  Layers,
+  Smile
 } from 'lucide-react';
 import { UserArtifact, ArtifactComment } from '../../types.ts';
 import { socialProfileService } from '../../services/socialProfileService.ts';
 import { playChime } from '../../utils/audio.ts';
 import { useI18n } from '../../services/i18nService.ts';
+import { StickerPickerPopover } from '../common/StickerPickerPopover.tsx';
+import { AdminSticker } from '../../services/stickerService.ts';
 
 interface PortfolioWindowProps {
   artifacts: UserArtifact[];
@@ -56,6 +59,8 @@ export const PortfolioWindow: React.FC<PortfolioWindowProps> = ({
   const [comments, setComments] = useState<ArtifactComment[]>([]);
   const [newCommentText, setNewCommentText] = useState('');
   const [newCommentColor, setNewCommentColor] = useState<'yellow' | 'blue' | 'pink' | 'green'>('yellow');
+  const [selectedSticker, setSelectedSticker] = useState<AdminSticker | null>(null);
+  const [isStickerPickerOpen, setIsStickerPickerOpen] = useState(false);
   const [isAddingComment, setIsAddingComment] = useState(false);
 
   useEffect(() => {
@@ -95,7 +100,7 @@ export const PortfolioWindow: React.FC<PortfolioWindowProps> = ({
   }, [selectedArtifact?.id]);
 
   const handleAddComment = async () => {
-    if (!newCommentText.trim() || !selectedArtifact) return;
+    if ((!newCommentText.trim() && !selectedSticker) || !selectedArtifact) return;
     setIsAddingComment(true);
     try {
       await socialProfileService.addArtifactComment(selectedArtifact.id, {
@@ -105,8 +110,11 @@ export const PortfolioWindow: React.FC<PortfolioWindowProps> = ({
         authorAvatar: currentUser?.photoURL,
         text: newCommentText.trim(),
         color: newCommentColor,
+        stickerImageUrl: selectedSticker?.imageUrl,
+        stickerName: selectedSticker?.name,
       });
       setNewCommentText('');
+      setSelectedSticker(null);
       playChime('success');
     } catch (e) {
       console.warn('Failed to post comment:', e);
@@ -379,14 +387,28 @@ export const PortfolioWindow: React.FC<PortfolioWindowProps> = ({
                         'bg-amber-100/90 border-amber-300 text-amber-950';
 
                       return (
-                        <div key={c.id} className={`p-3 rounded-2xl border shadow-2xs space-y-1.5 ${colorBg}`}>
+                        <div key={c.id} className={`p-3 rounded-2xl border shadow-2xs space-y-2 ${colorBg}`}>
                           <div className="flex items-center justify-between text-[10px] opacity-80">
                             <span className="font-bold truncate">{c.authorName}</span>
                             <span>{new Date(c.createdAt).toLocaleDateString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
                           </div>
-                          <p className="text-xs leading-relaxed whitespace-pre-wrap font-sans">
-                            {c.text}
-                          </p>
+
+                          {/* Attached PNG Sticker */}
+                          {c.stickerImageUrl && (
+                            <div className="py-1">
+                              <img
+                                src={c.stickerImageUrl}
+                                alt={c.stickerName || 'Стикер'}
+                                className="max-h-20 max-w-full object-contain drop-shadow-xs"
+                              />
+                            </div>
+                          )}
+
+                          {c.text && (
+                            <p className="text-xs leading-relaxed whitespace-pre-wrap font-sans">
+                              {c.text}
+                            </p>
+                          )}
                         </div>
                       );
                     })}
@@ -398,7 +420,36 @@ export const PortfolioWindow: React.FC<PortfolioWindowProps> = ({
                 )}
 
                 {/* Sticky note input composer */}
-                <div className="space-y-2 pt-2 border-t border-amber-200">
+                <div className="space-y-2 pt-2 border-t border-amber-200 relative">
+                  {/* Sticker Picker Popover */}
+                  <StickerPickerPopover
+                    isOpen={isStickerPickerOpen}
+                    onClose={() => setIsStickerPickerOpen(false)}
+                    onSelectSticker={(stk) => setSelectedSticker(stk)}
+                    positionClassName="bottom-full mb-2 left-0"
+                  />
+
+                  {/* Selected Sticker Badge */}
+                  {selectedSticker && (
+                    <div className="flex items-center space-x-2 p-1.5 rounded-xl bg-white border border-amber-300 w-fit">
+                      <img
+                        src={selectedSticker.imageUrl}
+                        alt={selectedSticker.name}
+                        className="w-8 h-8 object-contain"
+                      />
+                      <span className="text-[11px] font-bold text-amber-950">
+                        {selectedSticker.name}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedSticker(null)}
+                        className="p-1 text-slate-400 hover:text-rose-600 rounded cursor-pointer"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+
                   <div className="flex items-center space-x-1.5">
                     <span className="text-[10px] text-amber-900 font-semibold mr-1">{t('portfolio.stickerColor', 'Цвет стикера:')}</span>
                     <button
@@ -425,6 +476,20 @@ export const PortfolioWindow: React.FC<PortfolioWindowProps> = ({
                       className={`w-4 h-4 rounded-full bg-emerald-300 border ${newCommentColor === 'green' ? 'ring-2 ring-emerald-600 scale-110' : 'border-emerald-400'}`}
                       title={t('color.green', 'Зеленый')}
                     />
+
+                    <span className="text-amber-300 mx-1">|</span>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsStickerPickerOpen((prev) => !prev);
+                        playChime('click');
+                      }}
+                      className="px-2 py-0.5 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 text-[10px] font-bold flex items-center space-x-1 transition cursor-pointer border border-amber-300"
+                    >
+                      <Smile className="w-3 h-3 text-rose-500" />
+                      <span>PNG-Стикер</span>
+                    </button>
                   </div>
 
                   <div className="flex space-x-2">
@@ -441,7 +506,7 @@ export const PortfolioWindow: React.FC<PortfolioWindowProps> = ({
                     <button
                       type="button"
                       onClick={handleAddComment}
-                      disabled={!newCommentText.trim() || isAddingComment}
+                      disabled={(!newCommentText.trim() && !selectedSticker) || isAddingComment}
                       className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs disabled:opacity-40 shadow-2xs transition cursor-pointer flex items-center space-x-1.5"
                     >
                       <Send className="w-3.5 h-3.5" />

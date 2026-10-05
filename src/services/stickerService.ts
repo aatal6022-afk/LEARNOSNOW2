@@ -1,0 +1,318 @@
+import { 
+  collection, 
+  doc, 
+  setDoc, 
+  getDocs, 
+  deleteDoc, 
+  onSnapshot, 
+  type Unsubscribe 
+} from 'firebase/firestore';
+import { auth, db, isFirebaseConfigured } from '../firebase.ts';
+import { sanitizeFirestoreData } from '../utils/firestoreSanitizer.ts';
+
+export interface AdminSticker {
+  id: string;
+  name: string;
+  category: string;
+  imageUrl: string; // PNG base64 Data URL or public PNG URL
+  width?: number;
+  height?: number;
+  fileSizeKb?: number;
+  uploadedBy?: string;
+  createdAt: string;
+  isActive: boolean;
+}
+
+const LOCAL_STORAGE_STICKERS_KEY = 'learning_os_admin_png_stickers_v2';
+const BROADCAST_CHANNEL_NAME = 'learning_os_stickers_sync_channel';
+
+// Default is completely EMPTY - all test stickers removed per user requirement!
+const DEFAULT_STICKERS: AdminSticker[] = [];
+
+class StickerService {
+  private stickers: AdminSticker[] = [];
+  private broadcast: BroadcastChannel | null = null;
+  private listeners: Set<(stickers: AdminSticker[]) => void> = new Set();
+  private isHydrated: boolean = false;
+
+  constructor() {
+    if (typeof window !== 'undefined') {
+      try {
+        this.broadcast = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
+        this.broadcast.onmessage = (event) => {
+          if (event.data?.type === 'STICKERS_UPDATED') {
+            this.hydrateFromLocalStorage();
+            this.notifyListeners();
+          }
+        };
+      } catch (e) {
+        console.warn('[StickerService] BroadcastChannel not supported:', e);
+      }
+
+      // Clean up legacy test stickers if any existed in older storage keys
+      try {
+        localStorage.removeItem('learning_os_test_stickers');
+        localStorage.removeItem('learning_os_mock_stickers');
+      } catch {}
+
+      this.hydrateFromLocalStorage();
+    }
+  }
+
+  private hydrateFromLocalStorage() {
+    try {
+      const saved = localStorage.getItem(LOCAL_STORAGE_STICKERS_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          this.stickers = parsed;
+          this.isHydrated = true;
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('[StickerService] Failed to parse local stickers:', e);
+    }
+    // Default: empty array, NO test stickers
+    this.stickers = [];
+    this.isHydrated = true;
+  }
+
+  private saveToLocalStorage() {
+    try {
+      localStorage.setItem(LOCAL_STORAGE_STICKERS_KEY, JSON.stringify(this.stickers));
+      if (this.broadcast) {
+        this.broadcast.postMessage({ type: 'STICKERS_UPDATED' });
+      }
+    } catch (e) {
+      console.warn('[StickerService] Failed to write stickers to local storage:', e);
+    }
+  }
+
+  private notifyListeners() {
+    const list = this.getAllStickers();
+    this.listeners.forEach((listener) => {
+      try {
+        listener(list);
+      } catch (err) {
+        console.error('[StickerService] Listener notification error:', err);
+      }
+    });
+  }
+
+  public getAllStickers(): AdminSticker[] {
+    if (!this.isHydrated) {
+      this.hydrateFromLocalStorage();
+    }
+    return [...this.stickers];
+  }
+
+  public getActiveStickers(): AdminSticker[] {
+    return this.getAllStickers().filter((s) => s.isActive !== false);
+  }
+
+  public getCategories(): string[] {
+    const active = this.getActiveStickers();
+    const set = new Set<string>();
+    active.forEach((s) => {
+      if (s.category && s.category.trim()) {
+        set.add(s.category.trim());
+      }
+    });
+    return Array.from(set);
+  }
+
+  public subscribeStickers(callback: (stickers: AdminSticker[]) => void): Unsubscribe {
+    this.listeners.add(callback);
+    callback(this.getAllStickers());
+
+    let firestoreUnsub: Unsubscribe | null = null;
+
+    if (isFirebaseConfigured && db) {
+      try {
+        const stickersCol = collection(db, 'admin_stickers');
+        firestoreUnsub = onSnapshot(
+          stickersCol,
+          (snapshot) => {
+            const cloudStickers: AdminSticker[] = snapshot.docs.map((docSnap) => ({
+              ...docSnap.data(),
+              id: docSnap.id,
+            } as AdminSticker));
+
+            if (cloudStickers.length > 0 || snapshot.empty) {
+              this.stickers = cloudStickers;
+              this.saveToLocalStorage();
+              this.notifyListeners();
+            }
+          },
+          (err) => {
+            console.warn('[StickerService] Firestore sticker subscription warning:', err);
+          }
+        );
+      } catch (e) {
+        console.warn('[StickerService] Firestore snapshot init error:', e);
+      }
+    }
+
+    return () => {
+      this.listeners.delete(callback);
+      if (firestoreUnsub) {
+        firestoreUnsub();
+      }
+    };
+  }
+
+  /**
+   * Helper to process uploaded PNG file: validates MIME, checks dimensions, converts to DataURL
+   */
+  public async processPngFile(file: File): Promise<{
+    dataUrl: string;
+    width: number;
+    height: number;
+    sizeKb: number;
+  }> {
+    if (!file.type.includes('png') && !file.name.toLowerCase().endsWith('.png')) {
+      // Still allow if it's an image, but warn / convert
+      if (!file.type.startsWith('image/')) {
+        throw new Error('Пожалуйста, выберите файл в формате PNG.');
+      }
+    }
+
+    // File size limit: 3MB max for high quality PNG stickers
+    if (file.size > 3 * 1024 * 1024) {
+      throw new Error('Размер PNG файла не должен превышать 3 МБ.');
+    }
+
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(new Error('Ошибка чтения файла'));
+      reader.readAsDataURL(file);
+    });
+
+    const dimensions = await new Promise<{ width: number; height: number }>((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        resolve({
+          width: img.naturalWidth || 256,
+          height: img.naturalHeight || 256,
+        });
+      };
+      img.onerror = () => resolve({ width: 256, height: 256 });
+      img.src = dataUrl;
+    });
+
+    return {
+      dataUrl,
+      width: dimensions.width,
+      height: dimensions.height,
+      sizeKb: Math.round(file.size / 1024),
+    };
+  }
+
+  /**
+   * Admin-only: Upload & register a new PNG sticker
+   */
+  public async addSticker(params: {
+    name: string;
+    category: string;
+    imageUrl: string;
+    width?: number;
+    height?: number;
+    fileSizeKb?: number;
+    uploadedBy?: string;
+  }): Promise<AdminSticker> {
+    const id = `sticker-png-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    const newSticker: AdminSticker = {
+      id,
+      name: params.name.trim() || 'PNG Стикер',
+      category: params.category.trim() || 'Общие',
+      imageUrl: params.imageUrl,
+      width: params.width || 256,
+      height: params.height || 256,
+      fileSizeKb: params.fileSizeKb || 0,
+      uploadedBy: params.uploadedBy || auth.currentUser?.displayName || 'Администратор',
+      createdAt: new Date().toISOString(),
+      isActive: true,
+    };
+
+    // 1. Local update
+    this.stickers = [newSticker, ...this.stickers.filter((s) => s.id !== id)];
+    this.saveToLocalStorage();
+    this.notifyListeners();
+
+    // 2. Cloud Firestore sync
+    if (isFirebaseConfigured && db) {
+      try {
+        const docRef = doc(db, 'admin_stickers', id);
+        await setDoc(docRef, sanitizeFirestoreData(newSticker));
+      } catch (err) {
+        console.warn('[StickerService] Firestore add sticker sync warning:', err);
+      }
+    }
+
+    return newSticker;
+  }
+
+  /**
+   * Admin-only: Delete sticker
+   */
+  public async deleteSticker(id: string): Promise<void> {
+    this.stickers = this.stickers.filter((s) => s.id !== id);
+    this.saveToLocalStorage();
+    this.notifyListeners();
+
+    if (isFirebaseConfigured && db) {
+      try {
+        const docRef = doc(db, 'admin_stickers', id);
+        await deleteDoc(docRef);
+      } catch (err) {
+        console.warn('[StickerService] Firestore delete sticker warning:', err);
+      }
+    }
+  }
+
+  /**
+   * Admin-only: Toggle sticker active status
+   */
+  public async toggleStickerActive(id: string): Promise<void> {
+    const target = this.stickers.find((s) => s.id === id);
+    if (!target) return;
+
+    target.isActive = !target.isActive;
+    this.stickers = [...this.stickers];
+    this.saveToLocalStorage();
+    this.notifyListeners();
+
+    if (isFirebaseConfigured && db) {
+      try {
+        const docRef = doc(db, 'admin_stickers', id);
+        await setDoc(docRef, sanitizeFirestoreData(target), { merge: true });
+      } catch (err) {
+        console.warn('[StickerService] Firestore toggle sticker warning:', err);
+      }
+    }
+  }
+
+  /**
+   * Clear all stickers (removes all test stickers)
+   */
+  public async clearAllStickers(): Promise<void> {
+    const currentIds = this.stickers.map((s) => s.id);
+    this.stickers = [];
+    this.saveToLocalStorage();
+    this.notifyListeners();
+
+    if (isFirebaseConfigured && db) {
+      try {
+        for (const id of currentIds) {
+          await deleteDoc(doc(db, 'admin_stickers', id));
+        }
+      } catch (err) {
+        console.warn('[StickerService] Firestore clear all warning:', err);
+      }
+    }
+  }
+}
+
+export const stickerService = new StickerService();

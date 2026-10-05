@@ -23,11 +23,14 @@ import {
   MousePointer2,
   CloudCheck,
   Layers,
-  Palette
+  Palette,
+  Smile
 } from 'lucide-react';
 import { playChime } from '../../utils/audio.ts';
 import { peerCollabSync } from '../../services/peerCollabSync.ts';
 import { communityRoomService } from '../../services/communityRoomService.ts';
+import { StickerPickerPopover } from '../common/StickerPickerPopover.tsx';
+import { AdminSticker } from '../../services/stickerService.ts';
 
 export type WhiteboardTool =
   | 'select'
@@ -41,6 +44,17 @@ export type WhiteboardTool =
   | 'sticky'
   | 'text'
   | 'eraser';
+
+export interface BoardStickerItem {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  imageUrl: string;
+  name: string;
+  author?: string;
+}
 
 export interface BoardSticky {
   id: string;
@@ -116,8 +130,10 @@ export const InfiniteWhiteboard: React.FC<InfiniteWhiteboardProps> = ({
   // Stored Elements: Shapes & Freehand Drawings isolated by roomId
   const [shapes, setShapes] = useState<BoardShape[]>([]);
   const [stickies, setStickies] = useState<BoardSticky[]>([]);
-  const [redoStack, setRedoStack] = useState<{ shapes: BoardShape[]; stickies: BoardSticky[] }[]>([]);
-  const [undoStack, setUndoStack] = useState<{ shapes: BoardShape[]; stickies: BoardSticky[] }[]>([]);
+  const [boardStickers, setBoardStickers] = useState<BoardStickerItem[]>([]);
+  const [isStickerPickerOpen, setIsStickerPickerOpen] = useState(false);
+  const [redoStack, setRedoStack] = useState<{ shapes: BoardShape[]; stickies: BoardSticky[]; boardStickers?: BoardStickerItem[] }[]>([]);
+  const [undoStack, setUndoStack] = useState<{ shapes: BoardShape[]; stickies: BoardSticky[]; boardStickers?: BoardStickerItem[] }[]>([]);
 
   const [liveDrawing, setLiveDrawing] = useState<BoardShape | null>(null);
   const [isInteracting, setIsInteracting] = useState(false);
@@ -139,11 +155,14 @@ export const InfiniteWhiteboard: React.FC<InfiniteWhiteboardProps> = ({
       // 1. Try local storage cache for instant rendering
       let localShapes: BoardShape[] | null = null;
       let localStickies: BoardSticky[] | null = null;
+      let localStickers: BoardStickerItem[] | null = null;
       try {
         const savedS = localStorage.getItem(`whiteboard_shapes_${roomId}`);
         const savedSt = localStorage.getItem(`whiteboard_stickies_${roomId}`);
+        const savedStk = localStorage.getItem(`whiteboard_png_stickers_${roomId}`);
         if (savedS) localShapes = JSON.parse(savedS);
         if (savedSt) localStickies = JSON.parse(savedSt);
+        if (savedStk) localStickers = JSON.parse(savedStk);
       } catch (e) {
         console.warn('Local read err', e);
       }
@@ -152,6 +171,7 @@ export const InfiniteWhiteboard: React.FC<InfiniteWhiteboardProps> = ({
         if (isMounted) {
           setShapes(localShapes);
           setStickies(localStickies);
+          if (localStickers) setBoardStickers(localStickers);
           setIsLoadingBoard(false);
         }
       }
@@ -250,6 +270,7 @@ export const InfiniteWhiteboard: React.FC<InfiniteWhiteboardProps> = ({
     try {
       localStorage.setItem(`whiteboard_shapes_${roomId}`, JSON.stringify(shapes));
       localStorage.setItem(`whiteboard_stickies_${roomId}`, JSON.stringify(stickies));
+      localStorage.setItem(`whiteboard_png_stickers_${roomId}`, JSON.stringify(boardStickers));
     } catch (e) {
       console.warn('Local save err', e);
     }
@@ -265,7 +286,7 @@ export const InfiniteWhiteboard: React.FC<InfiniteWhiteboardProps> = ({
     }, 1200);
 
     return () => clearTimeout(timer);
-  }, [shapes, stickies, roomId, isLoadingBoard, currentUser?.uid]);
+  }, [shapes, stickies, boardStickers, roomId, isLoadingBoard, currentUser?.uid]);
 
   // 3. Subscriptions to peer sync
   useEffect(() => {
@@ -470,7 +491,7 @@ export const InfiniteWhiteboard: React.FC<InfiniteWhiteboardProps> = ({
   }, [redrawCanvas]);
 
   const saveHistorySnapshot = () => {
-    setUndoStack((prev) => [...prev.slice(-20), { shapes: [...shapes], stickies: [...stickies] }]);
+    setUndoStack((prev) => [...prev.slice(-20), { shapes: [...shapes], stickies: [...stickies], boardStickers: [...boardStickers] }]);
     setRedoStack([]);
   };
 
@@ -478,9 +499,10 @@ export const InfiniteWhiteboard: React.FC<InfiniteWhiteboardProps> = ({
     if (undoStack.length === 0) return;
     const last = undoStack[undoStack.length - 1];
     setUndoStack((prev) => prev.slice(0, prev.length - 1));
-    setRedoStack((prev) => [...prev, { shapes: [...shapes], stickies: [...stickies] }]);
+    setRedoStack((prev) => [...prev, { shapes: [...shapes], stickies: [...stickies], boardStickers: [...boardStickers] }]);
     setShapes(last.shapes);
     setStickies(last.stickies);
+    if (last.boardStickers) setBoardStickers(last.boardStickers);
     playChime('click');
   };
 
@@ -488,10 +510,30 @@ export const InfiniteWhiteboard: React.FC<InfiniteWhiteboardProps> = ({
     if (redoStack.length === 0) return;
     const next = redoStack[redoStack.length - 1];
     setRedoStack((prev) => prev.slice(0, prev.length - 1));
-    setUndoStack((prev) => [...prev, { shapes: [...shapes], stickies: [...stickies] }]);
+    setUndoStack((prev) => [...prev, { shapes: [...shapes], stickies: [...stickies], boardStickers: [...boardStickers] }]);
     setShapes(next.shapes);
     setStickies(next.stickies);
+    if (next.boardStickers) setBoardStickers(next.boardStickers);
     playChime('click');
+  };
+
+  const handlePlaceBoardSticker = (sticker: AdminSticker) => {
+    saveHistorySnapshot();
+    const centerX = (-viewTransform.x + 320) / viewTransform.scale;
+    const centerY = (-viewTransform.y + 220) / viewTransform.scale;
+    const newStk: BoardStickerItem = {
+      id: `bstk-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      x: Math.round(centerX),
+      y: Math.round(centerY),
+      width: 140,
+      height: 140,
+      imageUrl: sticker.imageUrl,
+      name: sticker.name,
+      author: currentUser?.displayName || 'Участник',
+    };
+    setBoardStickers((prev) => [...prev, newStk]);
+    setIsStickerPickerOpen(false);
+    playChime('success');
   };
 
   // Pointer down
@@ -808,6 +850,29 @@ export const InfiniteWhiteboard: React.FC<InfiniteWhiteboardProps> = ({
           <StickyNote className="w-4 h-4 text-amber-500" />
         </button>
 
+        {/* PNG Sticker Picker */}
+        <div className="relative">
+          <StickerPickerPopover
+            isOpen={isStickerPickerOpen}
+            onClose={() => setIsStickerPickerOpen(false)}
+            onSelectSticker={handlePlaceBoardSticker}
+            positionClassName="bottom-full mb-3 left-0"
+          />
+          <button
+            type="button"
+            onClick={() => {
+              setIsStickerPickerOpen((prev) => !prev);
+              playChime('click');
+            }}
+            title="Добавить PNG-стикер на доску"
+            className={`p-2 rounded-xl transition cursor-pointer flex items-center space-x-1 ${
+              isStickerPickerOpen ? 'bg-rose-100 text-rose-600' : 'text-gray-600 hover:bg-rose-50 hover:text-rose-600'
+            }`}
+          >
+            <Smile className="w-4 h-4 text-rose-500" />
+          </button>
+        </div>
+
         <button
           type="button"
           onClick={() => setActiveTool('eraser')}
@@ -981,6 +1046,42 @@ export const InfiniteWhiteboard: React.FC<InfiniteWhiteboardProps> = ({
                 <Trash2 className="w-3 h-3" />
               </button>
             </div>
+          </div>
+        ))}
+
+        {/* Placed Admin PNG Stickers */}
+        {boardStickers.map((stk) => (
+          <div
+            key={stk.id}
+            style={{
+              transform: `translate(${stk.x}px, ${stk.y}px)`,
+              width: `${stk.width}px`,
+              height: `${stk.height}px`,
+            }}
+            className="absolute pointer-events-auto flex flex-col items-center justify-center group select-none p-2"
+          >
+            <img
+              src={stk.imageUrl}
+              alt={stk.name}
+              className="max-w-full max-h-full object-contain drop-shadow-md transition-transform group-hover:scale-105 pointer-events-none"
+            />
+            <div className="absolute -bottom-4 left-0 right-0 text-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <span className="text-[9px] bg-black/70 backdrop-blur-xs text-white px-2 py-0.5 rounded-full font-medium shadow-xs">
+                {stk.name}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                saveHistorySnapshot();
+                setBoardStickers((prev) => prev.filter((item) => item.id !== stk.id));
+                playChime('click');
+              }}
+              className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 bg-white text-rose-600 hover:text-rose-800 p-1 rounded-full shadow-md border border-slate-200 cursor-pointer transition-opacity"
+              title="Удалить стикер с доски"
+            >
+              <Trash2 className="w-3 h-3" />
+            </button>
           </div>
         ))}
 

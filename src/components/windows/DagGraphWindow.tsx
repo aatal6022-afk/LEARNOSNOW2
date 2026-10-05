@@ -740,6 +740,11 @@ export const DagGraphWindow: React.FC<DagGraphWindowProps> = ({
                                   <span className="truncate">{note.authorName}</span>
                                   <span>{new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                 </div>
+                                {note.stickerImageUrl && (
+                                  <div className="py-1">
+                                    <img src={note.stickerImageUrl} alt="Стикер" className="max-h-14 max-w-full object-contain" />
+                                  </div>
+                                )}
                                 <p className="leading-snug whitespace-pre-wrap">{note.text}</p>
                               </div>
                             );
@@ -1280,6 +1285,11 @@ export const DagGraphWindow: React.FC<DagGraphWindowProps> = ({
                             <span className="font-bold truncate">{note.authorName}</span>
                             <span>{new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                           </div>
+                          {note.stickerImageUrl && (
+                            <div className="py-1">
+                              <img src={note.stickerImageUrl} alt="Стикер" className="max-h-16 max-w-full object-contain" />
+                            </div>
+                          )}
                           <p className="text-[11px] leading-relaxed whitespace-pre-wrap font-sans">
                             {note.text}
                           </p>
