@@ -21,6 +21,7 @@ import {
 import { MemoryNodeRetention, spacedRepetition } from '../../services/spacedRepetitionService.ts';
 import { playChime } from '../../utils/audio.ts';
 import { LearningUnit } from '../../types.ts';
+import { useI18n } from '../../services/i18nService.ts';
 
 interface SpacedRepetitionModalProps {
   isOpen: boolean;
@@ -53,6 +54,7 @@ export const SpacedRepetitionModal: React.FC<SpacedRepetitionModalProps> = ({
   onRefreshCompleted,
   onAddKarma,
 }) => {
+  const { t } = useI18n();
   const [selectedNode, setSelectedNode] = useState<MemoryNodeRetention | null>(null);
   const [dueList, setDueList] = useState<MemoryNodeRetention[]>([]);
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);

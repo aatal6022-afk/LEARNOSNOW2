@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useI18n } from '../../services/i18nService.ts';
 
 interface SessionWelcomeSplashProps {
   userName: string;
@@ -9,10 +10,11 @@ export const SessionWelcomeSplash: React.FC<SessionWelcomeSplashProps> = ({
   userName,
   onFinished,
 }) => {
+  const { t } = useI18n();
   const [stage, setStage] = useState<'enter' | 'visible' | 'fadeout'>('enter');
 
   // Extract first name for a natural friendly greeting: "Привет, Егор"
-  const cleanFirstName = (userName || 'Студент')
+  const cleanFirstName = (userName || t('topbar.student', 'Студент'))
     .trim()
     .split(/\s+/)[0]
     .replace(/[^\p{L}\p{N}_-]/gu, '');
@@ -74,7 +76,7 @@ export const SessionWelcomeSplash: React.FC<SessionWelcomeSplashProps> = ({
         </div>
         <div className="text-[10px] font-mono text-emerald-400 font-semibold flex items-center space-x-1.5">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          <span>Сессия активна</span>
+          <span>{t('splash.sessionActive', 'Сессия активна')}</span>
         </div>
       </div>
 
@@ -97,7 +99,7 @@ export const SessionWelcomeSplash: React.FC<SessionWelcomeSplashProps> = ({
             letterSpacing: '-0.025em',
           }}
         >
-          Привет, {cleanFirstName || 'Инженер'}
+          {t('splash.hello', 'Привет')}, {cleanFirstName || t('topbar.student', 'Студент')}
         </h1>
 
         <p
@@ -105,7 +107,7 @@ export const SessionWelcomeSplash: React.FC<SessionWelcomeSplashProps> = ({
             stage === 'enter' ? 'opacity-0 translate-y-2' : 'opacity-100 translate-y-0'
           }`}
         >
-          Рабочее пространство готово
+          {t('splash.ready', 'Рабочее пространство готово')}
         </p>
 
         {/* Minimal loading indicator dots */}
@@ -122,7 +124,7 @@ export const SessionWelcomeSplash: React.FC<SessionWelcomeSplashProps> = ({
 
       {/* Subtle skip prompt at bottom */}
       <div className="w-full pb-8 text-center text-[10px] text-slate-400 font-mono tracking-wider uppercase opacity-80">
-        Кликните или нажмите пробел для входа
+        {t('splash.skipPrompt', 'Кликните или нажмите пробел для входа')}
       </div>
     </div>
   );

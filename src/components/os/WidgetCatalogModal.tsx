@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { DesktopWidgetType, DesktopWidgetInstance } from '../../types.ts';
 import { playChime } from '../../utils/audio.ts';
+import { useI18n } from '../../services/i18nService.ts';
 
 interface WidgetCatalogModalProps {
   isOpen: boolean;
@@ -34,10 +35,9 @@ interface WidgetCatalogModalProps {
 
 interface WidgetCatalogItem {
   type: DesktopWidgetType;
-  title: string;
+  titleKey: string;
   category: 'productivity' | 'system' | 'learning' | 'media';
-  categoryLabel: string;
-  description: string;
+  descKey: string;
   icon: React.ReactNode;
   defaultSize: string;
   accent: string;
@@ -47,20 +47,18 @@ interface WidgetCatalogItem {
 const CATALOG_ITEMS: WidgetCatalogItem[] = [
   {
     type: 'pomodoro',
-    title: 'Фокус-Таймер (Помодоро)',
+    titleKey: 'widget.pomodoro',
     category: 'productivity',
-    categoryLabel: 'Продуктивность',
-    description: 'Интервальный таймер 25/50 минут с начислением +500 XP за глубокую концентрацию.',
+    descKey: 'Фокус-таймер 25/50 минут с начислением XP за концентрацию.',
     icon: <Clock className="w-5 h-5 text-sky-500" />,
     defaultSize: '280 × 200 px',
     accent: 'border-sky-200',
   },
   {
     type: 'sticky_note',
-    title: 'Быстрая заметка (Стикер)',
+    titleKey: 'widget.sticky',
     category: 'productivity',
-    categoryLabel: 'Продуктивность',
-    description: 'Цветной стикер прямо на рабочем столе с автосохранением и сменой палитры.',
+    descKey: 'Цветной стикер прямо на рабочем столе с автосохранением.',
     icon: <Pin className="w-5 h-5 text-amber-500" />,
     defaultSize: '270 × 190 px',
     accent: 'border-amber-200',
@@ -68,110 +66,99 @@ const CATALOG_ITEMS: WidgetCatalogItem[] = [
   },
   {
     type: 'task_list',
-    title: 'Оперативные задачи',
+    titleKey: 'widget.tasks',
     category: 'productivity',
-    categoryLabel: 'Продуктивность',
-    description: 'Интерактивный список дел со счетчиком прогресса и быстрым вводом через Enter.',
+    descKey: 'Интерактивный список дел со счетчиком прогресса.',
     icon: <CheckSquare className="w-5 h-5 text-emerald-500" />,
     defaultSize: '290 × 220 px',
     accent: 'border-emerald-200',
   },
   {
     type: 'system_monitor',
-    title: 'Системный монитор OS',
+    titleKey: 'widget.system',
     category: 'system',
-    categoryLabel: 'Система',
-    description: 'Метрики CPU, памяти, статуса синхронизации Firestore, сетевого пинга и P2P пиров.',
+    descKey: 'Метрики CPU, памяти, статуса Firestore и P2P пиров.',
     icon: <Activity className="w-5 h-5 text-emerald-500" />,
     defaultSize: '290 × 210 px',
     accent: 'border-emerald-200',
   },
   {
     type: 'ai_insight',
-    title: 'ИИ-Совет по блоку',
+    titleKey: 'widget.insight',
     category: 'learning',
-    categoryLabel: 'Обучение',
-    description: 'Архитектурные советы и стратегические рекомендации ИИ на основе блока тем, который вы сейчас проходите.',
+    descKey: 'Архитектурные советы и стратегические рекомендации ИИ.',
     icon: <Bot className="w-5 h-5 text-indigo-500" />,
     defaultSize: '305 × 220 px',
     accent: 'border-indigo-200',
   },
   {
     type: 'habits',
-    title: 'Стрики & Привычки',
+    titleKey: 'widget.habits',
     category: 'productivity',
-    categoryLabel: 'Продуктивность',
-    description: 'Трекер ежедневных инженерных привычек: LeetCode, чтение RFC, профилирование памяти.',
+    descKey: 'Трекер ежедневных инженерных привычек и стриков.',
     icon: <Flame className="w-5 h-5 text-amber-500" />,
     defaultSize: '280 × 210 px',
     accent: 'border-amber-200',
   },
   {
     type: 'current_unit',
-    title: 'Текущий модуль DAG',
+    titleKey: 'widget.currentUnit',
     category: 'learning',
-    categoryLabel: 'Обучение',
-    description: 'Быстрый доступ к активному уроку дорожной карты со статусом и таймингом.',
+    descKey: 'Быстрый доступ к активному кванту дорожной карты.',
     icon: <Tv className="w-5 h-5 text-sky-500" />,
     defaultSize: '280 × 180 px',
     accent: 'border-sky-200',
   },
   {
     type: 'karma_progress',
-    title: 'Карма & Инженерный Уровень',
+    titleKey: 'widget.karma',
     category: 'learning',
-    categoryLabel: 'Обучение',
-    description: 'Шкала опыта XP, ранг архитектора и визуализация прогресса до следующего уровня.',
+    descKey: 'Шкала опыта XP, ранг архитектора и визуализация прогресса.',
     icon: <Award className="w-5 h-5 text-amber-500" />,
     defaultSize: '270 × 170 px',
     accent: 'border-amber-200',
   },
   {
     type: 'ambient_audio',
-    title: 'Звуковой фон концентрации',
+    titleKey: 'widget.ambient',
     category: 'media',
-    categoryLabel: 'Медиа & Звук',
-    description: 'Встроенный звуковой генератор (Шум дождя, Brown Noise, 40Hz Gamma Focus, Space Drone).',
+    descKey: 'Встроенный звуковой генератор (Шум дождя, Brown Noise, Space Drone).',
     icon: <Volume2 className="w-5 h-5 text-indigo-500" />,
     defaultSize: '300 × 200 px',
     accent: 'border-indigo-200',
   },
   {
     type: 'clock_calendar',
-    title: 'Время & Календарь',
+    titleKey: 'widget.clock',
     category: 'system',
-    categoryLabel: 'Система',
-    description: 'Секундные часы с датой и мини-календарной сеткой на текущий месяц.',
+    descKey: 'Секундные часы с датой и мини-календарной сеткой.',
     icon: <Calendar className="w-5 h-5 text-sky-500" />,
     defaultSize: '270 × 190 px',
     accent: 'border-sky-200',
   },
   {
     type: 'byte_converter',
-    title: 'Конвертер памяти & страниц',
+    titleKey: 'widget.byteConverter',
     category: 'system',
-    categoryLabel: 'Система',
-    description: 'Инженерный расчет размеров байт, КБ, МБ, страниц PostgreSQL (8KB) и OS (4KB).',
+    descKey: 'Инженерный расчет размеров байт, КБ, МБ и страниц памяти.',
     icon: <Calculator className="w-5 h-5 text-indigo-500" />,
     defaultSize: '280 × 210 px',
     accent: 'border-indigo-200',
   },
   {
     type: 'quick_links',
-    title: 'Инженерная библиотека ссылок',
+    titleKey: 'widget.quickLinks',
     category: 'learning',
-    categoryLabel: 'Обучение',
-    description: 'Закладки на внутренности PostgreSQL, System Design Primer и профилирование ядра Linux.',
+    descKey: 'Закладки на внутренности систем и базы знаний.',
     icon: <Bookmark className="w-5 h-5 text-sky-500" />,
     defaultSize: '290 × 210 px',
     accent: 'border-sky-200',
   },
   {
     type: 'memory_retention',
-    title: 'Память Эббингауза & Блиц',
+    titleKey: 'widget.memoryRetention',
     category: 'learning',
-    categoryLabel: 'Обучение',
-    description: 'Мониторинг кривой забывания тем, тепловая шкала свежести знаний и 2-минутный экспресс-блиц.',
+    descKey: 'Мониторинг кривой забывания Эббингауза и экспресс-блиц.',
     icon: <Flame className="w-5 h-5 text-amber-500" />,
     defaultSize: '300 × 230 px',
     accent: 'border-amber-200',
@@ -186,24 +173,26 @@ export const WidgetCatalogModal: React.FC<WidgetCatalogModalProps> = ({
   onResetToDefaults,
   onClearAll,
 }) => {
+  const { t, getWidgetTitle } = useI18n();
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<string>('all');
 
   if (!isOpen) return null;
 
   const categories = [
-    { id: 'all', label: 'Все виджеты' },
-    { id: 'productivity', label: 'Продуктивность' },
-    { id: 'system', label: 'Системные' },
-    { id: 'learning', label: 'Обучение' },
-    { id: 'media', label: 'Звук & Медиа' },
+    { id: 'all', label: t('action.all', 'Все виджеты') },
+    { id: 'productivity', label: t('cat.productivity', 'Продуктивность') },
+    { id: 'system', label: t('cat.system', 'Системные') },
+    { id: 'learning', label: t('cat.learning', 'Обучение') },
+    { id: 'media', label: t('cat.media', 'Звук & Медиа') },
   ];
 
   const filtered = CATALOG_ITEMS.filter((item) => {
+    const title = getWidgetTitle(item.type) || item.titleKey;
     const matchesCategory = category === 'all' || item.category === category;
     const matchesSearch =
-      item.title.toLowerCase().includes(search.toLowerCase()) ||
-      item.description.toLowerCase().includes(search.toLowerCase());
+      title.toLowerCase().includes(search.toLowerCase()) ||
+      item.descKey.toLowerCase().includes(search.toLowerCase());
     return matchesCategory && matchesSearch;
   });
 
@@ -221,9 +210,9 @@ export const WidgetCatalogModal: React.FC<WidgetCatalogModalProps> = ({
               <Layers className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-medium text-sm text-[#202124] leading-tight">Каталог виджетов</h3>
+              <h3 className="font-medium text-sm text-[#202124] leading-tight">{t('widget.catalog', 'Каталог виджетов')}</h3>
               <p className="text-[11px] text-[#5F6368] leading-tight">
-                Выберите и разместите виджеты на рабочем столе
+                {t('widget.catalogDesc', 'Выберите и разместите виджеты на рабочем столе')}
               </p>
             </div>
           </div>
@@ -236,10 +225,10 @@ export const WidgetCatalogModal: React.FC<WidgetCatalogModalProps> = ({
                 playChime('click');
               }}
               className="flex items-center space-x-1.5 px-3 py-1.5 rounded-full border border-[#DADCE0] text-[#3C4043] hover:text-[#202124] hover:bg-[#F1F3F4] transition text-xs font-medium cursor-pointer"
-              title="Восстановить стандартный набор виджетов"
+              title={t('widget.resetDefaults', 'Сбросить')}
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              <span>По умолчанию</span>
+              <span>{t('action.reset', 'По умолчанию')}</span>
             </button>
 
             <button
@@ -249,17 +238,17 @@ export const WidgetCatalogModal: React.FC<WidgetCatalogModalProps> = ({
                 playChime('click');
               }}
               className="flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-[#D93025] hover:bg-[#FCE8E6] transition text-xs font-medium cursor-pointer"
-              title="Убрать все виджеты с рабочего стола"
+              title={t('widget.clearAll', 'Очистить')}
             >
               <Trash2 className="w-3.5 h-3.5" />
-              <span>Очистить стол</span>
+              <span>{t('widget.clearAll', 'Очистить стол')}</span>
             </button>
 
             <button
               type="button"
               onClick={onClose}
               className="w-8 h-8 rounded-full flex items-center justify-center text-[#5F6368] hover:text-[#202124] hover:bg-[#F1F3F4] transition cursor-pointer"
-              title="Закрыть"
+              title={t('action.close', 'Закрыть')}
             >
               <X className="w-4 h-4" />
             </button>
@@ -286,14 +275,14 @@ export const WidgetCatalogModal: React.FC<WidgetCatalogModalProps> = ({
             ))}
           </div>
 
-          {/* Search Box (Google Search Style) */}
+          {/* Search Box */}
           <div className="relative w-full md:w-64">
             <Search className="w-4 h-4 text-[#5F6368] absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Поиск виджетов..."
+              placeholder={t('action.search', 'Поиск виджетов...')}
               className="w-full bg-[#F1F3F4] border border-transparent rounded-full pl-9 pr-3 py-1.5 text-xs outline-hidden focus:border-[#1A73E8] focus:bg-white text-[#202124] placeholder:text-[#5F6368] transition"
             />
           </div>
@@ -305,6 +294,7 @@ export const WidgetCatalogModal: React.FC<WidgetCatalogModalProps> = ({
             {filtered.map((item) => {
               const count = getWidgetCount(item.type);
               const isAdded = count > 0;
+              const title = getWidgetTitle(item.type) || item.titleKey;
 
               return (
                 <div
@@ -323,25 +313,21 @@ export const WidgetCatalogModal: React.FC<WidgetCatalogModalProps> = ({
                         {isAdded && (
                           <span className="text-[10px] text-[#1E8E3E] font-medium flex items-center justify-end space-x-1 mt-0.5">
                             <Check className="w-3 h-3" />
-                            <span>На столе ({count})</span>
+                            <span>({count})</span>
                           </span>
                         )}
                       </div>
                     </div>
 
                     <h4 className="font-medium text-[#202124] text-xs mb-1 group-hover:text-[#1A73E8] transition-colors">
-                      {item.title}
+                      {title}
                     </h4>
                     <p className="text-[11px] text-[#5F6368] leading-relaxed mb-3">
-                      {item.description}
+                      {item.descKey}
                     </p>
                   </div>
 
                   <div className="pt-2 border-t border-[#DADCE0] flex items-center justify-between">
-                    <span className="text-[10px] text-[#5F6368] font-medium">
-                      {item.categoryLabel}
-                    </span>
-
                     <button
                       type="button"
                       onClick={() => {
@@ -355,7 +341,7 @@ export const WidgetCatalogModal: React.FC<WidgetCatalogModalProps> = ({
                       }`}
                     >
                       <Plus className="w-3.5 h-3.5" />
-                      <span>{isAdded && item.allowMultiple ? '+ Еще один' : isAdded ? 'Добавить еще' : 'На стол'}</span>
+                      <span>{t('widget.addWidget', 'Добавить')}</span>
                     </button>
                   </div>
                 </div>
@@ -367,14 +353,14 @@ export const WidgetCatalogModal: React.FC<WidgetCatalogModalProps> = ({
         {/* Modal Footer */}
         <div className="h-12 px-6 border-t border-slate-200 bg-white flex items-center justify-between text-xs text-slate-500 shrink-0">
           <span>
-            Виджетов на рабочем столе: <strong className="text-slate-900">{activeWidgets.length}</strong>
+            {t('widget.tasks', 'Виджеты')}: <strong className="text-slate-900">{activeWidgets.length}</strong>
           </span>
           <button
             type="button"
             onClick={onClose}
             className="px-4 py-1.5 rounded-lg bg-slate-900 text-white font-semibold hover:bg-slate-800 transition cursor-pointer text-xs"
           >
-            Готово
+            {t('action.done', 'Готово')}
           </button>
         </div>
       </div>

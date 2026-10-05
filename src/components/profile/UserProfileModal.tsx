@@ -32,6 +32,7 @@ import {
 import { UserProfile, DAGNode, ProfileNodeSnapshot } from '../../types.ts';
 import { playChime } from '../../utils/audio.ts';
 import { socialProfileService } from '../../services/socialProfileService.ts';
+import { useI18n } from '../../services/i18nService.ts';
 
 // Preset avatar styles for easy 1-click customization
 const AVATAR_PRESETS = [
@@ -74,6 +75,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   onOpenUserDag,
   onOpenUserPortfolio,
 }) => {
+  const { t } = useI18n();
   const isOwnProfile = !profile || profile.uid === currentUserId;
 
   const [activeTab, setActiveTab] = useState<'profile' | 'trajectory'>('profile');

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Minus, Square, X, Maximize2, Minimize2, Scaling, Sparkles } from 'lucide-react';
+import { Minus, Square, X, Maximize2, Minimize2, Scaling } from 'lucide-react';
 import { WindowState } from '../../types.ts';
+import { useI18n } from '../../services/i18nService.ts';
 
 interface WindowFrameProps {
   window: WindowState;
@@ -44,6 +45,7 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
   children,
   headerControls,
 }) => {
+  const { t, getAppTitle } = useI18n();
   const [isDragging, setIsDragging] = useState(false);
   const [resizeDirection, setResizeDirection] = useState<ResizeDirection>(null);
 
@@ -274,11 +276,11 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
         <div className="flex items-center space-x-2 truncate max-w-[65%]">
           <span className={`w-2 h-2 rounded-full shrink-0 ${isActive ? 'bg-[#1A73E8]' : 'bg-[#BDC1C6]'}`} />
           <span className="font-medium text-xs text-[#202124] tracking-tight truncate">
-            {win.title}
+            {getAppTitle(win.id) || win.title}
           </span>
           {remoteDragUser && (
             <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#E8F0FE] text-[#1A73E8] border border-[#D2E3FC] shrink-0">
-              {remoteDragUser} перемещает
+              {remoteDragUser} {t('win.remoteDragging', 'перемещает')}
             </span>
           )}
         </div>
@@ -293,10 +295,10 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
                 onAutoFitEmptySpace(win.id);
               }}
               className="px-2 py-1 rounded-full text-[10px] bg-[#F1F3F4] hover:bg-[#E8EAED] text-[#3C4043] font-medium transition cursor-pointer flex items-center space-x-1"
-              title="Авто-подгонка под свободное место"
+              title={t('win.autoFit', 'Авто-подгонка под свободное место')}
             >
               <Scaling className="w-3 h-3 text-[#5F6368]" />
-              <span className="hidden sm:inline">Авто</span>
+              <span className="hidden sm:inline">{t('action.auto', 'Авто')}</span>
             </button>
           )}
 
@@ -307,8 +309,8 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
             id={`btn-minimize-${win.id}`}
             onClick={(e) => { e.stopPropagation(); onMinimize(); }}
             className="w-7 h-7 rounded-full flex items-center justify-center text-[#5F6368] hover:text-[#202124] hover:bg-[#E8EAED] transition cursor-pointer"
-            title="Свернуть окно"
-            aria-label="Свернуть"
+            title={t('win.minimize', 'Свернуть окно')}
+            aria-label={t('win.minimize', 'Свернуть')}
           >
             <Minus className="w-3.5 h-3.5" />
           </button>
@@ -318,13 +320,13 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
             id={`btn-maximize-${win.id}`}
             onClick={(e) => { e.stopPropagation(); onMaximizeToggle(); }}
             className="w-7 h-7 rounded-full flex items-center justify-center text-[#5F6368] hover:text-[#202124] hover:bg-[#E8EAED] transition cursor-pointer"
-            title={win.isMaximized ? 'Восстановить' : 'Развернуть'}
-            aria-label={win.isMaximized ? 'Восстановить' : 'Развернуть'}
+            title={win.isMaximized ? t('win.restore', 'Восстановить') : t('win.maximize', 'Развернуть')}
+            aria-label={win.isMaximized ? t('win.restore', 'Восстановить') : t('win.maximize', 'Развернуть')}
           >
             {win.isMaximized ? (
               <Minimize2 className="w-3.5 h-3.5" />
             ) : (
-              <Square className="w-3 h-3" />
+              <Square className="w-3.5 h-3.5" />
             )}
           </button>
 
@@ -333,8 +335,8 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
             id={`btn-close-${win.id}`}
             onClick={(e) => { e.stopPropagation(); onClose(); }}
             className="w-7 h-7 rounded-full flex items-center justify-center text-[#5F6368] hover:text-[#D93025] hover:bg-[#FCE8E6] transition cursor-pointer"
-            title="Закрыть окно"
-            aria-label="Закрыть окно"
+            title={t('win.close', 'Закрыть окно')}
+            aria-label={t('win.close', 'Закрыть окно')}
           >
             <X className="w-4 h-4" />
           </button>
@@ -346,7 +348,7 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
         {children}
       </div>
 
-      {/* 3. RESIZE HANDLES (8 directions with double-click expand) */}
+      {/* 3. RESIZE HANDLES */}
       {!win.isMaximized && (
         <>
           {/* East Edge */}
@@ -357,7 +359,7 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
               onExpandDirection?.(win.id, 'e');
             }}
             className="absolute top-3 bottom-3 right-0 w-2 cursor-e-resize hover:bg-sky-500/20 z-50 transition"
-            title="Изменить ширину (двойной клик — растянуть вправо)"
+            title="Изменить ширину"
           />
           {/* South Edge */}
           <div
@@ -367,7 +369,7 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
               onExpandDirection?.(win.id, 's');
             }}
             className="absolute left-3 right-3 bottom-0 h-2 cursor-s-resize hover:bg-sky-500/20 z-50 transition"
-            title="Изменить высоту (двойной клик — растянуть вниз)"
+            title="Изменить высоту"
           />
           {/* West Edge */}
           <div
@@ -377,7 +379,7 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
               onExpandDirection?.(win.id, 'w');
             }}
             className="absolute top-3 bottom-3 left-0 w-2 cursor-w-resize hover:bg-sky-500/20 z-50 transition"
-            title="Изменить ширину (двойной клик — растянуть влево)"
+            title="Изменить ширину"
           />
           {/* North Edge */}
           <div
@@ -387,7 +389,7 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
               onExpandDirection?.(win.id, 'n');
             }}
             className="absolute left-3 right-3 top-0 h-1.5 cursor-n-resize hover:bg-sky-500/20 z-50 transition"
-            title="Изменить высоту (двойной клик — растянуть вверх)"
+            title="Изменить высоту"
           />
           {/* South-East Corner Handle */}
           <div

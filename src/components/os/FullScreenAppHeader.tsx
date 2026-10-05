@@ -16,9 +16,11 @@ import {
   ShieldCheck, 
   Search, 
   Monitor,
-  ExternalLink
+  BookOpen,
+  GraduationCap,
 } from 'lucide-react';
 import { playChime } from '../../utils/audio.ts';
+import { useI18n } from '../../services/i18nService.ts';
 
 interface FullScreenAppHeaderProps {
   activeTab: string;
@@ -26,19 +28,21 @@ interface FullScreenAppHeaderProps {
   onRestoreToWindow?: () => void;
 }
 
-const APP_METADATA: Record<string, { label: string; icon: any; color: string }> = {
-  dag: { label: 'DAG-Граф Знаний', icon: Network, color: 'text-[#1A73E8]' },
-  knowledge_sphere: { label: 'Сфера знаний 3D', icon: Atom, color: 'text-[#1A73E8]' },
-  knowledge_git: { label: 'Git Репозиторий Знаний', icon: GitBranch, color: 'text-[#1E8E3E]' },
-  calendar: { label: 'Календарь & Расписание уроков', icon: Calendar, color: 'text-[#1A73E8]' },
-  focus: { label: 'Фокус-Студия обучения', icon: Tv, color: 'text-[#EA4335]' },
-  peer: { label: 'P2P Напарник & Whiteboard', icon: Users, color: 'text-[#1E8E3E]' },
-  chat: { label: 'ИИ-Оператор курса', icon: Bot, color: 'text-[#F9AB00]' },
-  white_screen: { label: 'Белый экран (White Screen)', icon: PenTool, color: 'text-[#1A73E8]' },
-  portfolio: { label: 'Портфолио артефактов', icon: Award, color: 'text-[#F9AB00]' },
-  widgets: { label: 'Виджеты & Оперативные задачи', icon: LayoutGrid, color: 'text-[#1A73E8]' },
-  partner_search: { label: 'Поиск напарника (P2P Matchmaking)', icon: Search, color: 'text-[#1A73E8]' },
-  admin: { label: 'Контроль качества & Модерация', icon: ShieldCheck, color: 'text-[#1A73E8]' },
+const APP_ICONS: Record<string, { icon: any; color: string }> = {
+  dag: { icon: Network, color: 'text-[#1A73E8]' },
+  knowledge_sphere: { icon: Atom, color: 'text-[#1A73E8]' },
+  knowledge_git: { icon: GitBranch, color: 'text-[#1E8E3E]' },
+  textbook_library: { icon: BookOpen, color: 'text-[#1E8E3E]' },
+  survey: { icon: GraduationCap, color: 'text-[#1A73E8]' },
+  calendar: { icon: Calendar, color: 'text-[#1A73E8]' },
+  focus: { icon: Tv, color: 'text-[#EA4335]' },
+  peer: { icon: Users, color: 'text-[#1E8E3E]' },
+  chat: { icon: Bot, color: 'text-[#F9AB00]' },
+  white_screen: { icon: PenTool, color: 'text-[#1A73E8]' },
+  portfolio: { icon: Award, color: 'text-[#F9AB00]' },
+  widgets: { icon: LayoutGrid, color: 'text-[#1A73E8]' },
+  partner_search: { icon: Search, color: 'text-[#1A73E8]' },
+  admin: { icon: ShieldCheck, color: 'text-[#1A73E8]' },
 };
 
 export const FullScreenAppHeader: React.FC<FullScreenAppHeaderProps> = ({
@@ -46,8 +50,10 @@ export const FullScreenAppHeader: React.FC<FullScreenAppHeaderProps> = ({
   onClose,
   onRestoreToWindow,
 }) => {
-  const meta = APP_METADATA[activeTab] || { label: 'Приложение', icon: Monitor, color: 'text-[#1A73E8]' };
-  const Icon = meta.icon;
+  const { t, getAppTitle } = useI18n();
+  const iconMeta = APP_ICONS[activeTab] || { icon: Monitor, color: 'text-[#1A73E8]' };
+  const Icon = iconMeta.icon;
+  const label = getAppTitle(activeTab);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -83,11 +89,11 @@ export const FullScreenAppHeader: React.FC<FullScreenAppHeaderProps> = ({
       {/* Left: Google App Info */}
       <div className="flex items-center space-x-3">
         <div className="flex items-center space-x-2">
-          <Icon className={`w-4 h-4 ${meta.color}`} />
-          <span className="font-medium text-xs text-[#202124] tracking-tight">{meta.label}</span>
+          <Icon className={`w-4 h-4 ${iconMeta.color}`} />
+          <span className="font-medium text-xs text-[#202124] tracking-tight">{label}</span>
           <span className="text-[#BDC1C6]">·</span>
           <span className="text-[11px] text-[#5F6368]">
-            Полноэкранный режим
+            {t('nav.fullscreen', 'Полноэкранный режим')}
           </span>
         </div>
       </div>
@@ -95,9 +101,7 @@ export const FullScreenAppHeader: React.FC<FullScreenAppHeaderProps> = ({
       {/* Right: Minimal Google Action Controls */}
       <div className="flex items-center space-x-2">
         <span className="text-[11px] text-[#5F6368] hidden sm:inline-flex items-center space-x-1">
-          <span>Нажмите</span>
-          <kbd className="px-1.5 py-0.5 rounded bg-[#F1F3F4] text-[#3C4043] font-mono text-[10px] border border-[#DADCE0]">Esc</kbd>
-          <span>для выхода</span>
+          <span>{t('nav.pressEsc', 'Нажмите Esc для выхода')}</span>
         </span>
 
         {onRestoreToWindow && (
@@ -106,10 +110,10 @@ export const FullScreenAppHeader: React.FC<FullScreenAppHeaderProps> = ({
             id="fullscreen-restore-window-btn"
             onClick={handleRestore}
             className="px-3 py-1 rounded-full text-xs font-medium text-[#3C4043] hover:text-[#202124] hover:bg-[#F1F3F4] border border-[#DADCE0] transition flex items-center space-x-1.5 cursor-pointer"
-            title="Свернуть в плавающее окно на рабочем столе"
+            title={t('nav.windowed', 'Оконный режим')}
           >
             <Minimize2 className="w-3.5 h-3.5 text-[#5F6368]" />
-            <span className="hidden md:inline">Оконный режим</span>
+            <span className="hidden md:inline">{t('nav.windowed', 'Оконный режим')}</span>
           </button>
         )}
 
@@ -118,10 +122,10 @@ export const FullScreenAppHeader: React.FC<FullScreenAppHeaderProps> = ({
           id="fullscreen-close-btn"
           onClick={handleClose}
           className="px-3 py-1 rounded-full text-xs font-medium text-[#D93025] hover:bg-[#FCE8E6] transition flex items-center space-x-1.5 cursor-pointer"
-          title="Закрыть приложение и вернуться на рабочий стол (Esc)"
+          title={t('nav.closeFullscreen', 'Закрыть')}
         >
           <X className="w-3.5 h-3.5" />
-          <span>Закрыть</span>
+          <span>{t('action.close', 'Закрыть')}</span>
         </button>
       </div>
     </div>

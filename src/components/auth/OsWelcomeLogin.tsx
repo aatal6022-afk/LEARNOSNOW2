@@ -3,6 +3,8 @@ import { UserCheck, ShieldCheck, ArrowRight } from 'lucide-react';
 import { loginWithGoogle, User } from '../../firebase.ts';
 import { playChime } from '../../utils/audio.ts';
 import { CloudflareTurnstile } from '../common/CloudflareTurnstile.tsx';
+import { LanguageSelector } from '../common/LanguageSelector.tsx';
+import { useI18n } from '../../services/i18nService.ts';
 
 interface OsWelcomeLoginProps {
   onSuccess: (user: User | { uid: string; displayName: string; email: string; photoURL?: string }) => void;
@@ -12,6 +14,7 @@ interface OsWelcomeLoginProps {
 export const OsWelcomeLogin: React.FC<OsWelcomeLoginProps> = ({
   onSuccess,
 }) => {
+  const { t } = useI18n();
   const [loading, setLoading] = useState(false);
   const [customName, setCustomName] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -29,7 +32,7 @@ export const OsWelcomeLogin: React.FC<OsWelcomeLoginProps> = ({
       }
     } catch (err: any) {
       console.warn('Google sign-in interrupted in iframe:', err);
-      setErrorMsg('Окно входа заблокировано браузером. Введите имя ниже для мгновенного входа в 1 клик.');
+      setErrorMsg(t('loginErrorIframe'));
     } finally {
       setLoading(false);
     }
@@ -37,7 +40,7 @@ export const OsWelcomeLogin: React.FC<OsWelcomeLoginProps> = ({
 
   const handleNamedSignIn = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    const clean = customName.trim() || 'Студент';
+    const clean = customName.trim() || t('student');
     playChime('success');
     onSuccess({
       uid: 'user-' + Date.now().toString(36),
@@ -60,12 +63,15 @@ export const OsWelcomeLogin: React.FC<OsWelcomeLoginProps> = ({
             OS
           </div>
           <span className="text-xs font-semibold tracking-tight text-stone-900">
-            Learning OS
+            {t('appName')}
           </span>
         </div>
 
-        <div className="text-[11px] font-mono text-stone-400">
-          v4.2 · Minimal Boot
+        <div className="flex items-center space-x-3">
+          <LanguageSelector variant="compact" />
+          <div className="text-[11px] font-mono text-stone-400 hidden sm:block">
+            v4.2 · Minimal Boot
+          </div>
         </div>
       </div>
 
@@ -77,11 +83,11 @@ export const OsWelcomeLogin: React.FC<OsWelcomeLoginProps> = ({
             letterSpacing: '-0.03em',
           }}
         >
-          Привет
+          {t('welcomeGreeting')}
         </h1>
 
         <p className="mt-5 text-xs sm:text-sm text-stone-600 font-normal tracking-wide max-w-sm leading-relaxed">
-          Персональная операционная система для глубокого освоения любых навыков, дисциплин и совместной практики.
+          {t('welcomeSub')}
         </p>
 
         {errorMsg && (
@@ -132,7 +138,7 @@ export const OsWelcomeLogin: React.FC<OsWelcomeLoginProps> = ({
               />
             </svg>
           )}
-          <span className="font-semibold">Войти через Google</span>
+          <span className="font-semibold">{t('loginGoogle')}</span>
         </button>
 
         {/* Name Input for seamless instant entry without popup restriction */}
@@ -141,14 +147,14 @@ export const OsWelcomeLogin: React.FC<OsWelcomeLoginProps> = ({
             type="text"
             value={customName}
             onChange={(e) => setCustomName(e.target.value)}
-            placeholder="или введите имя (например: Егор)"
+            placeholder={t('nameInputPlaceholder')}
             className="flex-1 py-2.5 px-3.5 rounded-xl border border-stone-200 bg-white hover:bg-stone-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-stone-400 text-xs text-stone-900 placeholder:text-stone-400 transition"
           />
           <button
             type="submit"
             className="py-2.5 px-4 rounded-xl bg-stone-900 hover:bg-stone-800 text-[#FAF8F5] text-xs font-semibold shadow-xs transition flex items-center space-x-1 cursor-pointer shrink-0"
           >
-            <span>Войти</span>
+            <span>{t('enterButton')}</span>
             <ArrowRight className="w-3 h-3" />
           </button>
         </form>
@@ -161,12 +167,12 @@ export const OsWelcomeLogin: React.FC<OsWelcomeLoginProps> = ({
           className="text-xs text-slate-400 hover:text-slate-800 transition flex items-center space-x-1.5 py-1 px-3 rounded-lg hover:bg-slate-50 cursor-pointer"
         >
           <UserCheck className="w-3.5 h-3.5 text-slate-400" />
-          <span>Быстрый вход без пароля (Демо)</span>
+          <span>{t('quickDemoEntry')}</span>
         </button>
 
         <div className="pt-1 text-[10px] text-slate-400 flex items-center space-x-1.5">
           <ShieldCheck className="w-3 h-3 text-slate-400" />
-          <span>Защищенная аутентификация Learning OS</span>
+          <span>{t('secureAuthBadge')}</span>
         </div>
       </div>
     </div>

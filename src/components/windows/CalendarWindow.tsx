@@ -25,6 +25,7 @@ import {
   formatDateKey, 
   exportScheduleToIcs 
 } from '../../services/calendarScheduleEngine.ts';
+import { useI18n } from '../../services/i18nService.ts';
 
 interface CalendarWindowProps {
   nodes: DAGNode[];
@@ -49,6 +50,7 @@ export const CalendarWindow: React.FC<CalendarWindowProps> = ({
   onMarkLessonCompleted,
   skillDomain = 'Универсальные навыки',
 }) => {
+  const { t, lang } = useI18n();
   // 1. Weekly Resource State
   const [weeklyResourceText, setWeeklyResourceText] = useState<string>(() => {
     return initialWeeklyResource || localStorage.getItem('learning_os_time_resource') || '3 раза в неделю по 45 мин + суббота 2 часа';
@@ -281,10 +283,10 @@ export const CalendarWindow: React.FC<CalendarWindowProps> = ({
         <div className="flex items-center space-x-3">
           <div className="flex items-center space-x-2">
             <span className="font-bold text-xs text-slate-900">
-              Календарь
+              {t('app.calendar', 'Календарь')}
             </span>
             <span className="text-[11px] text-slate-500 font-mono">
-              · 200 уроков
+              · 200 {t('calendar.lessons', 'уроков')}
             </span>
           </div>
 
@@ -301,7 +303,7 @@ export const CalendarWindow: React.FC<CalendarWindowProps> = ({
                   viewMode === mode ? 'bg-slate-900 text-white shadow-xs font-semibold' : 'text-slate-600 hover:text-slate-900 hover:bg-white/80'
                 }`}
               >
-                {mode === 'week' ? 'Неделя' : mode === 'month' ? 'Месяц' : mode === 'day' ? 'День' : 'Список'}
+                {mode === 'week' ? t('calendar.week', 'Неделя') : mode === 'month' ? t('calendar.month', 'Месяц') : mode === 'day' ? t('calendar.day', 'День') : t('calendar.agenda', 'Список')}
               </button>
             ))}
           </div>
@@ -316,7 +318,7 @@ export const CalendarWindow: React.FC<CalendarWindowProps> = ({
               type="button"
               onClick={handlePrev}
               className="p-0.5 hover:bg-slate-200 rounded text-slate-500 hover:text-slate-800 transition cursor-pointer"
-              title="Назад"
+              title={t('calendar.prev', 'Назад')}
             >
               <ChevronLeft className="w-3.5 h-3.5" />
             </button>
@@ -325,19 +327,19 @@ export const CalendarWindow: React.FC<CalendarWindowProps> = ({
               onClick={handleToday}
               className="px-1.5 font-medium hover:text-sky-600 transition cursor-pointer text-[11px]"
             >
-              Сегодня
+              {t('calendar.today', 'Сегодня')}
             </button>
             <button
               type="button"
               onClick={handleNext}
               className="p-0.5 hover:bg-slate-200 rounded text-slate-500 hover:text-slate-800 transition cursor-pointer"
-              title="Вперед"
+              title={t('calendar.next', 'Вперед')}
             >
               <ChevronRight className="w-3.5 h-3.5" />
             </button>
             <span className="text-slate-300">|</span>
             <span className="font-medium text-[11px] text-slate-800 px-1">
-              {currentDate.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })}
+              {currentDate.toLocaleDateString(lang === 'kk' ? 'kk-KZ' : lang === 'uk' ? 'uk-UA' : lang === 'en' ? 'en-US' : lang === 'ja' ? 'ja-JP' : 'ru-RU', { month: 'long', year: 'numeric' })}
             </span>
           </div>
 
@@ -348,7 +350,7 @@ export const CalendarWindow: React.FC<CalendarWindowProps> = ({
               onClick={() => setFilterType('all')}
               className={`px-2 py-0.5 rounded font-medium ${filterType === 'all' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500'}`}
             >
-              Все
+              {t('action.all', 'Все')}
             </button>
             <button
               type="button"
@@ -356,14 +358,14 @@ export const CalendarWindow: React.FC<CalendarWindowProps> = ({
               className={`px-2 py-0.5 rounded font-medium flex items-center space-x-1 ${filterType === 'pair' ? 'bg-white text-emerald-700 font-semibold shadow-2xs' : 'text-slate-500'}`}
             >
               <Users className="w-2.5 h-2.5 text-emerald-600" />
-              <span>Спарринги</span>
+              <span>{t('partner.tabSparring', 'Спарринги')}</span>
             </button>
             <button
               type="button"
               onClick={() => setFilterType('project')}
               className={`px-2 py-0.5 rounded font-medium ${filterType === 'project' ? 'bg-white text-purple-700 font-semibold shadow-2xs' : 'text-slate-500'}`}
             >
-              Проекты
+              {t('calendar.projects', 'Проекты')}
             </button>
           </div>
 
@@ -372,10 +374,10 @@ export const CalendarWindow: React.FC<CalendarWindowProps> = ({
             type="button"
             onClick={handleExportIcs}
             className="hidden sm:flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg hover:bg-slate-50 border border-slate-200/80 text-slate-600 text-xs font-medium transition cursor-pointer"
-            title="Экспортировать расписание в Apple Calendar / Google Calendar (.ics)"
+            title={t('calendar.exportTooltip', 'Экспортировать расписание в Apple Calendar / Google Calendar (.ics)')}
           >
             {icsExportSuccess ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Download className="w-3.5 h-3.5 text-slate-400" />}
-            <span className="text-[11px]">{icsExportSuccess ? 'Скачано' : 'Экспорт'}</span>
+            <span className="text-[11px]">{icsExportSuccess ? t('action.downloaded', 'Скачано') : t('action.export', 'Экспорт')}</span>
           </button>
 
           {/* Resource Setting Button */}
@@ -389,7 +391,7 @@ export const CalendarWindow: React.FC<CalendarWindowProps> = ({
             className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium transition cursor-pointer shadow-2xs"
           >
             <Sliders className="w-3 h-3 text-sky-400" />
-            <span className="text-[11px]">Ресурс времени</span>
+            <span className="text-[11px]">{t('calendar.timeResource', 'Ресурс времени')}</span>
           </button>
         </div>
       </div>
@@ -399,7 +401,7 @@ export const CalendarWindow: React.FC<CalendarWindowProps> = ({
         <div className="flex items-center space-x-2.5 text-[11px]">
           <div className="flex items-center space-x-1.5 text-slate-800 font-medium">
             <Clock className="w-3.5 h-3.5 text-slate-400" />
-            <span>{resourceConfig.hoursPerWeek} ч / неделю</span>
+            <span>{resourceConfig.hoursPerWeek} {t('time.hoursPerWeek', 'ч / неделю')}</span>
           </div>
           <span className="text-slate-300">·</span>
           <span className="text-slate-500 truncate max-w-xs">
@@ -408,14 +410,14 @@ export const CalendarWindow: React.FC<CalendarWindowProps> = ({
           <span className="text-slate-300 hidden md:inline">·</span>
           <div className="hidden md:flex items-center space-x-1 text-slate-600 text-[11px]">
             <Sparkles className="w-3 h-3 text-sky-500" />
-            <span>Финиш: {resourceConfig.targetCompletionDate} ({resourceConfig.targetWeeksCount} нед)</span>
+            <span>{t('calendar.finish', 'Финиш')}: {resourceConfig.targetCompletionDate} ({resourceConfig.targetWeeksCount} {t('time.weeks', 'нед')})</span>
           </div>
         </div>
 
         <div className="flex items-center space-x-3 text-[11px] text-slate-500 font-mono">
-          <span>На неделе: <strong className="text-slate-900 font-semibold">{weekStats.completedThisWeek}/{weekStats.countThisWeek}</strong></span>
+          <span>{t('calendar.thisWeek', 'На неделе')}: <strong className="text-slate-900 font-semibold">{weekStats.completedThisWeek}/{weekStats.countThisWeek}</strong></span>
           <span className="text-slate-300">|</span>
-          <span>Всего пройдено: <strong className="text-slate-900 font-semibold">{weekStats.totalCompleted}/{weekStats.totalCount}</strong></span>
+          <span>{t('calendar.totalDone', 'Всего пройдено')}: <strong className="text-slate-900 font-semibold">{weekStats.totalCompleted}/{weekStats.totalCount}</strong></span>
         </div>
       </div>
 
@@ -799,21 +801,21 @@ export const CalendarWindow: React.FC<CalendarWindowProps> = ({
                     onClick={() => handlePostponeSlot(selectedSlot.id, 1)}
                     className="p-2 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-600 font-medium text-[11px] transition text-center cursor-pointer border border-slate-200/60"
                   >
-                    +1 день
+                    +1 {t('time.day', 'день')}
                   </button>
                   <button
                     type="button"
                     onClick={() => handleToggleComplete(selectedSlot.id)}
                     className="p-2 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-medium text-[11px] transition text-center cursor-pointer border border-emerald-200/60"
                   >
-                    {selectedSlot.status === 'completed' ? 'Снять отметку' : 'Сдать урок ✓'}
+                    {selectedSlot.status === 'completed' ? t('calendar.unmark', 'Снять отметку') : t('calendar.passLesson', 'Сдать урок ✓')}
                   </button>
                 </div>
               </div>
             </div>
           ) : (
             <div className="text-center py-12 text-slate-300 text-xs">
-              Выберите урок для просмотра деталей
+              {t('calendar.selectLesson', 'Выберите урок для просмотра деталей')}
             </div>
           )}
 
@@ -826,8 +828,8 @@ export const CalendarWindow: React.FC<CalendarWindowProps> = ({
                   onClick={() => {
                     playChime('success');
                     onStartCallWithPartner({
-                      name: selectedSlot.pairPartnerName || partner?.name || 'Напарник P2P',
-                      role: 'Напарник по спаррингу',
+                      name: selectedSlot.pairPartnerName || partner?.name || t('partner.p2pPartner', 'Напарник P2P'),
+                      role: t('partner.sparringRole', 'Напарник по спаррингу'),
                       pairTask: {
                         topic: selectedSlot.title,
                         domain: skillDomain,
@@ -837,7 +839,7 @@ export const CalendarWindow: React.FC<CalendarWindowProps> = ({
                   className="w-full py-2.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs flex items-center justify-center space-x-1.5 transition cursor-pointer shadow-2xs"
                 >
                   <PhoneCall className="w-3.5 h-3.5 fill-current" />
-                  <span>Начать парный созвон</span>
+                  <span>{t('partner.startCall', 'Начать парный созвон')}</span>
                 </button>
               )}
 
@@ -847,7 +849,7 @@ export const CalendarWindow: React.FC<CalendarWindowProps> = ({
                 className="w-full py-2.5 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs flex items-center justify-center space-x-1.5 transition cursor-pointer shadow-2xs"
               >
                 <Play className="w-3.5 h-3.5 fill-current" />
-                <span>Запустить в Фокус-Студии</span>
+                <span>{t('calendar.launchFocusStudio', 'Запустить в Фокус-Студии')}</span>
               </button>
             </div>
           )}
@@ -862,7 +864,7 @@ export const CalendarWindow: React.FC<CalendarWindowProps> = ({
               <div className="flex items-center space-x-2">
                 <Clock className="w-4 h-4 text-slate-700" />
                 <h3 className="text-xs font-semibold text-slate-900">
-                  Недельный ресурс времени
+                  {t('calendar.weeklyResourceModalTitle', 'Недельный ресурс времени')}
                 </h3>
               </div>
               <button
@@ -875,13 +877,13 @@ export const CalendarWindow: React.FC<CalendarWindowProps> = ({
             </div>
 
             <p className="text-xs text-slate-500 leading-relaxed">
-              Укажите доступное время в неделю. Расписание всех 200 модулей курса автоматически пересчитается.
+              {t('calendar.weeklyResourceModalDesc', 'Укажите доступное время в неделю. Расписание всех 200 модулей курса автоматически пересчитается.')}
             </p>
 
             {/* Presets */}
             <div className="space-y-1">
               <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider block">
-                Готовые варианты:
+                {t('calendar.readyOptions', 'Готовые варианты:')}
               </span>
               <div className="grid grid-cols-2 gap-1.5">
                 {[
@@ -913,13 +915,13 @@ export const CalendarWindow: React.FC<CalendarWindowProps> = ({
             {/* Custom Input */}
             <div className="space-y-1">
               <label className="text-[11px] font-medium text-slate-600 block">
-                Свой график:
+                {t('calendar.customSchedule', 'Свой график:')}
               </label>
               <input
                 type="text"
                 value={tempResourceInput}
                 onChange={(e) => setTempResourceInput(e.target.value)}
-                placeholder="например: Пн, Ср по 1.5 часа, суббота 3 часа"
+                placeholder={t('calendar.customSchedulePlaceholder', 'например: Пн, Ср по 1.5 часа, суббота 3 часа')}
                 className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs focus:outline-hidden focus:border-slate-900"
               />
             </div>
@@ -931,7 +933,7 @@ export const CalendarWindow: React.FC<CalendarWindowProps> = ({
                 onClick={() => setIsResourceModalOpen(false)}
                 className="px-3 py-1.5 rounded-lg text-xs text-slate-600 hover:bg-slate-100 transition cursor-pointer"
               >
-                Отмена
+                {t('action.cancel', 'Отмена')}
               </button>
               <button
                 type="button"
@@ -942,7 +944,7 @@ export const CalendarWindow: React.FC<CalendarWindowProps> = ({
                 }}
                 className="px-4 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium transition cursor-pointer shadow-xs"
               >
-                Сохранить
+                {t('action.save', 'Сохранить')}
               </button>
             </div>
           </div>

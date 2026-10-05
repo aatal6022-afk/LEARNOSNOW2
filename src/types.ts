@@ -46,7 +46,7 @@ export interface DesktopWidgetInstance {
   customData?: any;
 }
 
-export type UserSkillLevel = 'beginner' | 'intermediate' | 'master';
+export type UserSkillLevel = 'beginner' | 'intermediate' | 'master' | 'expert' | 'advanced';
 
 export type DiagnosticVerdictType = 'MASTERED_BASE' | 'GAP_DETECTED' | 'NEEDS_CALIBRATION';
 
@@ -489,7 +489,7 @@ export interface PeerPartner {
   dailyRoomUrl?: string;
   bio?: string;
   currentUnitId?: string;
-  role?: 'Driver' | 'Navigator';
+  role?: 'Driver' | 'Navigator' | 'Architect' | 'Auditor';
   progressPercent?: number;
   roomCode?: string;
   pairTask?: any;

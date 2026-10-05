@@ -36,6 +36,8 @@ import { normalizeDagLayout } from '../../utils/dagLayout.ts';
 import { getDomainDiagnosticQuestions, DOMAIN_TOPIC_SUGGESTIONS } from '../../data/domainDiagnosticQuestions.ts';
 import { SkillRealityBriefingModal } from '../learning/SkillRealityBriefingModal.tsx';
 import { Floating3DGlassOrbs } from '../os/Floating3DGlassOrbs.tsx';
+import { LanguageSelector } from '../common/LanguageSelector.tsx';
+import { useI18n } from '../../services/i18nService.ts';
 
 interface OsPersonalizationModalProps {
   currentWallpaperConfig: GlobalWallpaperConfig;

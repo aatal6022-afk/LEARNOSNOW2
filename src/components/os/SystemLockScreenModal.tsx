@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Lock, ArrowRight, Shield, User } from 'lucide-react';
+import { useI18n } from '../../services/i18nService.ts';
 
 interface SystemLockScreenModalProps {
   isOpen: boolean;
@@ -12,24 +13,28 @@ interface SystemLockScreenModalProps {
 export const SystemLockScreenModal: React.FC<SystemLockScreenModalProps> = ({
   isOpen,
   onUnlock,
-  userName = 'Студент',
+  userName,
   userEmail,
   userPhoto,
 }) => {
+  const { t, lang } = useI18n();
   const [timeStr, setTimeStr] = useState<string>('');
   const [dateStr, setDateStr] = useState<string>('');
+
+  const displayName = userName || t('topbar.student', 'Студент');
 
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
+      const locale = lang === 'kk' ? 'kk-KZ' : lang === 'uk' ? 'uk-UA' : lang === 'ja' ? 'ja-JP' : lang === 'en' ? 'en-US' : 'ru-RU';
       setTimeStr(
-        now.toLocaleTimeString('ru-RU', {
+        now.toLocaleTimeString(locale, {
           hour: '2-digit',
           minute: '2-digit',
         })
       );
       setDateStr(
-        now.toLocaleDateString('ru-RU', {
+        now.toLocaleDateString(locale, {
           weekday: 'long',
           day: 'numeric',
           month: 'long',
@@ -40,7 +45,7 @@ export const SystemLockScreenModal: React.FC<SystemLockScreenModalProps> = ({
     updateTime();
     const interval = setInterval(updateTime, 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [lang]);
 
   if (!isOpen) return null;
 
@@ -50,10 +55,10 @@ export const SystemLockScreenModal: React.FC<SystemLockScreenModalProps> = ({
       <div className="w-full flex items-center justify-between max-w-5xl opacity-80">
         <div className="flex items-center space-x-2 text-xs text-white/70">
           <Shield className="w-4 h-4 text-emerald-400" />
-          <span>Learning OS • Сеанс защищен</span>
+          <span>Learning OS • {t('lock.title', 'Сеанс защищен')}</span>
         </div>
         <div className="text-xs text-white/60">
-          Нажмите кнопку или любую клавишу для разблокировки
+          {t('lock.hint', 'Нажмите кнопку для разблокировки')}
         </div>
       </div>
 
@@ -74,7 +79,7 @@ export const SystemLockScreenModal: React.FC<SystemLockScreenModalProps> = ({
             {userPhoto ? (
               <img
                 src={userPhoto}
-                alt={userName}
+                alt={displayName}
                 className="w-16 h-16 rounded-2xl object-cover border-2 border-white/20 shadow-lg"
               />
             ) : (
@@ -88,7 +93,7 @@ export const SystemLockScreenModal: React.FC<SystemLockScreenModalProps> = ({
           </div>
 
           <div className="text-center">
-            <h3 className="text-base font-bold text-white tracking-tight">{userName}</h3>
+            <h3 className="text-base font-bold text-white tracking-tight">{displayName}</h3>
             {userEmail && (
               <p className="text-xs text-white/60 font-mono truncate max-w-[220px]">{userEmail}</p>
             )}
@@ -99,7 +104,7 @@ export const SystemLockScreenModal: React.FC<SystemLockScreenModalProps> = ({
             onClick={onUnlock}
             className="w-full mt-2 py-3 px-4 rounded-xl bg-white hover:bg-white/90 text-slate-900 font-semibold text-xs shadow-lg transition-all flex items-center justify-center space-x-2 active:scale-95 cursor-pointer"
           >
-            <span>Войти в систему</span>
+            <span>{t('lock.button', 'Войти в систему')}</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>

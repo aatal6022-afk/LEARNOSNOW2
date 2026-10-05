@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, Monitor, Network, Atom, Tv, Bot, Users, LayoutGrid, ShieldCheck, FileText, ArrowRight, X, PenTool, Calendar as CalendarIcon, GraduationCap, BookOpen, GitBranch, Award } from 'lucide-react';
 import { WindowId, LearningUnit, NoteItem } from '../../types.ts';
+import { useI18n } from '../../services/i18nService.ts';
 
 interface SpotlightModalProps {
   isOpen: boolean;
@@ -19,6 +20,7 @@ export const SpotlightModal: React.FC<SpotlightModalProps> = ({
   notes,
   onSelectUnit,
 }) => {
+  const { t, getAppTitle } = useI18n();
   const [query, setQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -44,21 +46,21 @@ export const SpotlightModal: React.FC<SpotlightModalProps> = ({
 
   // Search Results
   const systemActions = [
-    { title: 'Рабочий стол с виджетами Web OS', icon: <Monitor className="w-4 h-4 text-sky-500" />, action: () => onOpenWindow('desktop') },
-    { title: 'Сфера знаний 3D (Holographic Knowledge Sphere)', icon: <Atom className="w-4 h-4 text-sky-400 animate-spin-slow" />, action: () => onOpenWindow('knowledge_sphere') },
-    { title: 'Открыть план обучения (DAG граф)', icon: <Network className="w-4 h-4 text-slate-500" />, action: () => onOpenWindow('dag') },
-    { title: 'Входная диагностика & Адаптивный план (200 блоков)', icon: <GraduationCap className="w-4 h-4 text-indigo-500" />, action: () => onOpenWindow('survey') },
-    { title: 'Библиотека академических учебников & Квантов', icon: <BookOpen className="w-4 h-4 text-emerald-500" />, action: () => onOpenWindow('textbook_library') },
-    { title: 'Git-Репозиторий Знаний & Инварианты', icon: <GitBranch className="w-4 h-4 text-purple-500" />, action: () => onOpenWindow('knowledge_git') },
-    { title: 'Портфолио проверенных решений & Сданные артефакты', icon: <Award className="w-4 h-4 text-amber-500" />, action: () => onOpenWindow('portfolio') },
-    { title: 'Календарь & Расписание уроков (на основе ресурса времени)', icon: <CalendarIcon className="w-4 h-4 text-sky-500" />, action: () => onOpenWindow('calendar') },
-    { title: 'Перейти в Фокус-студию (Плеер 20/10/70)', icon: <Tv className="w-4 h-4 text-slate-500" />, action: () => onOpenWindow('focus') },
-    { title: 'Запустить ИИ-Оператора системы', icon: <Bot className="w-4 h-4 text-slate-500" />, action: () => onOpenWindow('chat') },
-    { title: 'Поиск напарника (P2P Matchmaking)', icon: <Users className="w-4 h-4 text-slate-500" />, action: () => onOpenWindow('partner_search') },
-    { title: 'Открыть P2P Редактор & Whiteboard', icon: <Users className="w-4 h-4 text-slate-500" />, action: () => onOpenWindow('peer') },
-    { title: 'Открыть Белый экран (White Screen • P2P)', icon: <PenTool className="w-4 h-4 text-slate-500" />, action: () => onOpenWindow('white_screen') },
-    { title: 'Виджеты: Запустить таймер Помодоро', icon: <LayoutGrid className="w-4 h-4 text-slate-500" />, action: () => onOpenWindow('widgets') },
-    { title: 'Открыть консоль модерации (Admin)', icon: <ShieldCheck className="w-4 h-4 text-slate-500" />, action: () => onOpenWindow('admin') },
+    { title: getAppTitle('desktop'), icon: <Monitor className="w-4 h-4 text-sky-500" />, action: () => onOpenWindow('desktop') },
+    { title: getAppTitle('knowledge_sphere'), icon: <Atom className="w-4 h-4 text-sky-400 animate-spin-slow" />, action: () => onOpenWindow('knowledge_sphere') },
+    { title: getAppTitle('dag'), icon: <Network className="w-4 h-4 text-slate-500" />, action: () => onOpenWindow('dag') },
+    { title: getAppTitle('survey'), icon: <GraduationCap className="w-4 h-4 text-indigo-500" />, action: () => onOpenWindow('survey') },
+    { title: getAppTitle('textbook_library'), icon: <BookOpen className="w-4 h-4 text-emerald-500" />, action: () => onOpenWindow('textbook_library') },
+    { title: getAppTitle('knowledge_git'), icon: <GitBranch className="w-4 h-4 text-purple-500" />, action: () => onOpenWindow('knowledge_git') },
+    { title: getAppTitle('portfolio'), icon: <Award className="w-4 h-4 text-amber-500" />, action: () => onOpenWindow('portfolio') },
+    { title: getAppTitle('calendar'), icon: <CalendarIcon className="w-4 h-4 text-sky-500" />, action: () => onOpenWindow('calendar') },
+    { title: getAppTitle('focus'), icon: <Tv className="w-4 h-4 text-slate-500" />, action: () => onOpenWindow('focus') },
+    { title: getAppTitle('chat'), icon: <Bot className="w-4 h-4 text-slate-500" />, action: () => onOpenWindow('chat') },
+    { title: getAppTitle('partner_search'), icon: <Users className="w-4 h-4 text-slate-500" />, action: () => onOpenWindow('partner_search') },
+    { title: getAppTitle('peer'), icon: <Users className="w-4 h-4 text-slate-500" />, action: () => onOpenWindow('peer') },
+    { title: getAppTitle('white_screen'), icon: <PenTool className="w-4 h-4 text-slate-500" />, action: () => onOpenWindow('white_screen') },
+    { title: getAppTitle('widgets'), icon: <LayoutGrid className="w-4 h-4 text-slate-500" />, action: () => onOpenWindow('widgets') },
+    { title: getAppTitle('admin'), icon: <ShieldCheck className="w-4 h-4 text-slate-500" />, action: () => onOpenWindow('admin') },
   ].filter(a => !q || a.title.toLowerCase().includes(q));
 
   const filteredUnits = Object.values(units).filter(u => 
@@ -83,7 +85,7 @@ export const SpotlightModal: React.FC<SpotlightModalProps> = ({
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Поиск по курсам, конспектам, модулям и командам ОС (Ctrl+K)..."
+            placeholder={t('spotlight.placeholder', 'Поиск по курсам, модулям и командам ОС...')}
             className="w-full bg-transparent border-none text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none"
           />
           <button 
@@ -100,7 +102,7 @@ export const SpotlightModal: React.FC<SpotlightModalProps> = ({
           {systemActions.length > 0 && (
             <div>
               <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-2 mb-1.5">
-                Команды системы
+                {t('spotlight.commands', 'Команды системы')}
               </div>
               <div className="space-y-0.5">
                 {systemActions.map((action, i) => (
@@ -124,7 +126,7 @@ export const SpotlightModal: React.FC<SpotlightModalProps> = ({
           {filteredUnits.length > 0 && (
             <div>
               <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-2 mb-1.5">
-                Образовательные кванты
+                {t('spotlight.units', 'Образовательные кванты')}
               </div>
               <div className="space-y-0.5">
                 {filteredUnits.map((unit) => (
@@ -150,7 +152,7 @@ export const SpotlightModal: React.FC<SpotlightModalProps> = ({
                       </div>
                     </div>
                     <span className="text-[10px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-200">
-                      Открыть
+                      {t('action.open', 'Открыть')}
                     </span>
                   </button>
                 ))}
@@ -162,7 +164,7 @@ export const SpotlightModal: React.FC<SpotlightModalProps> = ({
           {filteredNotes.length > 0 && (
             <div>
               <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-2 mb-1.5">
-                Личные заметки
+                {t('app.notes', 'Личные заметки')}
               </div>
               <div className="space-y-0.5">
                 {filteredNotes.map((note) => (
@@ -189,7 +191,7 @@ export const SpotlightModal: React.FC<SpotlightModalProps> = ({
 
           {systemActions.length === 0 && filteredUnits.length === 0 && filteredNotes.length === 0 && (
             <div className="text-center py-8 text-slate-400">
-              Ничего не найдено по запросу «{query}»
+              {t('spotlight.noResults', 'Ничего не найдено')} «{query}»
             </div>
           )}
         </div>

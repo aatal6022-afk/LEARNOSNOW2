@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { NoteItem, TaskItem, HabitItem } from '../../types.ts';
 import { playChime } from '../../utils/audio.ts';
+import { useI18n } from '../../services/i18nService.ts';
 
 interface WidgetsWindowProps {
   notes: NoteItem[];
@@ -51,13 +52,15 @@ export const WidgetsWindow: React.FC<WidgetsWindowProps> = ({
   onResetPomodoro,
   onSetPomodoroMinutes,
 }) => {
+  const { t } = useI18n();
+
   // New task input
   const [newTaskText, setNewTaskText] = useState('');
 
   // New note input
   const [newNoteTitle, setNewNoteTitle] = useState('');
   const [newNoteContent, setNewNoteContent] = useState('');
-  const [newNoteTag, setNewNoteTag] = useState('#архитектура');
+  const [newNoteTag, setNewNoteTag] = useState('#инварианты');
   const [showAddNote, setShowAddNote] = useState(false);
 
   const handleCreateNote = (e: React.FormEvent) => {
@@ -68,7 +71,7 @@ export const WidgetsWindow: React.FC<WidgetsWindowProps> = ({
       title: newNoteTitle,
       content: newNoteContent,
       tag: newNoteTag,
-      createdAt: 'Только что',
+      createdAt: t('time.justNow', 'Только что'),
     });
     setNewNoteTitle('');
     setNewNoteContent('');
@@ -90,10 +93,10 @@ export const WidgetsWindow: React.FC<WidgetsWindowProps> = ({
       <div className="h-11 border-b border-[#DADCE0] px-6 flex items-center justify-between bg-white shrink-0">
         <div className="flex items-center space-x-2.5">
           <Layers className="w-4 h-4 text-[#1A73E8]" />
-          <h3 className="font-medium text-xs text-[#202124] tracking-tight">Рабочие инструменты & Задачи</h3>
+          <h3 className="font-medium text-xs text-[#202124] tracking-tight">{t('app.widgets', 'Рабочие инструменты & Задачи')}</h3>
         </div>
         <div className="flex items-center space-x-2 text-[11px] text-[#5F6368] font-medium">
-          <span>Синхронизировано с Firestore</span>
+          <span>{t('topbar.synced', 'Синхронизировано с Firestore')}</span>
         </div>
       </div>
 
@@ -105,7 +108,7 @@ export const WidgetsWindow: React.FC<WidgetsWindowProps> = ({
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <Clock className="w-4 h-4 text-[#1A73E8]" />
-                <h4 className="font-medium text-[#202124] text-xs">Фокус-таймер</h4>
+                <h4 className="font-medium text-[#202124] text-xs">{t('widget.pomodoro', 'Фокус-таймер')}</h4>
               </div>
               <div className="flex items-center space-x-1 bg-[#F1F3F4] p-0.5 rounded-full text-[11px]">
                 <button
@@ -117,7 +120,7 @@ export const WidgetsWindow: React.FC<WidgetsWindowProps> = ({
                       : 'text-[#5F6368] hover:text-[#202124]'
                   }`}
                 >
-                  25 мин
+                  25 {t('time.min', 'мин')}
                 </button>
                 <button
                   type="button"
@@ -128,7 +131,7 @@ export const WidgetsWindow: React.FC<WidgetsWindowProps> = ({
                       : 'text-[#5F6368] hover:text-[#202124]'
                   }`}
                 >
-                  50 мин
+                  50 {t('time.min', 'мин')}
                 </button>
               </div>
             </div>
@@ -143,7 +146,7 @@ export const WidgetsWindow: React.FC<WidgetsWindowProps> = ({
                   : `${String(pomodoroMinutes).padStart(2, '0')}:00`}
               </div>
               <span className="text-[11px] text-[#5F6368] mt-1 block font-medium">
-                {isPomodoroRunning ? 'Сессия концентрации активна' : 'Готов к началу сессии'}
+                {isPomodoroRunning ? t('pomodoro.running', 'Сессия концентрации активна') : t('pomodoro.ready', 'Готов к началу сессии')}
               </span>
             </div>
 
@@ -154,13 +157,13 @@ export const WidgetsWindow: React.FC<WidgetsWindowProps> = ({
                 className="flex-1 py-2 rounded-full bg-[#1A73E8] hover:bg-[#1967D2] text-white font-medium flex items-center justify-center space-x-1.5 transition cursor-pointer shadow-none"
               >
                 {isPomodoroRunning ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 fill-current" />}
-                <span>{isPomodoroRunning ? 'Пауза' : 'Старт'}</span>
+                <span>{isPomodoroRunning ? t('topbar.focusPause', 'Пауза') : t('topbar.focusStart', 'Старт')}</span>
               </button>
               <button
                 type="button"
                 onClick={onResetPomodoro}
                 className="p-2 rounded-full bg-[#F1F3F4] hover:bg-[#E8EAED] text-[#3C4043] transition cursor-pointer"
-                title="Сбросить таймер"
+                title={t('widget.resetDefaults', 'Сбросить таймер')}
               >
                 <RotateCcw className="w-4 h-4" />
               </button>
@@ -172,7 +175,7 @@ export const WidgetsWindow: React.FC<WidgetsWindowProps> = ({
             <div className="flex items-center justify-between pb-2 border-b border-[#DADCE0]">
               <div className="flex items-center space-x-2">
                 <CheckSquare className="w-4 h-4 text-[#1E8E3E]" />
-                <h4 className="font-medium text-[#202124] text-xs">Задачи спринта</h4>
+                <h4 className="font-medium text-[#202124] text-xs">{t('widget.tasks', 'Задачи спринта')}</h4>
               </div>
               <span className="text-[11px] text-[#5F6368] font-mono tabular-nums font-medium bg-[#F1F3F4] px-2.5 py-0.5 rounded-full">
                 {tasks.filter((t) => t.done).length} / {tasks.length}
@@ -181,7 +184,7 @@ export const WidgetsWindow: React.FC<WidgetsWindowProps> = ({
 
             <div className="space-y-1.5 overflow-y-auto max-h-48 pr-1 py-1">
               {tasks.length === 0 ? (
-                <div className="text-center py-6 text-[#5F6368] text-xs">Нет активных задач</div>
+                <div className="text-center py-6 text-[#5F6368] text-xs">{t('tasks.noActive', 'Нет активных задач')}</div>
               ) : (
                 tasks.map((task) => (
                   <div
@@ -222,7 +225,7 @@ export const WidgetsWindow: React.FC<WidgetsWindowProps> = ({
                 type="text"
                 value={newTaskText}
                 onChange={(e) => setNewTaskText(e.target.value)}
-                placeholder="Новая задача..."
+                placeholder={t('tasks.newTaskPlaceholder', 'Новая задача...')}
                 className="flex-1 bg-[#F1F3F4] border border-transparent rounded-full px-3.5 py-1.5 text-xs text-[#202124] focus:outline-none focus:border-[#1A73E8] focus:bg-white transition"
               />
               <button
@@ -239,14 +242,14 @@ export const WidgetsWindow: React.FC<WidgetsWindowProps> = ({
             <div className="flex items-center justify-between pb-2 border-b border-[#DADCE0]">
               <div className="flex items-center space-x-2">
                 <FileText className="w-4 h-4 text-[#F9AB00]" />
-                <h4 className="font-medium text-[#202124] text-xs">Заметки и конспекты</h4>
+                <h4 className="font-medium text-[#202124] text-xs">{t('notes.title', 'Заметки и конспекты')}</h4>
               </div>
               <button
                 type="button"
                 onClick={() => setShowAddNote(!showAddNote)}
                 className="text-[11px] text-[#1A73E8] hover:text-[#1967D2] font-medium transition cursor-pointer px-3 py-0.5 rounded-full bg-[#E8F0FE]"
               >
-                {showAddNote ? 'Отмена' : '+ Заметка'}
+                {showAddNote ? t('action.cancel', 'Отмена') : `+ ${t('app.notes', 'Заметка')}`}
               </button>
             </div>
 
@@ -256,13 +259,13 @@ export const WidgetsWindow: React.FC<WidgetsWindowProps> = ({
                   type="text"
                   value={newNoteTitle}
                   onChange={(e) => setNewNoteTitle(e.target.value)}
-                  placeholder="Заголовок заметки..."
+                  placeholder={t('notes.titlePlaceholder', 'Заголовок заметки...')}
                   className="w-full bg-white border border-[#DADCE0] rounded-lg px-3 py-1.5 text-xs text-[#202124] focus:outline-none focus:border-[#1A73E8]"
                 />
                 <textarea
                   value={newNoteContent}
                   onChange={(e) => setNewNoteContent(e.target.value)}
-                  placeholder="Текст конспекта или вывода..."
+                  placeholder={t('notes.contentPlaceholder', 'Текст конспекта или вывода...')}
                   rows={3}
                   className="w-full bg-white border border-[#DADCE0] rounded-lg px-3 py-1.5 text-xs text-[#202124] focus:outline-none focus:border-[#1A73E8] resize-none"
                 />
@@ -277,14 +280,14 @@ export const WidgetsWindow: React.FC<WidgetsWindowProps> = ({
                     type="submit"
                     className="px-4 py-1.5 bg-[#1A73E8] hover:bg-[#1967D2] text-white font-medium rounded-full text-xs transition cursor-pointer"
                   >
-                    Сохранить
+                    {t('action.save', 'Сохранить')}
                   </button>
                 </div>
               </form>
             ) : (
               <div className="space-y-2 overflow-y-auto max-h-48 pr-1 py-1">
                 {notes.length === 0 ? (
-                  <div className="text-center py-6 text-[#5F6368] text-xs">Заметок пока нет</div>
+                  <div className="text-center py-6 text-[#5F6368] text-xs">{t('notes.empty', 'Заметок пока нет')}</div>
                 ) : (
                   notes.map((note) => (
                     <div
@@ -297,7 +300,7 @@ export const WidgetsWindow: React.FC<WidgetsWindowProps> = ({
                           type="button"
                           onClick={() => onDeleteNote(note.id)}
                           className="text-[#5F6368] hover:text-[#D93025] opacity-0 group-hover:opacity-100 transition cursor-pointer p-0.5"
-                          title="Удалить"
+                          title={t('action.delete', 'Удалить')}
                         >
                           <Trash2 className="w-3 h-3" />
                         </button>
@@ -319,9 +322,9 @@ export const WidgetsWindow: React.FC<WidgetsWindowProps> = ({
             <div className="flex items-center justify-between pb-2 border-b border-[#DADCE0]">
               <div className="flex items-center space-x-2">
                 <Flame className="w-4 h-4 text-[#EA4335]" />
-                <h4 className="font-medium text-[#202124] text-xs">Привычки практики</h4>
+                <h4 className="font-medium text-[#202124] text-xs">{t('widget.habits', 'Привычки практики')}</h4>
               </div>
-              <span className="text-[11px] text-[#5F6368] bg-[#F1F3F4] px-2.5 py-0.5 rounded-full">Без штрафов</span>
+              <span className="text-[11px] text-[#5F6368] bg-[#F1F3F4] px-2.5 py-0.5 rounded-full">{t('habits.noPenalty', 'Без штрафов')}</span>
             </div>
             <div className="space-y-1.5">
               {habits.map((h) => (
@@ -343,7 +346,7 @@ export const WidgetsWindow: React.FC<WidgetsWindowProps> = ({
                     <span className="text-xs font-medium text-[#202124]">{h.title}</span>
                   </div>
                   <div className="flex items-center space-x-1 text-[#3C4043] font-medium text-xs font-mono tabular-nums bg-[#F1F3F4] px-2 py-0.5 rounded-full">
-                    <span>{h.streak} дн</span>
+                    <span>{h.streak} {t('time.days', 'дн')}</span>
                   </div>
                 </div>
               ))}
@@ -355,14 +358,14 @@ export const WidgetsWindow: React.FC<WidgetsWindowProps> = ({
             <div className="flex items-center justify-between pb-2 border-b border-[#DADCE0]">
               <div className="flex items-center space-x-2">
                 <Activity className="w-4 h-4 text-[#1A73E8]" />
-                <h4 className="font-medium text-[#202124] text-xs">Освоение компетенций</h4>
+                <h4 className="font-medium text-[#202124] text-xs">{t('skills.competenciesTitle', 'Освоение компетенций')}</h4>
               </div>
-              <span className="text-[11px] text-[#5F6368] bg-[#F1F3F4] px-2.5 py-0.5 rounded-full">Текущий срез</span>
+              <span className="text-[11px] text-[#5F6368] bg-[#F1F3F4] px-2.5 py-0.5 rounded-full">{t('skills.currentSnapshot', 'Текущий срез')}</span>
             </div>
             <div className="space-y-3 text-xs pt-1">
               <div>
                 <div className="flex justify-between text-[11px] mb-1 font-medium">
-                  <span className="text-[#3C4043]">Структура B-Tree и индексы</span>
+                  <span className="text-[#3C4043]">{t('skills.sample1', 'Структура B-Tree и индексы')}</span>
                   <span className="text-[#202124] font-mono tabular-nums">88%</span>
                 </div>
                 <div className="h-2 w-full bg-[#F1F3F4] rounded-full overflow-hidden">
@@ -371,7 +374,7 @@ export const WidgetsWindow: React.FC<WidgetsWindowProps> = ({
               </div>
               <div>
                 <div className="flex justify-between text-[11px] mb-1 font-medium">
-                  <span className="text-[#3C4043]">Многопоточность и транзакции</span>
+                  <span className="text-[#3C4043]">{t('skills.sample2', 'Многопоточность и транзакции')}</span>
                   <span className="text-[#202124] font-mono tabular-nums">64%</span>
                 </div>
                 <div className="h-2 w-full bg-[#F1F3F4] rounded-full overflow-hidden">
@@ -380,7 +383,7 @@ export const WidgetsWindow: React.FC<WidgetsWindowProps> = ({
               </div>
               <div>
                 <div className="flex justify-between text-[11px] mb-1 font-medium">
-                  <span className="text-[#3C4043]">Отказоустойчивое кэширование</span>
+                  <span className="text-[#3C4043]">{t('skills.sample3', 'Отказоустойчивое кэширование')}</span>
                   <span className="text-[#202124] font-mono tabular-nums">40%</span>
                 </div>
                 <div className="h-2 w-full bg-[#F1F3F4] rounded-full overflow-hidden">
@@ -395,23 +398,23 @@ export const WidgetsWindow: React.FC<WidgetsWindowProps> = ({
             <div className="flex items-center justify-between pb-2 border-b border-[#DADCE0]">
               <div className="flex items-center space-x-2">
                 <Award className="w-4 h-4 text-[#F9AB00]" />
-                <h4 className="font-medium text-[#202124] text-xs">Инженерная репутация</h4>
+                <h4 className="font-medium text-[#202124] text-xs">{t('karma.reputationTitle', 'Инженерная репутация')}</h4>
               </div>
               <span className="text-[11px] text-[#3C4043] font-medium bg-[#F1F3F4] px-2.5 py-0.5 rounded-full">Architect</span>
             </div>
             <div className="flex items-center justify-between py-1">
               <div>
                 <div className="text-3xl font-normal text-[#202124] font-mono tabular-nums">{karma}</div>
-                <span className="text-[11px] text-[#5F6368] font-medium">Баллы за проверенный код</span>
+                <span className="text-[11px] text-[#5F6368] font-medium">{t('karma.pointsForCode', 'Баллы за проверенный код')}</span>
               </div>
               <div className="text-right">
                 <span className="text-xs font-medium text-[#137333] bg-[#E6F4EA] px-3 py-1 rounded-full border border-[#CEEAD6]">
-                  -15% Pro доступ
+                  -15% Pro
                 </span>
               </div>
             </div>
             <p className="text-[11px] text-[#5F6368] leading-relaxed pt-2 border-t border-[#DADCE0]">
-              Начисляется за сдачу практических проектов с первого раза (≥90%), помощь напарнику и взаимную верификацию решений.
+              {t('karma.reputationDesc', 'Начисляется за сдачу практических проектов с первого раза (≥90%), помощь напарнику и взаимную верификацию решений.')}
             </p>
           </div>
         </div>

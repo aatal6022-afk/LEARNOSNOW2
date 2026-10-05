@@ -26,6 +26,7 @@ import {
   processImageFileToWallpaper 
 } from '../../services/wallpaperGallery.ts';
 import { playChime } from '../../utils/audio.ts';
+import { useI18n } from '../../services/i18nService.ts';
 
 interface WallpaperGalleryModalProps {
   isOpen: boolean;
@@ -40,6 +41,7 @@ export const WallpaperGalleryModal: React.FC<WallpaperGalleryModalProps> = ({
   config,
   onUpdateConfig,
 }) => {
+  const { t } = useI18n();
   const [selectedCategory, setSelectedCategory] = useState<WallpaperCategory>('all');
   const [customWallpapers, setCustomWallpapers] = useState<WallpaperItem[]>(() => getCustomWallpapers());
   const [imageUrlInput, setImageUrlInput] = useState('');
@@ -303,7 +305,7 @@ export const WallpaperGalleryModal: React.FC<WallpaperGalleryModalProps> = ({
               className="flex items-center space-x-2 px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-medium transition cursor-pointer border border-white/15 shadow-xs"
             >
               <Upload className="w-3.5 h-3.5 text-sky-400" />
-              <span>Загрузить фото с устройства</span>
+              <span>{t('wallpaper.upload', 'Загрузить фото с устройства')}</span>
             </button>
             <span className="text-[11px] text-slate-400 hidden sm:inline">
               PNG, JPG, WebP до 8 МБ
@@ -316,7 +318,7 @@ export const WallpaperGalleryModal: React.FC<WallpaperGalleryModalProps> = ({
               <LinkIcon className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
               <input
                 type="url"
-                placeholder="Или вставьте прямую ссылку на фото (https://...)..."
+                placeholder={t('wallpaper.urlPlaceholder', 'Или вставьте прямую ссылку на фото (https://...)...')}
                 value={imageUrlInput}
                 onChange={(e) => setImageUrlInput(e.target.value)}
                 className="w-full bg-black/40 border border-white/15 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-400/80 transition"
@@ -327,7 +329,7 @@ export const WallpaperGalleryModal: React.FC<WallpaperGalleryModalProps> = ({
               disabled={!imageUrlInput.trim()}
               className="px-3 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-500 disabled:opacity-40 text-white text-xs font-medium transition cursor-pointer shrink-0 shadow-xs"
             >
-              Добавить
+              {t('action.add', 'Добавить')}
             </button>
           </form>
         </div>
@@ -369,8 +371,8 @@ export const WallpaperGalleryModal: React.FC<WallpaperGalleryModalProps> = ({
           {filteredItems.length === 0 ? (
             <div className="py-16 text-center text-slate-400 text-xs flex flex-col items-center justify-center">
               <ImageIcon className="w-10 h-10 text-slate-600 mb-2" />
-              <p className="font-semibold text-slate-300">В этой категории пока нет обоев</p>
-              <p className="text-slate-500 mt-1">Загрузите свое фото через кнопку выше</p>
+              <p className="font-semibold text-slate-300">{t('wallpaper.emptyCategory', 'В этой категории пока нет обоев')}</p>
+              <p className="text-slate-500 mt-1">{t('wallpaper.emptyHint', 'Загрузите свое фото через кнопку выше')}</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -407,7 +409,7 @@ export const WallpaperGalleryModal: React.FC<WallpaperGalleryModalProps> = ({
                       {isActive && (
                         <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full bg-sky-500 text-white font-semibold text-[11px] shadow-lg flex items-center space-x-1">
                           <Check className="w-3 h-3" />
-                          <span>Активно везде</span>
+                          <span>{t('wallpaper.activeEverywhere', 'Активно везде')}</span>
                         </div>
                       )}
 
@@ -417,7 +419,7 @@ export const WallpaperGalleryModal: React.FC<WallpaperGalleryModalProps> = ({
                           type="button"
                           onClick={(e) => handleDeleteCustom(e, item.id)}
                           className="absolute top-2.5 left-2.5 p-1.5 rounded-lg bg-black/60 hover:bg-rose-600 text-white/80 hover:text-white transition cursor-pointer backdrop-blur-md"
-                          title="Удалить из моей галереи"
+                          title={t('wallpaper.deleteCustom', 'Удалить из моей галереи')}
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -456,7 +458,7 @@ export const WallpaperGalleryModal: React.FC<WallpaperGalleryModalProps> = ({
                             : 'bg-white/10 hover:bg-white/20 text-white border border-white/10'
                         }`}
                       >
-                        {isActive ? 'Выбрано' : 'Применить'}
+                        {isActive ? t('action.selected', 'Выбрано') : t('action.apply', 'Применить')}
                       </button>
                     </div>
                   </div>
@@ -470,10 +472,10 @@ export const WallpaperGalleryModal: React.FC<WallpaperGalleryModalProps> = ({
         <div className="px-6 py-3.5 border-t border-white/10 bg-slate-950/80 flex items-center justify-between shrink-0 text-xs">
           <div className="flex items-center space-x-2 text-slate-400">
             <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-xs shadow-emerald-400/60" />
-            <span>Текущие обои: <strong className="text-white">{currentItem.title}</strong></span>
+            <span>{t('wallpaper.current', 'Текущие обои')}: <strong className="text-white">{currentItem.title}</strong></span>
             <span className="text-slate-600">·</span>
             <span className="text-sky-300 font-mono">
-              {config.applyEverywhere ? 'Фоном на всех экранах' : 'Только рабочий стол'}
+              {config.applyEverywhere ? t('wallpaper.allScreens', 'Фоном на всех экранах') : t('wallpaper.desktopOnly', 'Только рабочий стол')}
             </span>
           </div>
 
@@ -483,7 +485,7 @@ export const WallpaperGalleryModal: React.FC<WallpaperGalleryModalProps> = ({
               onClick={onClose}
               className="px-4 py-1.5 rounded-xl bg-white text-slate-900 font-semibold text-xs hover:bg-white/90 transition cursor-pointer shadow-lg"
             >
-              Готово
+              {t('action.done', 'Готово')}
             </button>
           </div>
         </div>

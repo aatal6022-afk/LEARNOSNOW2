@@ -86,6 +86,7 @@ import { QuickLinksWidget } from './widgets/QuickLinksWidget.tsx';
 import { MemoryRetentionWidget } from './widgets/MemoryRetentionWidget.tsx';
 import { WidgetCatalogModal } from './WidgetCatalogModal.tsx';
 import { WindowFrame } from './WindowFrame.tsx';
+import { useI18n } from '../../services/i18nService.ts';
 
 // Windows Content
 import { DagGraphWindow } from '../windows/DagGraphWindow.tsx';
@@ -237,6 +238,8 @@ export const DesktopWorkspace: React.FC<DesktopWorkspaceProps> = ({
   onUpdateUnit,
   onApplyGeneratedPath,
 }) => {
+  const { t, getAppTitle, getWidgetTitle } = useI18n();
+
   // 1. Wallpaper State (Unified with Global Wallpaper)
   const effectiveConfig = wallpaperConfig || DEFAULT_WALLPAPER_CONFIG;
   const currentWallpaperItem = resolveWallpaperItem(effectiveConfig);
@@ -1996,7 +1999,7 @@ export const DesktopWorkspace: React.FC<DesktopWorkspaceProps> = ({
                   <div className="flex items-center space-x-1.5 truncate">
                     <span className={`w-1.5 h-1.5 rounded-full ${isFocused ? 'bg-[#1A73E8]' : 'bg-[#BDC1C6]'}`} />
                     <span className="text-[11px] font-medium text-[#202124] tracking-tight truncate">
-                      {widget.title}
+                      {getWidgetTitle(widget.type) || widget.title}
                     </span>
                   </div>
 
@@ -2008,7 +2011,7 @@ export const DesktopWorkspace: React.FC<DesktopWorkspaceProps> = ({
                         handleToggleCollapseWidget(widget.id);
                       }}
                       className="p-1 rounded-full text-[#5F6368] hover:text-[#202124] hover:bg-[#E8EAED] transition cursor-pointer"
-                      title={widget.isCollapsed ? 'Развернуть' : 'Свернуть'}
+                      title={widget.isCollapsed ? t('win.maximize', 'Развернуть') : t('win.minimize', 'Свернуть')}
                     >
                       <Minus className="w-3 h-3" />
                     </button>
@@ -2019,7 +2022,7 @@ export const DesktopWorkspace: React.FC<DesktopWorkspaceProps> = ({
                         handleRemoveWidget(widget.id);
                       }}
                       className="p-1 rounded-full text-[#5F6368] hover:text-[#D93025] hover:bg-[#FCE8E6] transition cursor-pointer"
-                      title="Удалить виджет с рабочего стола"
+                      title={t('action.delete', 'Удалить виджет с рабочего стола')}
                     >
                       <X className="w-3 h-3" />
                     </button>
@@ -2074,10 +2077,10 @@ export const DesktopWorkspace: React.FC<DesktopWorkspaceProps> = ({
                   type="button"
                   onClick={() => onOpenAppTab(win.id.startsWith('focus_') ? 'focus' : win.id)}
                   className="px-2 py-0.5 rounded text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium transition cursor-pointer flex items-center space-x-1"
-                  title="Развернуть во весь экран вкладки"
+                  title={t('fullScreenTabs', 'Развернуть во весь экран')}
                 >
                   <Maximize2 className="w-3 h-3" />
-                  <span>Во весь экран</span>
+                  <span>{t('fullScreen', 'Во весь экран')}</span>
                 </button>
               }
             >
@@ -2404,7 +2407,7 @@ export const DesktopWorkspace: React.FC<DesktopWorkspaceProps> = ({
           onClick={(e) => e.stopPropagation()}
         >
           <div className="px-2.5 py-1 text-[10px] text-[#5F6368] uppercase font-medium">
-            Рабочий стол
+            {t('nav.desktop', 'Рабочий стол')}
           </div>
 
           <button
@@ -2417,7 +2420,7 @@ export const DesktopWorkspace: React.FC<DesktopWorkspaceProps> = ({
             className="w-full text-left px-2.5 py-1.5 rounded-lg flex items-center space-x-2 text-[#3C4043] hover:text-[#202124] hover:bg-[#F1F3F4] transition cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5 text-[#1A73E8]" />
-            <span>+ Добавить виджет...</span>
+            <span>{t('widget.addWidget', '+ Добавить виджет...')}</span>
           </button>
 
           <button
@@ -2429,7 +2432,7 @@ export const DesktopWorkspace: React.FC<DesktopWorkspaceProps> = ({
             className="w-full text-left px-2.5 py-1.5 rounded-lg flex items-center space-x-2 text-[#3C4043] hover:text-[#202124] hover:bg-[#F1F3F4] transition cursor-pointer"
           >
             <Pin className="w-3.5 h-3.5 text-[#F9AB00]" />
-            <span>Новый стикер-заметка</span>
+            <span>{t('widget.newSticky', 'Новый стикер-заметка')}</span>
           </button>
 
           <button
@@ -2441,7 +2444,7 @@ export const DesktopWorkspace: React.FC<DesktopWorkspaceProps> = ({
             className="w-full text-left px-2.5 py-1.5 rounded-lg flex items-center space-x-2 text-[#1E8E3E] hover:bg-[#E6F4EA] transition cursor-pointer font-medium"
           >
             <Sparkles className="w-3.5 h-3.5 text-[#1E8E3E]" />
-            <span>Умная мозаика (все окна)</span>
+            <span>{t('action.smartMosaic', 'Умная мозаика (все окна)')}</span>
           </button>
 
           <button
@@ -2453,7 +2456,7 @@ export const DesktopWorkspace: React.FC<DesktopWorkspaceProps> = ({
             className="w-full text-left px-2.5 py-1.5 rounded-lg flex items-center space-x-2 text-[#3C4043] hover:text-[#202124] hover:bg-[#F1F3F4] transition cursor-pointer"
           >
             <Grid className="w-3.5 h-3.5 text-[#1A73E8]" />
-            <span>Упорядочить виджеты по сетке</span>
+            <span>{t('widget.arrangeGrid', 'Упорядочить виджеты по сетке')}</span>
           </button>
 
           {/* Magnetic Snapping and Drop Zone Highlighting */}
@@ -2467,12 +2470,12 @@ export const DesktopWorkspace: React.FC<DesktopWorkspaceProps> = ({
           >
             <span className="flex items-center space-x-2">
               <Magnet className="w-3.5 h-3.5 text-[#1A73E8]" />
-              <span>Магнитные зоны и направляющие</span>
+              <span>{t('action.magnetZones', 'Магнитные зоны и направляющие')}</span>
             </span>
             <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${
               isSmartSnappingEnabled ? 'bg-[#E8F0FE] text-[#1A73E8]' : 'bg-[#F1F3F4] text-[#5F6368]'
             }`}>
-              {isSmartSnappingEnabled ? 'Вкл' : 'Выкл'}
+              {isSmartSnappingEnabled ? t('action.on', 'Вкл') : t('action.off', 'Выкл')}
             </span>
           </button>
 
@@ -2488,7 +2491,7 @@ export const DesktopWorkspace: React.FC<DesktopWorkspaceProps> = ({
             className="w-full text-left px-2.5 py-1.5 rounded-lg flex items-center space-x-2 text-[#1A73E8] hover:bg-[#E8F0FE] transition cursor-pointer font-medium"
           >
             <Upload className="w-3.5 h-3.5 text-[#1A73E8]" />
-            <span>Установить обои из файла...</span>
+            <span>{t('action.uploadWallpaper', 'Установить обои из файла...')}</span>
           </button>
 
           <button
@@ -2504,7 +2507,7 @@ export const DesktopWorkspace: React.FC<DesktopWorkspaceProps> = ({
             className="w-full text-left px-2.5 py-1.5 rounded-lg flex items-center space-x-2 text-[#3C4043] hover:text-[#202124] hover:bg-[#F1F3F4] transition cursor-pointer"
           >
             <Image className="w-3.5 h-3.5 text-[#5F6368]" />
-            <span>Галерея обоев (настроить)...</span>
+            <span>{t('topbar.wallpapers', 'Галерея обоев (настроить)...')}</span>
           </button>
 
           {onOpenPersonalization && (
@@ -2517,7 +2520,7 @@ export const DesktopWorkspace: React.FC<DesktopWorkspaceProps> = ({
               className="w-full text-left px-2.5 py-1.5 rounded-lg flex items-center space-x-2 text-[#F9AB00] hover:bg-[#FEF7E0] transition cursor-pointer font-medium"
             >
               <Sparkles className="w-3.5 h-3.5 text-[#F9AB00]" />
-              <span>Персонализировать систему...</span>
+              <span>{t('topbar.personalize', 'Персонализировать систему...')}</span>
             </button>
           )}
 
@@ -2538,12 +2541,12 @@ export const DesktopWorkspace: React.FC<DesktopWorkspaceProps> = ({
           >
             <span className="flex items-center space-x-2">
               <Layers className="w-3.5 h-3.5 text-[#5F6368]" />
-              <span>Фон везде в системе</span>
+              <span>{t('action.bgEverywhere', 'Фон везде в системе')}</span>
             </span>
             <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${
               effectiveConfig.applyEverywhere ? 'bg-[#E6F4EA] text-[#1E8E3E]' : 'bg-[#F1F3F4] text-[#5F6368]'
             }`}>
-              {effectiveConfig.applyEverywhere ? 'Вкл' : 'Выкл'}
+              {effectiveConfig.applyEverywhere ? t('action.on', 'Вкл') : t('action.off', 'Выкл')}
             </span>
           </button>
 
@@ -2556,7 +2559,7 @@ export const DesktopWorkspace: React.FC<DesktopWorkspaceProps> = ({
             className="w-full text-left px-2.5 py-1.5 rounded-lg flex items-center space-x-2 text-[#3C4043] hover:text-[#202124] hover:bg-[#F1F3F4] transition cursor-pointer"
           >
             <RotateCcw className="w-3.5 h-3.5 text-[#5F6368]" />
-            <span>Сбросить виджеты к стандарту</span>
+            <span>{t('widget.resetDefaults', 'Сбросить виджеты к стандарту')}</span>
           </button>
 
           <button
@@ -2568,7 +2571,7 @@ export const DesktopWorkspace: React.FC<DesktopWorkspaceProps> = ({
             className="w-full text-left px-2.5 py-1.5 rounded-lg flex items-center space-x-2 text-[#D93025] hover:bg-[#FCE8E6] transition cursor-pointer"
           >
             <Trash2 className="w-3.5 h-3.5" />
-            <span>Очистить рабочий стол</span>
+            <span>{t('widget.clearAll', 'Очистить рабочий стол')}</span>
           </button>
         </div>
       )}
@@ -2576,27 +2579,28 @@ export const DesktopWorkspace: React.FC<DesktopWorkspaceProps> = ({
       {/* 5. BOTTOM ADAPTIVE OS APP DOCK (Google Material 3 Shelf) */}
       <nav 
         className="fixed bottom-3 left-1/2 -translate-x-1/2 z-40 px-2.5 py-1.5 rounded-2xl bg-white border border-[#DADCE0] shadow-[0_2px_6px_2px_rgba(60,64,67,0.15)] flex items-center space-x-1 select-none animate-fade-in"
-        aria-label="Панель приложений рабочего стола"
+        aria-label="Desktop Dock"
       >
         {[
-          { id: 'desktop', label: 'Рабочий стол', icon: Monitor },
-          { id: 'dag', label: 'DAG-Граф', icon: Network },
-          { id: 'knowledge_sphere', label: 'Сфера знаний 3D', icon: Atom },
-          { id: 'knowledge_git', label: 'Git Знаний', icon: GitBranch },
-          { id: 'textbook_library', label: 'Учебник', icon: BookOpen },
-          { id: 'calendar', label: 'Календарь', icon: Calendar },
-          { id: 'focus', label: 'Фокус-Студия', icon: Tv },
-          { id: 'peer', label: 'P2P Напарник', icon: Users },
-          { id: 'chat', label: 'ИИ-Оператор', icon: Bot },
-          { id: 'white_screen', label: 'Белый экран', icon: PenTool },
-          { id: 'portfolio', label: 'Портфолио', icon: Award },
-          { id: 'settings', label: 'Настройки клавиш', icon: Settings2 },
-          { id: 'widgets', label: 'Виджеты & Задачи', icon: LayoutGrid },
-          { id: 'admin', label: 'Модерация & Магазин', icon: ShieldCheck },
+          { id: 'desktop', icon: Monitor },
+          { id: 'dag', icon: Network },
+          { id: 'knowledge_sphere', icon: Atom },
+          { id: 'knowledge_git', icon: GitBranch },
+          { id: 'textbook_library', icon: BookOpen },
+          { id: 'calendar', icon: Calendar },
+          { id: 'focus', icon: Tv },
+          { id: 'peer', icon: Users },
+          { id: 'chat', icon: Bot },
+          { id: 'white_screen', icon: PenTool },
+          { id: 'portfolio', icon: Award },
+          { id: 'settings', icon: Settings2 },
+          { id: 'widgets', icon: LayoutGrid },
+          { id: 'admin', icon: ShieldCheck },
         ].map((app) => {
           const isOpen = floatingWindows[app.id]?.isOpen;
           const isFocused = activeWindowId === app.id && !floatingWindows[app.id]?.isMinimized;
           const Icon = app.icon;
+          const label = getAppTitle(app.id);
 
           return (
             <button
@@ -2624,7 +2628,7 @@ export const DesktopWorkspace: React.FC<DesktopWorkspaceProps> = ({
                   ? 'bg-[#F1F3F4] text-[#202124]'
                   : 'text-[#5F6368] hover:text-[#202124] hover:bg-[#F1F3F4]'
               }`}
-              title={`${app.label} (${isOpen ? (isFocused ? 'Активно · Свернуть' : 'Развернуть') : 'Запустить окно'})`}
+              title={`${label} (${isOpen ? (isFocused ? t('win.minimize', 'Свернуть') : t('win.restore', 'Развернуть')) : t('action.open', 'Запустить')})`}
             >
               <Icon className="w-4 h-4" />
               {isOpen && (

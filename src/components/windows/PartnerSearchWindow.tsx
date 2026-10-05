@@ -26,6 +26,7 @@ import { playChime } from '../../utils/audio.ts';
 import { peerCollabSync } from '../../services/peerCollabSync.ts';
 import { peerService } from '../../services/peerService.ts';
 import { CommunityRoomsHub } from '../community/CommunityRoomsHub.tsx';
+import { useI18n } from '../../services/i18nService.ts';
 
 interface PartnerSearchWindowProps {
   partner?: PeerPartner | null;
@@ -67,6 +68,7 @@ export const PartnerSearchWindow: React.FC<PartnerSearchWindowProps> = ({
   onSelectUnit,
   onSaveNote,
 }) => {
+  const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<'matchmaking' | 'direct_code' | 'community'>('community');
   const [matchStatus, setMatchStatus] = useState<'idle' | 'searching' | 'matched'>(
     partner ? 'matched' : 'idle'
@@ -88,7 +90,7 @@ export const PartnerSearchWindow: React.FC<PartnerSearchWindowProps> = ({
   const [preferredRole, setPreferredRole] = useState<'Architect' | 'Auditor'>('Architect');
 
   const myUserId = currentUser?.uid || ('user-' + (localStorage.getItem('os_user_id') || 'guest'));
-  const myUserName = currentUser?.displayName || 'Студент';
+  const myUserName = currentUser?.displayName || t('topbar.student', 'Студент');
 
   useEffect(() => {
     if (partner) {
@@ -176,7 +178,7 @@ export const PartnerSearchWindow: React.FC<PartnerSearchWindowProps> = ({
         }
       }
     } catch {
-      setErrorMessage('Сетевая ошибка при регистрации в очереди поиска');
+      setErrorMessage(t('partner.networkError', 'Сетевая ошибка при регистрации в очереди поиска'));
     }
   };
 
@@ -195,8 +197,8 @@ export const PartnerSearchWindow: React.FC<PartnerSearchWindowProps> = ({
     playChime('click');
 
     const randomCode = `OS-${Math.floor(1000 + Math.random() * 9000)}`;
-    const effectiveDomain = skillDomain || 'Инженерные системы';
-    const effectiveTopic = targetGoal || 'Стресс-спарринг инвариантов';
+    const effectiveDomain = skillDomain || t('domain.engineering', 'Инженерные системы');
+    const effectiveTopic = targetGoal || t('domain.sparringDefault', 'Стресс-спарринг инвариантов');
 
     try {
       const res = await fetch('/api/gemini/match-negotiate', {
@@ -248,11 +250,10 @@ export const PartnerSearchWindow: React.FC<PartnerSearchWindowProps> = ({
       userLevel: 'intermediate',
       skillDomain: effectiveDomain,
       targetGoal: effectiveTopic,
-      matchScore: 98,
-      onlineStatus: 'online',
-      role: preferredRole === 'Architect' ? 'Navigator' : 'Driver',
       roomCode: randomCode,
-      dailyRoomUrl: `https://meet.jit.si/learning-os-peer-${randomCode.toLowerCase()}#config.prejoinPageEnabled=false`,
+      onlineStatus: 'online',
+      role: preferredRole === 'Architect' ? 'Auditor' : 'Architect',
+      matchScore: 98,
     };
 
     sessionStorage.setItem('learning_os_peer_session_id', randomCode);
@@ -263,15 +264,15 @@ export const PartnerSearchWindow: React.FC<PartnerSearchWindowProps> = ({
   };
 
   const handleCopyCode = () => {
-    navigator.clipboard?.writeText(myRoomCode);
+    navigator.clipboard.writeText(myRoomCode);
     setCopiedCode(true);
     playChime('click');
     setTimeout(() => setCopiedCode(false), 2000);
   };
 
   const handleCopyLink = () => {
-    const url = `${window.location.origin}/#room=${myRoomCode}`;
-    navigator.clipboard?.writeText(url);
+    const url = `${window.location.origin}${window.location.pathname}?room=${myRoomCode}`;
+    navigator.clipboard.writeText(url);
     setCopiedLink(true);
     playChime('click');
     setTimeout(() => setCopiedLink(false), 2000);
@@ -285,17 +286,16 @@ export const PartnerSearchWindow: React.FC<PartnerSearchWindowProps> = ({
     playChime('click');
 
     const joinedPartner: PeerPartner = {
-      id: `peer-${clean}`,
-      name: `Напарник [${clean}]`,
+      id: `peer-code-${clean}`,
+      name: `Коллега (Комната ${clean})`,
       avatar: '',
-      userLevel: 'intermediate',
+      userLevel: 'advanced',
       skillDomain,
       targetGoal,
-      matchScore: 98,
-      onlineStatus: 'online',
-      role: preferredRole === 'Architect' ? 'Navigator' : 'Driver',
       roomCode: clean,
-      dailyRoomUrl: `https://meet.jit.si/learning-os-peer-${clean.toLowerCase()}#config.prejoinPageEnabled=false`,
+      onlineStatus: 'online',
+      role: 'Auditor',
+      matchScore: 99,
     };
 
     peerService.joinSession(clean, {
@@ -321,10 +321,10 @@ export const PartnerSearchWindow: React.FC<PartnerSearchWindowProps> = ({
           </div>
           <div>
             <h2 className="font-bold text-sm text-gray-900">
-              Комьюнити & Поиск партнеров
+              {t('partner.communityTitle', 'Комьюнити & Поиск партнеров')}
             </h2>
             <p className="text-[11px] text-gray-500">
-              Совместная практика на изолированных досках и парные спарринги
+              {t('partner.communitySubtitle', 'Совместная практика на изолированных досках и парные спарринги')}
             </p>
           </div>
         </div>
@@ -344,7 +344,7 @@ export const PartnerSearchWindow: React.FC<PartnerSearchWindowProps> = ({
             }`}
           >
             <Globe className="w-3.5 h-3.5 text-blue-600" />
-            <span>Комнаты сообщества</span>
+            <span>{t('partner.tabRooms', 'Комнаты сообщества')}</span>
           </button>
 
           <button
@@ -360,7 +360,7 @@ export const PartnerSearchWindow: React.FC<PartnerSearchWindowProps> = ({
             }`}
           >
             <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-            <span>P2P Спарринг</span>
+            <span>{t('partner.tabSparring', 'P2P Спарринг')}</span>
           </button>
 
           <button
@@ -376,7 +376,7 @@ export const PartnerSearchWindow: React.FC<PartnerSearchWindowProps> = ({
             }`}
           >
             <Link className="w-3.5 h-3.5 text-blue-600" />
-            <span>Код сессии</span>
+            <span>{t('partner.tabCode', 'Код сессии')}</span>
           </button>
         </div>
       </header>
@@ -418,9 +418,9 @@ export const PartnerSearchWindow: React.FC<PartnerSearchWindowProps> = ({
                 <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto border border-blue-100">
                   <Sparkles className="w-6 h-6 text-blue-600" />
                 </div>
-                <h3 className="font-bold text-base text-gray-900">Интеллектуальный P2P Спарринг</h3>
+                <h3 className="font-bold text-base text-gray-900">{t('partner.sparringTitle', 'Интеллектуальный P2P Спарринг')}</h3>
                 <p className="text-xs text-gray-600 leading-relaxed max-w-md mx-auto">
-                  Система подбирает напарника со схожим уровнем понимания инвариантов для совместной защиты архитектурных решений.
+                  {t('partner.sparringDesc', 'Система подбирает напарника со схожим уровнем понимания инвариантов для совместной защиты архитектурных решений.')}
                 </p>
               </div>
 
@@ -428,15 +428,15 @@ export const PartnerSearchWindow: React.FC<PartnerSearchWindowProps> = ({
                 <div className="py-8 flex flex-col items-center justify-center space-y-4 bg-gray-50 rounded-xl border border-gray-200">
                   <div className="w-10 h-10 border-3 border-blue-600 border-t-transparent rounded-full animate-spin" />
                   <div className="text-center">
-                    <p className="font-bold text-sm text-gray-900">Поиск напарника в сети...</p>
-                    <p className="text-xs text-gray-500 mt-1">Время ожидания: {searchSeconds} сек.</p>
+                    <p className="font-bold text-sm text-gray-900">{t('partner.searchingOnline', 'Поиск напарника в сети...')}</p>
+                    <p className="text-xs text-gray-500 mt-1">{t('partner.waitTime', 'Время ожидания')}: {searchSeconds} {t('time.sec', 'сек.')}</p>
                   </div>
                   <button
                     type="button"
                     onClick={handleCancelSearch}
                     className="px-4 py-2 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 border border-rose-200 cursor-pointer"
                   >
-                    Отменить поиск
+                    {t('partner.cancelSearch', 'Отменить поиск')}
                   </button>
                 </div>
               ) : matchStatus === 'matched' && partner ? (
@@ -445,15 +445,15 @@ export const PartnerSearchWindow: React.FC<PartnerSearchWindowProps> = ({
                     <Check className="w-5 h-5" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-sm text-emerald-950">Партнер найден!</h4>
-                    <p className="text-xs text-emerald-800 mt-0.5">{partner.name} • Комната: {partner.roomCode}</p>
+                    <h4 className="font-bold text-sm text-emerald-950">{t('partner.found', 'Партнер найден!')}</h4>
+                    <p className="text-xs text-emerald-800 mt-0.5">{partner.name} • {t('partner.room', 'Комната')}: {partner.roomCode}</p>
                   </div>
                   <button
                     type="button"
                     onClick={() => onOpenPeerWindow?.()}
                     className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition cursor-pointer shadow-xs"
                   >
-                    Перейти на доску спарринга
+                    {t('partner.goToBoard', 'Перейти на доску спарринга')}
                   </button>
                 </div>
               ) : (
@@ -470,10 +470,10 @@ export const PartnerSearchWindow: React.FC<PartnerSearchWindowProps> = ({
                     >
                       <div className="font-bold text-xs flex items-center space-x-1.5">
                         <Shield className="w-4 h-4 text-blue-600" />
-                        <span>Роль: Архитектор</span>
+                        <span>{t('partner.roleArchitect', 'Роль: Архитектор')}</span>
                       </div>
                       <p className="text-[11px] text-gray-500 mt-1">
-                        Проектирует и защищает инварианты на доске.
+                        {t('partner.roleArchitectDesc', 'Проектирует и защищает инварианты на доске.')}
                       </p>
                     </button>
 
@@ -488,10 +488,10 @@ export const PartnerSearchWindow: React.FC<PartnerSearchWindowProps> = ({
                     >
                       <div className="font-bold text-xs flex items-center space-x-1.5">
                         <Swords className="w-4 h-4 text-amber-600" />
-                        <span>Роль: Аудитор</span>
+                        <span>{t('partner.roleAuditor', 'Роль: Аудитор')}</span>
                       </div>
                       <p className="text-[11px] text-gray-500 mt-1">
-                        Генерирует сбои, 10x спайки нагрузки и аудит.
+                        {t('partner.roleAuditorDesc', 'Генерирует сбои, 10x спайки нагрузки и аудит.')}
                       </p>
                     </button>
                   </div>
@@ -503,7 +503,7 @@ export const PartnerSearchWindow: React.FC<PartnerSearchWindowProps> = ({
                       className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs transition cursor-pointer flex items-center justify-center space-x-1.5 shadow-xs"
                     >
                       <Search className="w-4 h-4" />
-                      <span>Начать поиск напарника</span>
+                      <span>{t('partner.startSearch', 'Начать поиск напарника')}</span>
                     </button>
 
                     <button
@@ -512,7 +512,7 @@ export const PartnerSearchWindow: React.FC<PartnerSearchWindowProps> = ({
                       className="px-4 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold text-xs transition cursor-pointer flex items-center justify-center space-x-1"
                     >
                       <Zap className="w-4 h-4 text-amber-500" />
-                      <span>Мгновенный спарринг</span>
+                      <span>{t('partner.instantSparring', 'Мгновенный спарринг')}</span>
                     </button>
                   </div>
                 </div>
@@ -523,9 +523,9 @@ export const PartnerSearchWindow: React.FC<PartnerSearchWindowProps> = ({
           {activeTab === 'direct_code' && (
             <div className="max-w-xl mx-auto bg-white border border-gray-200 rounded-2xl p-6 shadow-xs space-y-6">
               <div className="space-y-3 pb-4 border-b border-gray-100">
-                <h3 className="font-bold text-sm text-gray-900">Ваш персональный код сессии</h3>
+                <h3 className="font-bold text-sm text-gray-900">{t('partner.personalCodeTitle', 'Ваш персональный код сессии')}</h3>
                 <p className="text-xs text-gray-500">
-                  Отправьте этот код или ссылку коллеге, чтобы начать совместное проектирование на общей доске.
+                  {t('partner.personalCodeDesc', 'Отправьте этот код или ссылку коллеге, чтобы начать совместное проектирование на общей доске.')}
                 </p>
 
                 <div className="flex items-center space-x-2">
@@ -541,7 +541,7 @@ export const PartnerSearchWindow: React.FC<PartnerSearchWindowProps> = ({
                     className="px-3.5 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold flex items-center space-x-1 cursor-pointer"
                   >
                     {copiedCode ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                    <span>{copiedCode ? 'Скопировано' : 'Копировать код'}</span>
+                    <span>{copiedCode ? t('action.copied', 'Скопировано') : t('partner.copyCode', 'Копировать код')}</span>
                   </button>
                   <button
                     type="button"
@@ -549,18 +549,18 @@ export const PartnerSearchWindow: React.FC<PartnerSearchWindowProps> = ({
                     className="px-3.5 py-2 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 text-xs font-semibold flex items-center space-x-1 cursor-pointer"
                   >
                     {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Link className="w-3.5 h-3.5" />}
-                    <span>{copiedLink ? 'Ссылка скопирована' : 'Скопировать ссылку'}</span>
+                    <span>{copiedLink ? t('action.linkCopied', 'Ссылка скопирована') : t('partner.copyLink', 'Скопировать ссылку')}</span>
                   </button>
                 </div>
               </div>
 
               {/* Join by code */}
               <div className="space-y-3">
-                <h3 className="font-bold text-sm text-gray-900">Присоединиться по чужому коду</h3>
+                <h3 className="font-bold text-sm text-gray-900">{t('partner.joinByCodeTitle', 'Присоединиться по чужому коду')}</h3>
                 <div className="flex items-center space-x-2">
                   <input
                     type="text"
-                    placeholder="Например: OS-4891"
+                    placeholder={t('partner.codePlaceholder', 'Например: OS-4891')}
                     value={roomCodeInput}
                     onChange={(e) => setRoomCodeInput(e.target.value)}
                     onKeyDown={(e) => {
@@ -574,7 +574,7 @@ export const PartnerSearchWindow: React.FC<PartnerSearchWindowProps> = ({
                     disabled={!roomCodeInput.trim() || isJoiningCode}
                     className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-30 text-white text-xs font-semibold cursor-pointer transition shadow-xs"
                   >
-                    {isJoiningCode ? 'Подключение...' : 'Войти'}
+                    {isJoiningCode ? t('partner.connecting', 'Подключение...') : t('nav.login', 'Войти')}
                   </button>
                 </div>
               </div>
