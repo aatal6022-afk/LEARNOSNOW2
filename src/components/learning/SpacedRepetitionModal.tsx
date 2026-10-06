@@ -63,6 +63,7 @@ export const SpacedRepetitionModal: React.FC<SpacedRepetitionModalProps> = ({
   const [selectedGrade, setSelectedGrade] = useState<'easy' | 'good' | 'hard' | 'forgot' | null>(null);
   const [isFinished, setIsFinished] = useState(false);
   const [questions, setQuestions] = useState<BlitzQuestion[]>([]);
+  const [earnedXpAwarded, setEarnedXpAwarded] = useState<number>(60);
 
   // Load target or urgent node
   useEffect(() => {
@@ -141,7 +142,8 @@ export const SpacedRepetitionModal: React.FC<SpacedRepetitionModalProps> = ({
       setSelectedGrade(null);
     } else {
       setIsFinished(true);
-      const earnedXp = selectedGrade === 'hard' ? 0 : grade === 'easy' ? 80 : grade === 'good' ? 60 : 20;
+      const earnedXp = selectedGrade === 'hard' ? 20 : grade === 'easy' ? 80 : grade === 'good' ? 60 : 20;
+      setEarnedXpAwarded(earnedXp);
       if (earnedXp > 0) onAddKarma?.(earnedXp);
       onRefreshCompleted?.(selectedNode.nodeId, updated.retentionPercentage);
     }
@@ -412,7 +414,7 @@ export const SpacedRepetitionModal: React.FC<SpacedRepetitionModalProps> = ({
 
               <div className="inline-flex items-center space-x-2 px-4 py-2 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 font-bold text-xs shadow-2xs">
                 <Award className="w-4 h-4 text-amber-600" />
-                <span>+600 XP начислено за интервальную тренировку</span>
+                <span>+{earnedXpAwarded} XP начислено за интервальную тренировку</span>
               </div>
 
               <div className="pt-4 flex items-center justify-center space-x-3">

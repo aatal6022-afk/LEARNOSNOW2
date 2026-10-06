@@ -80,6 +80,9 @@ export function securityHeaders(req: Request, res: Response, next: NextFunction)
   // Prevent MIME-type sniffing
   res.setHeader('X-Content-Type-Options', 'nosniff');
 
+  // Strict Transport Security (HSTS - 1 year)
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+
   // Basic XSS Protection for legacy browsers
   res.setHeader('X-XSS-Protection', '1; mode=block');
 
@@ -88,6 +91,12 @@ export function securityHeaders(req: Request, res: Response, next: NextFunction)
 
   // Prevent flash / cross-domain policy files abuse
   res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
+
+  // Modern Permissions Policy
+  res.setHeader('Permissions-Policy', 'camera=(self), microphone=(self), display-capture=(self), geolocation=()');
+
+  // Cross-Origin Isolation compatibility
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
 
   // Ensure express identity is hidden
   res.removeHeader('X-Powered-By');

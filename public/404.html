@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ru" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>404 — PinkInAu</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800;900&display=swap" rel="stylesheet" />
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      height: 100vh;
+      width: 100vw;
+      margin: 0;
+      padding: 0;
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      background: #05020a url('/cosmos.jpg') center center / cover no-repeat fixed;
+      color: #ffffff;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+      position: relative;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    /* Minimal Soft Overlay */
+    .bg-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(8, 4, 15, 0.45);
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    /* Top empty spacer */
+    .top-spacer {
+      position: relative;
+      z-index: 10;
+      height: 4rem;
+    }
+
+    /* Main Center: Static Minimal Pink 404 */
+    .center-block {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .error-code {
+      font-size: clamp(6.5rem, 20vw, 13rem);
+      font-weight: 900;
+      line-height: 1;
+      letter-spacing: -0.05em;
+      color: #fb7185; /* Pure clean pink/rose */
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Neat Bottom Inscription */
+    .bottom-footer {
+      position: relative;
+      z-index: 10;
+      padding-bottom: 2.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .footer-link {
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: #fda4af;
+      opacity: 0.85;
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      transition: opacity 0.2s ease, color 0.2s ease;
+    }
+
+    .footer-link:hover {
+      opacity: 1;
+      color: #ffffff;
+    }
+
+    .footer-logo {
+      width: 16px;
+      height: 16px;
+      opacity: 0.85;
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-overlay"></div>
+
+  <div class="top-spacer"></div>
+
+  <!-- Minimal Center -->
+  <main class="center-block">
+    <div class="error-code">404</div>
+  </main>
+
+  <!-- Neat Bottom Signature -->
+  <footer class="bottom-footer">
+    <a href="/" class="footer-link" title="PinkInAu">
+      <img src="/logo.svg" alt="PinkInAu Logo" class="footer-logo" onerror="this.style.display='none'" />
+      <span>PinkInAu</span>
+    </a>
+  </footer>
+</body>
+</html>

@@ -1124,6 +1124,23 @@ class I18nService {
   }
 
   private async initLanguage() {
+    // 0. Check URL query param first (highest priority)
+    if (typeof window !== 'undefined') {
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlLang = urlParams.get('lang') as SupportedLanguage;
+        if (urlLang && (['kk', 'uk', 'ru', 'en', 'ja'] as SupportedLanguage[]).includes(urlLang)) {
+          this.currentLanguage = urlLang;
+          this.geoMeta.isAuto = false;
+          localStorage.setItem('pinkinau_lang_manual', 'true');
+          localStorage.setItem('pinkinau_lang', urlLang);
+          syncGoogleTranslate(urlLang);
+          this.notify();
+          return;
+        }
+      } catch (e) {}
+    }
+
     const isManual = localStorage.getItem('pinkinau_lang_manual') === 'true';
     const saved = localStorage.getItem('pinkinau_lang') as SupportedLanguage;
 
@@ -1239,12 +1256,32 @@ class I18nService {
     }
     syncGoogleTranslate(lang);
     this.notify();
+
+    if (isManual && typeof window !== 'undefined') {
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.set('lang', lang);
+        window.location.href = url.toString();
+      } catch (e) {
+        window.location.reload();
+      }
+    }
   }
 
-  public resetToAutoIp(): Promise<SupportedLanguage> {
+  public async resetToAutoIp(): Promise<SupportedLanguage> {
     localStorage.removeItem('pinkinau_lang_manual');
     this.geoMeta.isAuto = true;
-    return this.detectLanguageFromEnvironment(true);
+    const detected = await this.detectLanguageFromEnvironment(true);
+    if (typeof window !== 'undefined') {
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('lang');
+        window.location.href = url.toString();
+      } catch (e) {
+        window.location.reload();
+      }
+    }
+    return detected;
   }
 
   public t(key: string, defaultText?: string): string {

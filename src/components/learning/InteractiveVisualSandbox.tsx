@@ -58,7 +58,13 @@ export const InteractiveVisualSandbox: React.FC<InteractiveVisualSandboxProps> =
     setIsRunning(true);
     playChime('click');
 
-    const result = await executionSandbox.executeCode(code);
+    const detectedLang = defaultFilename.endsWith('.py')
+      ? 'python'
+      : defaultFilename.endsWith('.js')
+      ? 'javascript'
+      : 'typescript';
+
+    const result = await executionSandbox.executeCode(code, [], detectedLang);
 
     setOutput(result);
     setIsRunning(false);

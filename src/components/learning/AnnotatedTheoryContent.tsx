@@ -264,11 +264,29 @@ export const AnnotatedTheoryContent: React.FC<AnnotatedTheoryContentProps> = ({
 
   // If unclosed code block, flush it
   if (inCodeBlock && currentCodeLines.length > 0) {
-    parsedBlocks.push({
-      type: 'diagram',
-      language: currentCodeLang || 'mermaid',
-      code: currentCodeLines.join('\n'),
-    });
+    const fullCode = currentCodeLines.join('\n');
+    const isDiagram = diagramLanguages.has(currentCodeLang) ||
+      currentCodeLang.startsWith('chart') ||
+      currentCodeLang.startsWith('flow') ||
+      currentCodeLang.startsWith('graph') ||
+      fullCode.includes('graph TD') ||
+      fullCode.includes('graph LR') ||
+      fullCode.includes('flowchart') ||
+      fullCode.startsWith('type:');
+
+    if (isDiagram) {
+      parsedBlocks.push({
+        type: 'diagram',
+        language: currentCodeLang || 'mermaid',
+        code: fullCode,
+      });
+    } else {
+      parsedBlocks.push({
+        type: 'code',
+        language: currentCodeLang || 'text',
+        code: fullCode,
+      });
+    }
   }
 
   return (

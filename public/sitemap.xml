@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  <url>
+    <loc>https://learn.pinkinau.space/</loc>
+    <lastmod>2026-10-06</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://learn.pinkinau.space/?lang=ru"/>
+    <xhtml:link rel="alternate" hreflang="kk" href="https://learn.pinkinau.space/?lang=kk"/>
+    <xhtml:link rel="alternate" hreflang="uk" href="https://learn.pinkinau.space/?lang=uk"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://learn.pinkinau.space/?lang=en"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://learn.pinkinau.space/?lang=ja"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://learn.pinkinau.space/"/>
+    <image:image>
+      <image:loc>https://learn.pinkinau.space/cosmos.jpg</image:loc>
+      <image:title>Learning OS Space Environment</image:title>
+      <image:caption>Learning OS Interactive Workspace</image:caption>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://learn.pinkinau.space/company</loc>
+    <lastmod>2026-10-06</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://learn.pinkinau.space/company?lang=ru"/>
+    <xhtml:link rel="alternate" hreflang="kk" href="https://learn.pinkinau.space/company?lang=kk"/>
+    <xhtml:link rel="alternate" hreflang="uk" href="https://learn.pinkinau.space/company?lang=uk"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://learn.pinkinau.space/company?lang=en"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://learn.pinkinau.space/company?lang=ja"/>
+  </url>
+  <url>
+    <loc>https://learn.pinkinau.space/pinkinau</loc>
+    <lastmod>2026-10-06</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+</urlset>

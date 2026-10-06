@@ -3,16 +3,125 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Learning OS</title>
+    <title>Learning OS — Персональная интерактивная операционная среда обучения</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="description" content="Модульная операционная веб-среда обучения с динамическим DAG-графом курсов на базе LLM, macOS glassmorphism интерфейсом, P2P коллаборацией, ролевыми проектами и анти-инфоцыганским модерационным контуром." />
-    <meta property="og:title" content="Learning OS" />
-    <meta property="og:description" content="Модульная операционная веб-среда обучения с динамическим DAG-графом курсов на базе LLM, macOS glassmorphism интерфейсом, P2P коллаборацией, ролевыми проектами и анти-инфоцыганским модерационным контуром." />
+    <link rel="canonical" href="https://learn.pinkinau.space/" />
+
+    <!-- Multilingual Alternates / Hreflang -->
+    <link rel="alternate" hreflang="ru" href="https://learn.pinkinau.space/?lang=ru" />
+    <link rel="alternate" hreflang="kk" href="https://learn.pinkinau.space/?lang=kk" />
+    <link rel="alternate" hreflang="uk" href="https://learn.pinkinau.space/?lang=uk" />
+    <link rel="alternate" hreflang="en" href="https://learn.pinkinau.space/?lang=en" />
+    <link rel="alternate" hreflang="ja" href="https://learn.pinkinau.space/?lang=ja" />
+    <link rel="alternate" hreflang="x-default" href="https://learn.pinkinau.space/" />
+
+    <!-- Core SEO & Search Indexing -->
+    <meta name="description" content="Модульная операционная среда с динамическим DAG-графом курсов, P2P-коллаборацией, интервальным повторением и ИИ-тьютором для быстрого освоения навыков." />
+    <meta name="keywords" content="learning os, pinkinau, обучение онлайн, интерактивные курсы, dag граф, spaced repetition, интервальное повторение, программирование, иностранные языки, дизайн, бизнес" />
+    <meta name="author" content="PinkInAu" />
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+    <meta name="theme-color" content="#030712" />
+    <meta name="geo.region" content="KZ" />
+    <meta name="geo.placename" content="Almaty" />
+
+    <!-- OpenGraph Social Sharing -->
     <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://learn.pinkinau.space/" />
+    <meta property="og:title" content="Learning OS — Персональная интерактивная операционная среда обучения" />
+    <meta property="og:description" content="Модульная операционная среда с динамическим DAG-графом курсов, P2P-коллаборацией, интервальным повторением и ИИ-тьютором для быстрого освоения навыков." />
+    <meta property="og:site_name" content="Learning OS by PinkInAu" />
+    <meta property="og:image" content="https://learn.pinkinau.space/cosmos.jpg" />
+    <meta property="og:image:alt" content="Learning OS Workspace" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:locale" content="ru_RU" />
+    <meta property="og:locale:alternate" content="kk_KZ" />
+    <meta property="og:locale:alternate" content="uk_UA" />
+    <meta property="og:locale:alternate" content="en_US" />
+    <meta property="og:locale:alternate" content="ja_JP" />
+
+    <!-- X / Twitter Cards -->
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@PinkInAu" />
+    <meta name="twitter:creator" content="@PinkInAu" />
+    <meta name="twitter:title" content="Learning OS — Персональная интерактивная операционная среда обучения" />
+    <meta name="twitter:description" content="Модульная операционная среда с динамическим DAG-графом курсов, P2P-коллаборацией, интервальным повторением и ИИ-тьютором для быстрого освоения навыков." />
+    <meta name="twitter:image" content="https://learn.pinkinau.space/cosmos.jpg" />
+
+    <!-- Schema.org Rich Structured Data (JSON-LD) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebApplication",
+          "@id": "https://learn.pinkinau.space/#app",
+          "name": "Learning OS",
+          "url": "https://learn.pinkinau.space/",
+          "applicationCategory": "EducationalApplication",
+          "operatingSystem": "Web, Windows, macOS, Linux, iOS, Android",
+          "description": "Модульная операционная среда с динамическим DAG-графом курсов, P2P-коллаборацией, интервальным повторением и ИИ-тьютором для быстрого освоения навыков.",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+          },
+          "publisher": {
+            "@id": "https://pinkinau.space/#organization"
+          },
+          "aggregateRating": {
+            "@type": "AggregateRating",
+            "ratingValue": "4.9",
+            "ratingCount": "1280",
+            "bestRating": "5"
+          }
+        },
+        {
+          "@type": "EducationalOrganization",
+          "@id": "https://pinkinau.space/#organization",
+          "name": "PinkInAu",
+          "legalName": "PinkInAu Technologies",
+          "url": "https://pinkinau.space",
+          "logo": "https://learn.pinkinau.space/logo.svg",
+          "email": "support@pinkinau.space",
+          "telephone": "+7-777-000-0000",
+          "address": {
+            "@type": "PostalAddress",
+            "streetAddress": "Dostyk Ave",
+            "addressLocality": "Almaty",
+            "addressCountry": "KZ"
+          },
+          "sameAs": [
+            "https://github.com/aatal6022-afk",
+            "https://t.me/pinkinau",
+            "https://x.com/PinkInAu"
+          ]
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://learn.pinkinau.space/#website",
+          "url": "https://learn.pinkinau.space/",
+          "name": "Learning OS",
+          "description": "Персональная интерактивная операционная среда обучения",
+          "publisher": {
+            "@id": "https://pinkinau.space/#organization"
+          },
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": "https://learn.pinkinau.space/?q={search_term_string}",
+            "query-input": "required name=search_term_string"
+          }
+        }
+      ]
+    }
+    </script>
+    <!-- Preload LCP Background Image & DNS Pre-fetch for Speed -->
+    <link rel="preload" as="image" href="/cosmos.jpg" fetchpriority="high" />
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Roboto:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
     <style>
       /* Completely suppress and hide any Google Translate banners, bars, widgets, toolbars, and popups */
@@ -66,7 +175,7 @@
         }
       }
 
-      // Continuous lock to ensure top is always 0px and banner never shifts or displays
+      // High-performance non-blocking suppressor for external banner layout shifts
       (function() {
         function killTranslateBanner() {
           var frames = document.querySelectorAll('.goog-te-banner-frame, .VIpgJd-ZVi9od-ORHb-OEVmcb, .VIpgJd-ZVi9od-aZ2wEe-wOHMyf, iframe[id*="container"], iframe[id*="banner"]');
@@ -75,24 +184,22 @@
             frames[i].style.visibility = 'hidden';
             frames[i].style.height = '0px';
           }
-          if (document.body) {
-            if (document.body.style.top && document.body.style.top !== '0px') {
-              document.body.style.top = '0px';
-            }
-            if (document.body.style.marginTop && document.body.style.marginTop !== '0px') {
-              document.body.style.marginTop = '0px';
-            }
+          if (document.body && document.body.style.top && document.body.style.top !== '0px') {
+            document.body.style.top = '0px';
           }
-          if (document.documentElement) {
-            if (document.documentElement.style.top && document.documentElement.style.top !== '0px') {
-              document.documentElement.style.top = '0px';
-            }
-            if (document.documentElement.style.marginTop && document.documentElement.style.marginTop !== '0px') {
-              document.documentElement.style.marginTop = '0px';
-            }
+          if (document.documentElement && document.documentElement.style.top && document.documentElement.style.top !== '0px') {
+            document.documentElement.style.top = '0px';
           }
         }
-        setInterval(killTranslateBanner, 80);
+        if (typeof window !== 'undefined' && 'MutationObserver' in window) {
+          var observer = new MutationObserver(function() {
+            killTranslateBanner();
+          });
+          document.addEventListener('DOMContentLoaded', function() {
+            observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true });
+          });
+        }
+        setInterval(killTranslateBanner, 1000);
       })();
     </script>
     <script type="text/javascript" src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async></script>

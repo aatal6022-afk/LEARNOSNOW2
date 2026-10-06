@@ -78,9 +78,17 @@ import { normalizeDagLayout } from './utils/dagLayout.ts';
 import { socialProfileService } from './services/socialProfileService.ts';
 import { isShortcutCaptureActive, keyboardEventToShortcut, loadKeyboardShortcuts, SHORTCUT_DEFINITIONS } from './services/keyboardShortcuts.ts';
 import { telemetryGoalTracker } from './services/telemetryGoalTracker.ts';
+import { NotFound404Page } from './components/common/NotFound404Page.tsx';
 
 export default function App() {
-  const portfolioUid = new URLSearchParams(window.location.search).get('portfolio')?.trim();
+  const searchParams = new URLSearchParams(window.location.search);
+  const portfolioUid = searchParams.get('portfolio')?.trim();
+  const is404 = window.location.pathname === '/404' || searchParams.get('page') === '404' || searchParams.get('error') === '404';
+
+  if (is404) {
+    return <NotFound404Page onGoHome={() => { window.location.href = '/'; }} />;
+  }
+
   return portfolioUid ? <PublicPortfolioPage uid={portfolioUid} /> : <LearningOSApp />;
 }
 

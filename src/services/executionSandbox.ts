@@ -43,13 +43,23 @@ class ExecutionSandboxService {
       };
     }
 
+    let resolvedLanguage = language;
+    if (!resolvedLanguage || resolvedLanguage === 'python') {
+      // Smart detection if code clearly contains JavaScript/TypeScript syntax
+      const isJsTs = /^(import\s.+from|export\s|const\s|let\s|var\s|function\s|class\s.+\{|\bconsole\.log\b|\basync\s+function|\binterface\s|\btype\s+[A-Z]|\b=>)/m.test(code.trim());
+      const isPy = /^(def\s+|import\s+[a-z_0-9]+|from\s+[a-z_0-9]+\s+import|print\(|elif\s+|class\s+[A-Za-z0-9_]+:)/m.test(code.trim());
+      if (isJsTs && !isPy) {
+        resolvedLanguage = 'typescript';
+      }
+    }
+
     try {
       const response = await fetch('/api/code/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           code,
-          language,
+          language: resolvedLanguage,
           tests,
           timeoutMs: 8000,
         }),
@@ -79,7 +89,7 @@ class ExecutionSandboxService {
     const testResults: ExecutionTestResult[] = [];
     let isSuccess = true;
 
-    if (language === 'javascript' || language === 'typescript') {
+    if (resolvedLanguage === 'javascript' || resolvedLanguage === 'typescript') {
       try {
         const customConsole = {
           log: (...args: any[]) => logs.push({ type: 'log', text: args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' '), time: Date.now() }),
@@ -104,7 +114,14 @@ class ExecutionSandboxService {
           'location'
         ];
 
-        const fn = new Function(...shadowEnvParams, `"use strict";\n${code}`);
+        // Lightly clean common TS-specific syntax for client execution fallback
+        let executableJs = code
+          .replace(/:\s*(?:string|number|boolean|any|void|unknown|never|Record<[^>]+>|Array<[^>]+>|[A-Z][a-zA-Z0-9_]*)(?:\[\])?(?=[\s,=);])/g, '')
+          .replace(/as\s+[a-zA-Z0-9_<>[\]]+/g, '')
+          .replace(/interface\s+[A-Za-z0-9_]+\s*\{[^}]*\}/g, '')
+          .replace(/type\s+[A-Za-z0-9_]+\s*=[^;]+;/g, '');
+
+        const fn = new Function(...shadowEnvParams, `"use strict";\n${executableJs}`);
         fn(customConsole, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined);
 
         if (logs.length === 0) {

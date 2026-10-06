@@ -1,4 +1,5 @@
 import express from 'express';
+import compression from 'compression';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import { apiRouter } from './server/apiRouter';
@@ -19,6 +20,15 @@ async function startServer() {
 
   app.disable('x-powered-by');
 
+  // Gzip / Deflate Response Compression for Max Speed & SEO Performance
+  app.use(compression({
+    filter: (req, res) => {
+      if (req.headers['x-no-compression']) return false;
+      return compression.filter(req, res);
+    },
+    threshold: 1024,
+  }));
+
   // OWASP Standard Security Headers
   app.use(securityHeaders);
 
@@ -38,6 +48,20 @@ async function startServer() {
   app.use(express.urlencoded({ extended: true, limit: '15mb' }));
   app.use(sanitizeInputMiddleware);
 
+  // Explicit SEO Endpoints: robots.txt and sitemap.xml
+  const publicDir = path.resolve(process.cwd(), 'public');
+  app.get('/robots.txt', (req, res) => {
+    res.setHeader('Content-Type', 'text/plain');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.sendFile(path.join(publicDir, 'robots.txt'));
+  });
+
+  app.get('/sitemap.xml', (req, res) => {
+    res.setHeader('Content-Type', 'application/xml');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.sendFile(path.join(publicDir, 'sitemap.xml'));
+  });
+
   // Anti-DDoS & Sliding Window Rate Limiting on /api
   app.use('/api', apiRateLimiter);
 
@@ -50,6 +74,14 @@ async function startServer() {
   app.use('/company', express.static(pinkinauLandingPath));
   app.get('/company', (req, res) => res.sendFile(path.join(pinkinauLandingPath, 'index.html')));
   app.get('/pinkinau', (req, res) => res.sendFile(path.join(pinkinauLandingPath, 'index.html')));
+
+  // Serve Static assets from /public with caching
+  app.use(express.static(publicDir, { maxAge: '7d' }));
+
+  // Explicit 404 Error Page
+  app.get('/404', (req, res) => {
+    res.status(404).sendFile(path.join(publicDir, '404.html'));
+  });
 
   // Vite middleware for development vs static build for production
   if (process.env.NODE_ENV !== 'production' && !process.env.SERVE_STATIC) {

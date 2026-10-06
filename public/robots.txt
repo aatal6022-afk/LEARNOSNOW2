@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+
+Sitemap: https://learn.pinkinau.space/sitemap.xml
+Host: learn.pinkinau.space

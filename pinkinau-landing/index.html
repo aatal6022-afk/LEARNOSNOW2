@@ -3,9 +3,43 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PinkInAu — Digital Products & Platforms</title>
-  <meta name="description" content="PinkInAu — технологиялық компания, цифрлық өнімдер мен оқу операциялық орталарын әзірлеуші." />
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='46' fill='%23F43F5E'/><text x='50' y='65' font-size='44' font-family='system-ui, sans-serif' font-weight='700' fill='white' text-anchor='middle'>P</text></svg>" />
+  <title>PinkInAu — Цифровые продукты, платформы и операционные среды</title>
+  <meta name="description" content="PinkInAu — технологическая компания, разработчик интерактивных цифровых продуктов, операционных сред и платформ обучения человека." />
+  <link rel="canonical" href="https://learn.pinkinau.space/company" />
+  <link rel="icon" type="image/svg+xml" href="./assets/logo.svg" />
+
+  <!-- OpenGraph Social Sharing -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://learn.pinkinau.space/company" />
+  <meta property="og:title" content="PinkInAu — Цифровые продукты, платформы и операционные среды" />
+  <meta property="og:description" content="PinkInAu — технологическая компания, разработчик интерактивных цифровых продуктов, операционных сред и платформ обучения человека." />
+  <meta property="og:site_name" content="PinkInAu" />
+  <meta property="og:image" content="https://learn.pinkinau.space/cosmos.jpg" />
+
+  <!-- Twitter / X Cards -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:site" content="@PinkInAu" />
+  <meta name="twitter:title" content="PinkInAu — Цифровые продукты, платформы и операционные среды" />
+  <meta name="twitter:description" content="PinkInAu — технологическая компания, разработчик интерактивных цифровых продуктов, операционных сред и платформ обучения человека." />
+  <meta name="twitter:image" content="https://learn.pinkinau.space/cosmos.jpg" />
+
+  <!-- Schema.org JSON-LD -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "PinkInAu",
+    "legalName": "PinkInAu Technologies",
+    "url": "https://pinkinau.space",
+    "logo": "https://learn.pinkinau.space/logo.svg",
+    "description": "Разработчик программных продуктов, платформ и операционных сред для человека.",
+    "sameAs": [
+      "https://github.com/aatal6022-afk",
+      "https://t.me/pinkinau",
+      "https://x.com/PinkInAu"
+    ]
+  }
+  </script>
   
   <!-- Clean Modern Typography -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -673,6 +707,15 @@
       if (isManual) {
         localStorage.setItem('pinkinau_lang_manual', 'true');
         localStorage.setItem('pinkinau_lang', lang);
+        try {
+          const url = new URL(window.location.href);
+          url.searchParams.set('lang', lang);
+          window.location.href = url.toString();
+          return;
+        } catch (e) {
+          window.location.reload();
+          return;
+        }
       }
       syncGoogleTranslate(lang);
 
@@ -703,6 +746,18 @@
 
     // Auto Geo IP & Browser detection on page load
     async function autoDetectLanguage() {
+      // 0. Check URL query param first
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlLang = urlParams.get('lang');
+        if (urlLang && translations[urlLang]) {
+          localStorage.setItem('pinkinau_lang_manual', 'true');
+          localStorage.setItem('pinkinau_lang', urlLang);
+          setLanguage(urlLang, false);
+          return;
+        }
+      } catch (e) {}
+
       const isManual = localStorage.getItem('pinkinau_lang_manual') === 'true';
       const saved = localStorage.getItem('pinkinau_lang');
       if (isManual && saved && translations[saved]) {

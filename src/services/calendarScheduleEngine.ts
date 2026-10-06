@@ -206,8 +206,9 @@ export function generateCurriculumSchedule(
         const durationMin = node.estimatedTimeMin || slotTpl.duration;
         const [startHour, startMin] = slotTpl.start.split(':').map(Number);
         const totalMinutes = startHour * 60 + startMin + durationMin;
-        const endHour = Math.min(23, Math.floor(totalMinutes / 60));
-        const endMinutes = totalMinutes % 60;
+        const rawEndHour = Math.floor(totalMinutes / 60);
+        const endHour = rawEndHour >= 24 ? 23 : rawEndHour;
+        const endMinutes = rawEndHour >= 24 ? 59 : totalMinutes % 60;
         const calculatedEndTime = `${String(endHour).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`;
 
         schedule.push({
