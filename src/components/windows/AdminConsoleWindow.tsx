@@ -34,7 +34,8 @@ import { AdminUnitRow, AdminMaterial } from '../../types.ts';
 import { INITIAL_ADMIN_MATERIALS } from '../../data/initialData.ts';
 import { playChime } from '../../utils/audio.ts';
 import { AdminStickersTab } from '../admin/AdminStickersTab.tsx';
-import { Smile } from 'lucide-react';
+import { Smile, Lock, LogOut, KeyRound, Eye } from 'lucide-react';
+import { releaseUpdatesService, ADMIN_PASSWORD } from '../../services/releaseUpdatesService.ts';
 
 interface AdminConsoleWindowProps {
   units: AdminUnitRow[];
@@ -55,6 +56,11 @@ export const AdminConsoleWindow: React.FC<AdminConsoleWindowProps> = ({
   initialTab,
   highlightMaterialId,
 }) => {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => releaseUpdatesService.isAdminAuthenticated());
+  const [passwordInput, setPasswordInput] = useState<string>('');
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [authError, setAuthError] = useState<string>('');
+
   const [activeTab, setActiveTab] = useState<'queue' | 'matrix' | 'royalties' | 'store' | 'stickers'>(initialTab || 'store');
   const [selectedQueueUnit, setSelectedQueueUnit] = useState<AdminUnitRow>(units[2] || units[0]);
   const [authorPool, setAuthorPool] = useState(18450);
@@ -433,6 +439,112 @@ export const AdminConsoleWindow: React.FC<AdminConsoleWindowProps> = ({
   const totalViews = units.reduce((acc, u) => acc + u.views, 0) || 1;
   const totalPass = units.reduce((acc, u) => acc + u.passRate, 0) || 1;
 
+  const handleAuthenticate = (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError('');
+    const entered = passwordInput.trim();
+    if (!entered) {
+      setAuthError('Введите код доступа администратора');
+      return;
+    }
+
+    if (entered === ADMIN_PASSWORD || releaseUpdatesService.authenticateAdmin(entered)) {
+      setIsAuthenticated(true);
+      setPasswordInput('');
+      setAuthError('');
+      playChime('success');
+    } else {
+      setAuthError('Неверный код доступа администратора');
+      playChime('alert');
+    }
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="h-full flex items-center justify-center p-6 bg-slate-900/90 backdrop-blur-2xl text-slate-100 select-none">
+        <div className="w-full max-w-md bg-slate-800/90 border border-slate-700/80 rounded-3xl p-7 shadow-2xl space-y-6 text-center animate-fade-in relative overflow-hidden">
+          {/* Glows */}
+          <div className="absolute -top-24 -right-24 w-48 h-48 bg-rose-500/20 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
+
+          {/* Icon Badge */}
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-tr from-rose-500 to-indigo-600 p-0.5 shadow-lg flex items-center justify-center">
+            <div className="w-full h-full bg-slate-900 rounded-[14px] flex items-center justify-center">
+              <Lock className="w-7 h-7 text-rose-400" />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <h2 className="text-lg font-bold text-white tracking-tight">
+              Панель администратора
+            </h2>
+            <p className="text-xs text-slate-400 leading-relaxed max-w-sm mx-auto">
+              Для доступа к управлению модерацией, магазину знаний и PNG-стикерам введите мастер-код доступа.
+            </p>
+          </div>
+
+          {/* Form */}
+          <form onSubmit={handleAuthenticate} className="space-y-4">
+            <div className="space-y-2 text-left">
+              <label className="text-[11px] font-semibold text-slate-300 block">
+                Код доступа администратора
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={passwordInput}
+                  onChange={(e) => {
+                    setPasswordInput(e.target.value);
+                    if (authError) setAuthError('');
+                  }}
+                  placeholder="Введите пароль администратора..."
+                  className="w-full px-4 py-2.5 pr-10 rounded-xl bg-slate-900/90 border border-slate-700 focus:border-rose-500 focus:outline-hidden text-xs text-white placeholder:text-slate-500 font-mono tracking-wide"
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-200 transition cursor-pointer"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+
+              {authError && (
+                <div className="text-[11px] text-rose-400 font-medium flex items-center space-x-1 animate-fade-in">
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                  <span>{authError}</span>
+                </div>
+              )}
+            </div>
+
+            <button
+              type="submit"
+              className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white font-bold text-xs shadow-lg shadow-rose-950/40 transition cursor-pointer flex items-center justify-center space-x-2"
+            >
+              <KeyRound className="w-4 h-4" />
+              <span>Войти в панель администратора</span>
+            </button>
+          </form>
+
+          <div className="pt-2 border-t border-slate-700/60 flex items-center justify-between text-[11px] text-slate-400">
+            <span>Безопасный контур управления</span>
+            <button
+              type="button"
+              onClick={() => {
+                setPasswordInput(ADMIN_PASSWORD);
+                if (authError) setAuthError('');
+              }}
+              className="text-rose-400 hover:text-rose-300 transition cursor-pointer font-medium"
+            >
+              Вставить код
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-full flex flex-col bg-white/95 backdrop-blur-2xl text-slate-800 text-xs select-none">
       {/* Metrics Top Header */}
@@ -521,6 +633,20 @@ export const AdminConsoleWindow: React.FC<AdminConsoleWindowProps> = ({
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Загрузить видео</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                releaseUpdatesService.logoutAdmin();
+                setIsAuthenticated(false);
+                playChime('click');
+              }}
+              className="px-2.5 py-1.5 rounded-xl bg-white/80 hover:bg-rose-50 text-slate-600 hover:text-rose-600 border border-slate-200/80 font-semibold flex items-center space-x-1 transition text-xs cursor-pointer shadow-2xs"
+              title="Выйти из панели администратора (Заблокировать)"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Выйти</span>
             </button>
           </div>
         </div>

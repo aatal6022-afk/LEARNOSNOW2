@@ -15,6 +15,7 @@ export interface AdminSticker {
   name: string;
   category: string;
   imageUrl: string; // PNG base64 Data URL or public PNG URL
+  price: number; // 0 for Free, or amount in Karma / Coins
   width?: number;
   height?: number;
   fileSizeKb?: number;
@@ -24,16 +25,15 @@ export interface AdminSticker {
 }
 
 const LOCAL_STORAGE_STICKERS_KEY = 'learning_os_admin_png_stickers_v2';
+const LOCAL_STORAGE_UNLOCKED_KEY = 'learning_os_unlocked_stickers_v1';
 const BROADCAST_CHANNEL_NAME = 'learning_os_stickers_sync_channel';
-
-// Default is completely EMPTY - all test stickers removed per user requirement!
-const DEFAULT_STICKERS: AdminSticker[] = [];
 
 class StickerService {
   private stickers: AdminSticker[] = [];
   private broadcast: BroadcastChannel | null = null;
   private listeners: Set<(stickers: AdminSticker[]) => void> = new Set();
   private isHydrated: boolean = false;
+  private unlockedStickerIds: Set<string> = new Set();
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -56,6 +56,7 @@ class StickerService {
       } catch {}
 
       this.hydrateFromLocalStorage();
+      this.hydrateUnlockedStickers();
     }
   }
 
@@ -65,7 +66,10 @@ class StickerService {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          this.stickers = parsed;
+          this.stickers = parsed.map((stk) => ({
+            ...stk,
+            price: typeof stk.price === 'number' ? Math.max(0, stk.price) : 0,
+          }));
           this.isHydrated = true;
           return;
         }
@@ -76,6 +80,24 @@ class StickerService {
     // Default: empty array, NO test stickers
     this.stickers = [];
     this.isHydrated = true;
+  }
+
+  private hydrateUnlockedStickers() {
+    try {
+      const saved = localStorage.getItem(LOCAL_STORAGE_UNLOCKED_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          this.unlockedStickerIds = new Set(parsed);
+        }
+      }
+    } catch {}
+  }
+
+  private saveUnlockedStickers() {
+    try {
+      localStorage.setItem(LOCAL_STORAGE_UNLOCKED_KEY, JSON.stringify(Array.from(this.unlockedStickerIds)));
+    } catch {}
   }
 
   private saveToLocalStorage() {
@@ -134,10 +156,14 @@ class StickerService {
         firestoreUnsub = onSnapshot(
           stickersCol,
           (snapshot) => {
-            const cloudStickers: AdminSticker[] = snapshot.docs.map((docSnap) => ({
-              ...docSnap.data(),
-              id: docSnap.id,
-            } as AdminSticker));
+            const cloudStickers: AdminSticker[] = snapshot.docs.map((docSnap) => {
+              const data = docSnap.data();
+              return {
+                ...data,
+                id: docSnap.id,
+                price: typeof data.price === 'number' ? Math.max(0, data.price) : 0,
+              } as AdminSticker;
+            });
 
             if (cloudStickers.length > 0 || snapshot.empty) {
               this.stickers = cloudStickers;
@@ -163,6 +189,37 @@ class StickerService {
   }
 
   /**
+   * Check if a sticker is unlocked for the current user
+   */
+  public isStickerUnlocked(sticker: AdminSticker): boolean {
+    if (!sticker || sticker.price <= 0) return true;
+    return this.unlockedStickerIds.has(sticker.id);
+  }
+
+  /**
+   * Purchase / Unlock sticker for user with Karma
+   */
+  public unlockSticker(sticker: AdminSticker, currentKarma: number): { success: boolean; newKarma: number; error?: string } {
+    if (this.isStickerUnlocked(sticker)) {
+      return { success: true, newKarma: currentKarma };
+    }
+
+    if (currentKarma < sticker.price) {
+      return {
+        success: false,
+        newKarma: currentKarma,
+        error: `Недостаточно очков кармы (${currentKarma} XP). Требуется ${sticker.price} XP для разблокировки стикера «${sticker.name}».`,
+      };
+    }
+
+    this.unlockedStickerIds.add(sticker.id);
+    this.saveUnlockedStickers();
+    const newKarma = currentKarma - sticker.price;
+
+    return { success: true, newKarma };
+  }
+
+  /**
    * Helper to process uploaded PNG file: validates MIME, checks dimensions, converts to DataURL
    */
   public async processPngFile(file: File): Promise<{
@@ -172,7 +229,6 @@ class StickerService {
     sizeKb: number;
   }> {
     if (!file.type.includes('png') && !file.name.toLowerCase().endsWith('.png')) {
-      // Still allow if it's an image, but warn / convert
       if (!file.type.startsWith('image/')) {
         throw new Error('Пожалуйста, выберите файл в формате PNG.');
       }
@@ -211,12 +267,13 @@ class StickerService {
   }
 
   /**
-   * Admin-only: Upload & register a new PNG sticker
+   * Admin-only: Upload & register a new PNG sticker with price
    */
   public async addSticker(params: {
     name: string;
     category: string;
     imageUrl: string;
+    price?: number;
     width?: number;
     height?: number;
     fileSizeKb?: number;
@@ -228,6 +285,7 @@ class StickerService {
       name: params.name.trim() || 'PNG Стикер',
       category: params.category.trim() || 'Общие',
       imageUrl: params.imageUrl,
+      price: typeof params.price === 'number' && !isNaN(params.price) ? Math.max(0, Math.floor(params.price)) : 0,
       width: params.width || 256,
       height: params.height || 256,
       fileSizeKb: params.fileSizeKb || 0,
@@ -252,6 +310,29 @@ class StickerService {
     }
 
     return newSticker;
+  }
+
+  /**
+   * Admin-only: Update sticker price
+   */
+  public async updateStickerPrice(id: string, newPrice: number): Promise<void> {
+    const validPrice = Math.max(0, Math.floor(newPrice || 0));
+    const target = this.stickers.find((s) => s.id === id);
+    if (!target) return;
+
+    target.price = validPrice;
+    this.stickers = [...this.stickers];
+    this.saveToLocalStorage();
+    this.notifyListeners();
+
+    if (isFirebaseConfigured && db) {
+      try {
+        const docRef = doc(db, 'admin_stickers', id);
+        await setDoc(docRef, sanitizeFirestoreData(target), { merge: true });
+      } catch (err) {
+        console.warn('[StickerService] Firestore update sticker price warning:', err);
+      }
+    }
   }
 
   /**

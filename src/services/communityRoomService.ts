@@ -107,8 +107,19 @@ class CommunityRoomService {
       if (saved) {
         const list: CommunityRoom[] = JSON.parse(saved);
         if (Array.isArray(list)) {
+          const mockRoomIds = new Set([
+            'room-highload-sys',
+            'room-ai-agents',
+            'room-frontend-craft',
+            'room-algorithms-pro',
+            'room-private-vip-sre',
+            'room-frontend-react',
+            'room-algorithms-arena',
+            'room-security-pentest',
+            'room-databases-sql',
+          ]);
           list.forEach((r) => {
-            if (r && r.id) {
+            if (r && r.id && !mockRoomIds.has(r.id)) {
               this.localRoomsCache.set(r.id, this.sanitizeCachedRoom(r));
             }
           });

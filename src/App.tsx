@@ -1413,9 +1413,9 @@ function LearningOSApp() {
         lastSyncTime={lastFirestoreSyncTime}
         isCollabCursorsEnabled={isCollabCursorsEnabled}
         onToggleCollabCursors={() => {
-          if (!partner && !peerCollabSync.isDemoPartnerActive()) {
+          if (!partner) {
             setActiveTab('partner_search');
-            showNotification('Подключите напарника по коду, через очередь или нажмите «Демо-напарник (тест)»', 'info');
+            showNotification('Подключите напарника по коду комнаты или через поиск', 'info');
           } else {
             setIsCollabCursorsEnabled((prev) => {
               const next = !prev;

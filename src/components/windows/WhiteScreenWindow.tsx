@@ -668,30 +668,12 @@ export const WhiteScreenWindow: React.FC<WhiteScreenWindowProps> = ({
 
           <div className="h-4 w-px bg-slate-200 mx-1" />
 
-          {/* Quick Demo Partner Toggle */}
-          <button
-            type="button"
-            onClick={() => {
-              const active = peerCollabSync.toggleDemoPartner();
-              setIsDemoPartner(active);
-            }}
-            className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition border cursor-pointer ${
-              isDemoPartner
-                ? 'bg-slate-900 text-white border-slate-900 shadow-2xs'
-                : 'bg-white text-slate-700 hover:bg-slate-50 border-slate-200'
-            }`}
-            title={t('whiteboard.demoPartnerTooltip', 'Запустить виртуального напарника')}
-          >
-            <Play className={`w-3 h-3 ${isDemoPartner ? 'fill-current' : ''}`} />
-            <span>{isDemoPartner ? t('whiteboard.partnerActive', 'Напарник активен') : t('whiteboard.demoPartner', 'Демо-напарник')}</span>
-          </button>
-
           {/* Helper Modal Trigger */}
           <button
             type="button"
             onClick={() => setShowHelperModal(true)}
             className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition cursor-pointer"
-            title={t('whiteboard.infoTooltip', 'Как работает совместный белый экран и тест в 2 вкладках')}
+            title={t('whiteboard.infoTooltip', 'Как работает совместный белый экран и синхронизация')}
           >
             <Info className="w-4 h-4" />
           </button>
@@ -768,7 +750,9 @@ export const WhiteScreenWindow: React.FC<WhiteScreenWindowProps> = ({
             <img
               src={stk.imageUrl}
               alt={stk.name}
-              className="max-w-full max-h-full object-contain drop-shadow-md pointer-events-none"
+              className="max-w-full max-h-full object-contain drop-shadow-md pointer-events-none sticker-render-crisp [image-rendering:-webkit-optimize-contrast] [image-rendering:crisp-edges]"
+              loading="eager"
+              decoding="sync"
             />
             <div className="absolute -bottom-3 left-0 right-0 text-center opacity-0 group-hover:opacity-100 transition-opacity">
               <span className="text-[9px] bg-slate-900/80 text-white px-2 py-0.5 rounded-full font-medium">
@@ -855,19 +839,11 @@ export const WhiteScreenWindow: React.FC<WhiteScreenWindowProps> = ({
               </div>
 
               <div className="space-y-2">
-                <div className="font-semibold text-slate-900">Два способа проверки:</div>
+                <div className="font-semibold text-slate-900">Проверка совместной работы:</div>
                 <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200">
-                  <strong>1. Тест в одной вкладке прямо сейчас:</strong>
-                  <p className="mt-0.5 text-slate-600">
-                    Нажмите кнопку <strong>«Демо-напарник»</strong> в верхней панели. На экране появится курсор Алексея (Напарника), который плавно двигается и рисует. Ваш собственный курсор при этом полностью скрыт.
-                  </p>
-                </div>
-
-                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200">
-                  <strong>2. Тест в двух реальных окнах/вкладках:</strong>
-                  <p className="mt-0.5 text-slate-600">
-                    Скопируйте ссылку на страницу и откройте ее во второй вкладке (или окне инкогнито).
-                    В первой вкладке двигайте мышь — ваш курсор в ней не виден, но виден во второй вкладке! Во второй вкладке двигайте мышь — ее курсор виден в первой вкладке, а в своей скрыт!
+                  <p className="text-slate-600">
+                    Скопируйте ссылку на страницу и откройте ее во второй вкладке или отправьте напарнику.
+                    В первой вкладке двигайте мышь — ваш курсор в ней не виден, но виден во второй вкладке! Во второй вкладке двигайте мышь — ее курсор виден в первой вкладке, а в своей скрыт.
                   </p>
                   <button
                     type="button"
@@ -875,7 +851,7 @@ export const WhiteScreenWindow: React.FC<WhiteScreenWindowProps> = ({
                     className="mt-2 flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-900 text-white font-medium hover:bg-slate-800 transition cursor-pointer shadow-2xs"
                   >
                     {copiedLink ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                    <span>{copiedLink ? 'Ссылка скопирована!' : 'Скопировать ссылку для второй вкладки'}</span>
+                    <span>{copiedLink ? 'Ссылка скопирована!' : 'Скопировать ссылку для напарника'}</span>
                   </button>
                 </div>
               </div>

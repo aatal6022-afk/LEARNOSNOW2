@@ -15,7 +15,10 @@ import {
   Timer, 
   Check, 
   Bot,
-  GripVertical
+  GripVertical,
+  AlertCircle,
+  HelpCircle,
+  ExternalLink
 } from 'lucide-react';
 import { DAGNode, ScheduledLessonSlot, WeeklyResourceConfig, PeerPartner } from '../../types.ts';
 import { playChime } from '../../utils/audio.ts';
@@ -56,9 +59,16 @@ export const CalendarWindow: React.FC<CalendarWindowProps> = ({
     return initialWeeklyResource || localStorage.getItem('learning_os_time_resource') || '3 раза в неделю по 45 мин + суббота 2 часа';
   });
 
+  const [isIcsGuideOpen, setIsIcsGuideOpen] = useState<boolean>(false);
+
+  // Calculate real total course hours across all curriculum nodes
+  const totalCourseHours = useMemo(() => {
+    return Math.round(nodes.reduce((acc, n) => acc + (n.estimatedTimeMin || 28), 0) / 60);
+  }, [nodes]);
+
   const resourceConfig: WeeklyResourceConfig = useMemo(() => {
-    return parseWeeklyResource(weeklyResourceText);
-  }, [weeklyResourceText]);
+    return parseWeeklyResource(weeklyResourceText, totalCourseHours);
+  }, [weeklyResourceText, totalCourseHours]);
 
   // 2. Schedule Generation & Local Modifications
   const [scheduleSlots, setScheduleSlots] = useState<ScheduledLessonSlot[]>(() => {
@@ -232,20 +242,30 @@ export const CalendarWindow: React.FC<CalendarWindowProps> = ({
     handleMoveSlotToDate(slotId, formatDateKey(d), d.getDay());
   };
 
-  // Toggle slot completion status
+  // Toggle slot completion status with persistence
   const handleToggleComplete = (slotId: string) => {
-    setScheduleSlots((prev) =>
-      prev.map((s) => {
+    setScheduleSlots((prev) => {
+      const updated: ScheduledLessonSlot[] = prev.map((s) => {
         if (s.id === slotId) {
-          const nextStatus = s.status === 'completed' ? 'scheduled' : 'completed';
+          const nextStatus: ScheduledLessonSlot['status'] = s.status === 'completed' ? 'scheduled' : 'completed';
           if (nextStatus === 'completed' && onMarkLessonCompleted) {
             onMarkLessonCompleted(s.unitId);
           }
-          return { ...s, status: nextStatus };
+          return {
+            ...s,
+            status: nextStatus,
+            completedAt: nextStatus === 'completed' ? 'Завершено' : undefined,
+          };
         }
         return s;
-      })
-    );
+      });
+
+      try {
+        localStorage.setItem('learning_os_cached_schedule', JSON.stringify(updated));
+      } catch {}
+
+      return updated;
+    });
     playChime('success');
   };
 
@@ -261,8 +281,8 @@ export const CalendarWindow: React.FC<CalendarWindowProps> = ({
     link.click();
     document.body.removeChild(link);
     setIcsExportSuccess(true);
+    setIsIcsGuideOpen(true);
     playChime('success');
-    setTimeout(() => setIcsExportSuccess(false), 3000);
   };
 
   return (
@@ -374,10 +394,10 @@ export const CalendarWindow: React.FC<CalendarWindowProps> = ({
             type="button"
             onClick={handleExportIcs}
             className="hidden sm:flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg hover:bg-slate-50 border border-slate-200/80 text-slate-600 text-xs font-medium transition cursor-pointer"
-            title={t('calendar.exportTooltip', 'Экспортировать расписание в Apple Calendar / Google Calendar (.ics)')}
+            title={t('calendar.exportTooltip', 'Экспортировать расписание в Google Календарь / Яндекс / Apple Calendar (.ics)')}
           >
             {icsExportSuccess ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Download className="w-3.5 h-3.5 text-slate-400" />}
-            <span className="text-[11px]">{icsExportSuccess ? t('action.downloaded', 'Скачано') : t('action.export', 'Экспорт')}</span>
+            <span className="text-[11px]">{icsExportSuccess ? t('action.downloaded', 'Скачано (.ics)') : t('action.export', 'Экспорт')}</span>
           </button>
 
           {/* Resource Setting Button */}
@@ -396,17 +416,42 @@ export const CalendarWindow: React.FC<CalendarWindowProps> = ({
         </div>
       </div>
 
+      {/* Validation Alert Banner when input format is abnormal or out-of-bounds */}
+      {resourceConfig.isInputInvalid && resourceConfig.validationMessage && (
+        <div className="px-6 py-2 bg-amber-50/90 border-b border-amber-200 text-amber-900 text-xs flex items-center justify-between gap-2 animate-fade-in shrink-0">
+          <div className="flex items-center space-x-2">
+            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+            <span>{resourceConfig.validationMessage}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setTempResourceInput('5 дней в неделю по 1 часу');
+              setIsResourceModalOpen(true);
+              playChime('click');
+            }}
+            className="text-[11px] font-semibold text-amber-800 underline hover:text-amber-950 cursor-pointer ml-4 shrink-0"
+          >
+            {t('calendar.pickPreset', 'Выбрать готовый пресет')}
+          </button>
+        </div>
+      )}
+
       {/* 2. SUBTLE MINIMALIST INFO STRIP */}
-      <div className="px-6 py-2 bg-slate-50/70 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-600">
+      <div className="px-6 py-2 bg-slate-50/70 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-600 shrink-0">
         <div className="flex items-center space-x-2.5 text-[11px]">
           <div className="flex items-center space-x-1.5 text-slate-800 font-medium">
             <Clock className="w-3.5 h-3.5 text-slate-400" />
             <span>{resourceConfig.hoursPerWeek} {t('time.hoursPerWeek', 'ч / неделю')}</span>
           </div>
-          <span className="text-slate-300">·</span>
-          <span className="text-slate-500 truncate max-w-xs">
-            {resourceConfig.rawInput}
-          </span>
+          {!resourceConfig.isInputInvalid && resourceConfig.rawInput && (
+            <>
+              <span className="text-slate-300">·</span>
+              <span className="text-slate-500 truncate max-w-xs">
+                {resourceConfig.rawInput}
+              </span>
+            </>
+          )}
           <span className="text-slate-300 hidden md:inline">·</span>
           <div className="hidden md:flex items-center space-x-1 text-slate-600 text-[11px]">
             <Sparkles className="w-3 h-3 text-sky-500" />
@@ -945,6 +990,69 @@ export const CalendarWindow: React.FC<CalendarWindowProps> = ({
                 className="px-4 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium transition cursor-pointer shadow-xs"
               >
                 {t('action.save', 'Сохранить')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 5. HELPFUL MODAL: ICS CALENDAR IMPORT GUIDE */}
+      {isIcsGuideOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-fade-in">
+          <div className="w-full max-w-lg bg-white rounded-2xl p-6 border border-slate-200 shadow-2xl space-y-4 text-left text-slate-800">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center space-x-2.5">
+                <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-200/70">
+                  <Check className="w-4 h-4 text-emerald-600" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">
+                    Файл расписания (.ics) успешно скачан
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    Импортируйте его в любой удобный календарь
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsIcsGuideOpen(false)}
+                className="text-slate-400 hover:text-slate-700 text-xs p-1 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs text-slate-600 leading-relaxed">
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 space-y-1.5">
+                <div className="font-semibold text-slate-900 flex items-center space-x-1.5">
+                  <span>💡 Как открыть в Google / Яндекс Календаре:</span>
+                </div>
+                <ul className="list-disc list-inside space-y-1 text-slate-600 pl-1 text-[11px]">
+                  <li>
+                    <strong className="text-slate-800">Google Календарь:</strong> Откройте <code className="bg-white px-1 py-0.5 rounded border border-slate-200">calendar.google.com</code> ➔ Настройки (шестеренка) ➔ <strong>Импорт и экспорт</strong> ➔ выберите скачанный файл <code className="bg-white px-1 py-0.5 rounded border border-slate-200">.ics</code>.
+                  </li>
+                  <li>
+                    <strong className="text-slate-800">Яндекс Календарь:</strong> Откройте <code className="bg-white px-1 py-0.5 rounded border border-slate-200">calendar.yandex.ru</code> ➔ Настройки ➔ <strong>Импорт событий</strong> ➔ прикрепите файл.
+                  </li>
+                  <li>
+                    <strong className="text-slate-800">Apple Calendar / Mac / iPhone:</strong> Просто дважды кликните скачанный файл <code className="bg-white px-1 py-0.5 rounded border border-slate-200">.ics</code> или отправьте его на устройство.
+                  </li>
+                </ul>
+              </div>
+
+              <p className="text-[11px] text-slate-500">
+                Все 200 уроков, время практики, темы и ИИ-рекомендации автоматически добавятся с точными напоминаниями и тайм-слотами.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setIsIcsGuideOpen(false)}
+                className="px-5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition cursor-pointer shadow-xs"
+              >
+                Понятно, спасибо!
               </button>
             </div>
           </div>

@@ -859,11 +859,14 @@ apiRouter.post('/gemini/grounded-adapted-block', async (req, res) => {
     const params = req.body || {};
     const unitTitle = params.unitTitle || params.title || 'Учебный модуль';
     const category = params.category || 'Общая дисциплина';
+    const thinkingStyle = params.thinkingStyle || 'visual';
+    const userLevel = params.userLevel || 'intermediate';
     
-    // 1. Check Firestore Knowledge Cache first (only accept if rich and detailed >= 1000 chars, unless forceRefresh requested)
-    const cached = await FirestoreKnowledgeCache.getCachedLesson(unitTitle, category);
+    // 1. Check Firestore Knowledge Cache incorporating thinking style & user level
+    const cacheKey = `${unitTitle}__${thinkingStyle}__${userLevel}`;
+    const cached = await FirestoreKnowledgeCache.getCachedLesson(cacheKey, category);
     if (!params.forceRefresh && cached && cached.adaptedTheoryMarkdown && cached.adaptedTheoryMarkdown.length >= 1000 && Array.isArray(cached.practicalExercises)) {
-      console.log(`[API Route] HIT! Returning Firestore-cached adapted block for: "${unitTitle}"`);
+      console.log(`[API Route] HIT! Returning Firestore-cached adapted block for: "${cacheKey}"`);
       return res.json({
         ...cached,
         cachedInFirestore: true,
@@ -874,7 +877,7 @@ apiRouter.post('/gemini/grounded-adapted-block', async (req, res) => {
 
     // 2. Persist newly synthesized high-yield block to Firestore for all users & AI agents
     if (result && result.adaptedTheoryMarkdown) {
-      await FirestoreKnowledgeCache.saveCachedLesson(unitTitle, result, category);
+      await FirestoreKnowledgeCache.saveCachedLesson(cacheKey, result, category);
     }
 
     return res.json(result);
@@ -2018,18 +2021,6 @@ apiRouter.post('/gemini/adapt-material', async (req, res) => {
   }
 });
 
-// Grounded Adapted Lesson Block (Rich AI Lesson Synthesis for Unit 1, Unit 2, and any block)
-apiRouter.post('/gemini/grounded-adapted-block', async (req, res) => {
-  res.setHeader('Content-Type', 'application/json');
-  try {
-    const result = await generateGroundedAdaptedBlock(req.body || {});
-    return res.json(result);
-  } catch (err: any) {
-    console.error('[API Route] Error in grounded-adapted-block:', err?.message || err);
-    return res.status(500).json({ error: err?.message || 'Failed to adapt block' });
-  }
-});
-
 // Deep Unit Enrichment
 apiRouter.post('/gemini/enrich-unit', async (req, res) => {
   res.setHeader('Content-Type', 'application/json');
@@ -2334,262 +2325,9 @@ interface RoomWhiteboardData {
 
 const roomWhiteboardsStore: Map<string, RoomWhiteboardData> = new Map();
 
-// Initialize initial rich community rooms and distinct room whiteboards
+// Initialize initial rich community rooms (only real user-created rooms are kept)
 function seedCommunityRooms() {
-  if (communityRoomsStore.size > 0) return;
-
-  const seeds: StoredCommunityRoom[] = [
-    {
-      id: 'room-highload-sys',
-      name: '⚡ Highload & Distributed Systems Hub',
-      description: 'Спарринги по системному дизайну, отказоустойчивости, кворумам и консенсусу (Raft, Paxos, Kafka, Go/Rust).',
-      bioMarkdown: `### 🏛️ Манифест сообщества Distributed Systems\nМы собираемся для парного разбора сложных распределенных инвариантов.\n- **Формат:** 15 минут разбор теории + 30 минут стресс-аудит архитектуры.\n- **Роли:** Архитектор защищает решение, Аудитор генерирует 10x спайки и сбои сети.\n- **Правило:** никакого поверхностного кода, только доказанные инварианты.`,
-      avatarUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80',
-      bannerTheme: 'indigo_neon',
-      isPrivate: false,
-      creatorId: 'user_alex_arch',
-      creatorName: 'Алексей Архитектор',
-      creatorAvatar: '',
-      createdAt: new Date(Date.now() - 86400000 * 5).toISOString(),
-      category: 'Распределенные системы',
-      tags: ['Highload', 'System Design', 'Kafka', 'Consensus', 'Raft', 'Zero Downtime'],
-      memberCount: 38,
-      maxMembers: 50,
-      activeTopic: 'Идемпотентность и Circuit Breaker в микросервисах',
-      rules: ['Взаимное уважение', 'Обоснование через первоисточники', 'Разбор инцидентов'],
-      hasVoiceCall: true,
-      hasWhiteboard: true,
-      hasCodeEditor: true,
-      dailyRoomUrl: 'https://meet.jit.si/learning-os-community-highload#config.prejoinPageEnabled=false',
-      members: [
-        { userId: 'user_alex_arch', userName: 'Алексей Архитектор', role: 'owner', joinedAt: '2026-09-20', isOnline: true },
-        { userId: 'user_elena_sec', userName: 'Елена Безопасность', role: 'moderator', joinedAt: '2026-09-21', isOnline: true },
-        { userId: 'user_ivan_sre', userName: 'Иван SRE', role: 'architect', joinedAt: '2026-09-25', isOnline: false }
-      ],
-      feedPosts: [
-        {
-          id: 'post-1',
-          authorId: 'user_alex_arch',
-          authorName: 'Алексей Архитектор',
-          text: 'Сегодня в 19:00 проводим парный спарринг по Circuit Breaker и Rate Limiting. Присоединяйтесь в голосовой канал!',
-          createdAt: '2 часа назад',
-          likes: 12
-        }
-      ]
-    },
-    {
-      id: 'room-ai-agents',
-      name: '🧠 AI Agents & LLM Infrastructure',
-      description: 'Исследование автономных мультиагентных систем, RAG, чистой памяти и Gemini API.',
-      bioMarkdown: `### 🤖 AI Engineering Circle\nЛаборатория по разработке и калибровке агентных систем без галлюцинаций.\n- Реализация Socratic Scaffolding\n- Векторные базы данных и графовые индексы\n- Прямая работа с Gemini 2.5/3.1 API.`,
-      avatarUrl: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=150&auto=format&fit=crop&q=80',
-      bannerTheme: 'cyber_purple',
-      isPrivate: false,
-      creatorId: 'user_denis_ai',
-      creatorName: 'Денис AI Engineer',
-      createdAt: new Date(Date.now() - 86400000 * 3).toISOString(),
-      category: 'Искусственный интеллект',
-      tags: ['LLM', 'Gemini API', 'Agents', 'RAG', 'Vector Search', 'Prompting'],
-      memberCount: 29,
-      maxMembers: 50,
-      activeTopic: 'Анти-галлюцинаторные контуры памяти',
-      rules: ['Делиться кодом', 'Тестировать на реальных промптах'],
-      hasVoiceCall: true,
-      hasWhiteboard: true,
-      hasCodeEditor: true,
-      dailyRoomUrl: 'https://meet.jit.si/learning-os-community-ai#config.prejoinPageEnabled=false',
-      members: [
-        { userId: 'user_denis_ai', userName: 'Денис AI Engineer', role: 'owner', joinedAt: '2026-09-22', isOnline: true },
-        { userId: 'user_maria_ml', userName: 'Мария ML', role: 'member', joinedAt: '2026-09-23', isOnline: true }
-      ],
-      feedPosts: [
-        {
-          id: 'post-2',
-          authorId: 'user_denis_ai',
-          authorName: 'Денис AI Engineer',
-          text: 'Опубликовали новый шаблон P2P-переговоров агентов для этапа 4 блока. Проверьте в песочнице!',
-          createdAt: 'Вчера',
-          likes: 8
-        }
-      ]
-    },
-    {
-      id: 'room-frontend-craft',
-      name: '⚛️ React & Modern Frontend Masters',
-      description: 'Архитектура React SPA, Tailwind CSS, микроанимации, доступность и оптимизация рендеринга.',
-      bioMarkdown: `### 🎨 Frontend Architecture Lab\nЗдесь мы проектируем интерфейсы будущего: zero-pill эстетика, чистый TypeScript и реактивный стек.`,
-      avatarUrl: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=150&auto=format&fit=crop&q=80',
-      bannerTheme: 'emerald_matrix',
-      isPrivate: false,
-      creatorId: 'user_kira_front',
-      creatorName: 'Кира Frontend Lead',
-      createdAt: new Date(Date.now() - 86400000 * 7).toISOString(),
-      category: 'Фронтенд & UI/UX',
-      tags: ['React', 'TypeScript', 'Tailwind', 'Performance', 'UI Design'],
-      memberCount: 44,
-      maxMembers: 50,
-      activeTopic: 'Кастомный курсор и совместная работа без лагов',
-      rules: ['Код-ревью для всех участников', 'Никакого AI-slop в верстке'],
-      hasVoiceCall: true,
-      hasWhiteboard: true,
-      hasCodeEditor: true,
-      dailyRoomUrl: 'https://meet.jit.si/learning-os-community-frontend#config.prejoinPageEnabled=false',
-      members: [
-        { userId: 'user_kira_front', userName: 'Кира Frontend Lead', role: 'owner', joinedAt: '2026-09-15', isOnline: true }
-      ],
-      feedPosts: []
-    },
-    {
-      id: 'room-algorithms-pro',
-      name: '🏆 Олимпиадные алгоритмы & Собеседования',
-      description: 'Интенсивные тренировки по графам, динамическому программированию, деревьям и LeetCode Hard.',
-      bioMarkdown: `### 🎯 Алгоритмический ринг\nРешаем сложные олимпиадные кейсы, разбираем доказательства корректности и асимптотики.`,
-      avatarUrl: 'https://images.unsplash.com/photo-1509228468518-180dd4864904?w=150&auto=format&fit=crop&q=80',
-      bannerTheme: 'sunset_fire',
-      isPrivate: false,
-      creatorId: 'user_max_algo',
-      creatorName: 'Максим Олимпиадник',
-      createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-      category: 'Алгоритмы & Структуры данных',
-      tags: ['Algorithms', 'LeetCode', 'Graphs', 'DP', 'Complexity'],
-      memberCount: 21,
-      maxMembers: 30,
-      activeTopic: 'Топологическая сортировка и детекция циклов в DAG',
-      rules: ['Строгие формулировки', 'Анализ O(N) по времени и памяти'],
-      hasVoiceCall: true,
-      hasWhiteboard: true,
-      hasCodeEditor: true,
-      dailyRoomUrl: 'https://meet.jit.si/learning-os-community-algo#config.prejoinPageEnabled=false',
-      members: [
-        { userId: 'user_max_algo', userName: 'Максим Олимпиадник', role: 'owner', joinedAt: '2026-09-26', isOnline: true }
-      ],
-      feedPosts: []
-    },
-    {
-      id: 'room-private-vip-sre',
-      name: '🔒 SRE & Security Incident Response (Закрытая группа)',
-      description: 'Закрытый клуб для моделирования боевых инцидентов и стресс-тестирования инфраструктуры.',
-      bioMarkdown: `### 🛡️ Private DevSecOps Group\nТолько по коду доступа. Моделируем атаки, утечки памяти и сетевые разделения (Split-Brain).`,
-      avatarUrl: 'https://images.unsplash.com/photo-1563986768609-322da13575f3?w=150&auto=format&fit=crop&q=80',
-      bannerTheme: 'midnight_glass',
-      isPrivate: true,
-      accessCode: 'SRE-2026',
-      creatorId: 'user_artem_sre',
-      creatorName: 'Артем Principal SRE',
-      createdAt: new Date(Date.now() - 86400000 * 4).toISOString(),
-      category: 'Безопасность & DevOps',
-      tags: ['Private', 'Security', 'SRE', 'Chaos Engineering'],
-      memberCount: 8,
-      maxMembers: 12,
-      activeTopic: 'Разбор инцидента каскадного отказа БД',
-      rules: ['Конфиденциальность', 'PIN-доступ'],
-      hasVoiceCall: true,
-      hasWhiteboard: true,
-      hasCodeEditor: true,
-      dailyRoomUrl: 'https://meet.jit.si/learning-os-community-private-sre#config.prejoinPageEnabled=false',
-      members: [
-        { userId: 'user_artem_sre', userName: 'Артем Principal SRE', role: 'owner', joinedAt: '2026-09-24', isOnline: true }
-      ],
-      feedPosts: []
-    }
-  ];
-
-  for (const s of seeds) {
-    communityRoomsStore.set(s.id, s);
-  }
-
-  // Seed unique room whiteboards
-  roomWhiteboardsStore.set('room-highload-sys', {
-    shapes: [
-      { id: 'hl-1', tool: 'rect', color: '#1a73e8', strokeWidth: 2, start: { x: 80, y: 100 }, end: { x: 300, y: 180 }, fill: false },
-      { id: 'hl-1t', tool: 'text', color: '#202124', strokeWidth: 16, start: { x: 100, y: 145 }, text: '🌐 API Gateway / Nginx', fontSize: 14 },
-      { id: 'hl-a1', tool: 'arrow', color: '#5f6368', strokeWidth: 2, start: { x: 190, y: 180 }, end: { x: 190, y: 250 } },
-      { id: 'hl-2', tool: 'rect', color: '#34a853', strokeWidth: 2, start: { x: 80, y: 250 }, end: { x: 300, y: 330 }, fill: false },
-      { id: 'hl-2t', tool: 'text', color: '#202124', strokeWidth: 16, start: { x: 100, y: 295 }, text: '⚙️ Go Microservice Worker', fontSize: 14 },
-      { id: 'hl-a2', tool: 'arrow', color: '#5f6368', strokeWidth: 2, start: { x: 300, y: 290 }, end: { x: 420, y: 290 } },
-      { id: 'hl-3', tool: 'circle', color: '#ea4335', strokeWidth: 2, start: { x: 420, y: 230 }, end: { x: 600, y: 350 }, fill: false },
-      { id: 'hl-3t', tool: 'text', color: '#202124', strokeWidth: 16, start: { x: 445, y: 295 }, text: '⚡ Redis Quorum / Raft', fontSize: 13 }
-    ],
-    stickies: [
-      {
-        id: 'hl-st-1',
-        x: 650,
-        y: 100,
-        width: 220,
-        height: 150,
-        text: '📌 Инвариант Highload:\nИдемпотентный ключ в заголовке X-Idempotency-Key сохраняет транзакцию при ретраях.',
-        color: '#fef08a',
-        author: 'Алексей Архитектор'
-      }
-    ],
-    lastModified: new Date().toISOString()
-  });
-
-  roomWhiteboardsStore.set('room-ai-agents', {
-    shapes: [
-      { id: 'ai-1', tool: 'rect', color: '#9333ea', strokeWidth: 2, start: { x: 100, y: 100 }, end: { x: 340, y: 180 }, fill: false },
-      { id: 'ai-1t', tool: 'text', color: '#202124', strokeWidth: 16, start: { x: 120, y: 145 }, text: '🧠 Prompt & Clean Memory', fontSize: 14 },
-      { id: 'ai-a1', tool: 'arrow', color: '#5f6368', strokeWidth: 2, start: { x: 220, y: 180 }, end: { x: 220, y: 250 } },
-      { id: 'ai-2', tool: 'rect', color: '#1a73e8', strokeWidth: 2, start: { x: 100, y: 250 }, end: { x: 340, y: 330 }, fill: false },
-      { id: 'ai-2t', tool: 'text', color: '#202124', strokeWidth: 16, start: { x: 120, y: 295 }, text: '⚡ Gemini 2.5 Pro Agent', fontSize: 14 }
-    ],
-    stickies: [
-      {
-        id: 'ai-st-1',
-        x: 400,
-        y: 100,
-        width: 220,
-        height: 140,
-        text: '🤖 Заметка:\nSocratic Scaffolding запрещает выдавать готовый код до анализа студентом.',
-        color: '#e9d5ff',
-        author: 'Денис AI'
-      }
-    ],
-    lastModified: new Date().toISOString()
-  });
-
-  roomWhiteboardsStore.set('room-frontend-craft', {
-    shapes: [
-      { id: 'fe-1', tool: 'rect', color: '#34a853', strokeWidth: 2, start: { x: 100, y: 100 }, end: { x: 320, y: 170 }, fill: false },
-      { id: 'fe-1t', tool: 'text', color: '#202124', strokeWidth: 16, start: { x: 120, y: 140 }, text: '⚛️ React 19 SPA Root', fontSize: 14 }
-    ],
-    stickies: [
-      {
-        id: 'fe-st-1',
-        x: 370,
-        y: 100,
-        width: 210,
-        height: 130,
-        text: '🎨 Google Minimalism:\nИспользуем чистоту #ffffff, строгие отступы и crisp svg иконки.',
-        color: '#bbf7d0',
-        author: 'Кира Lead'
-      }
-    ],
-    lastModified: new Date().toISOString()
-  });
-
-  roomWhiteboardsStore.set('room-algorithms-pro', {
-    shapes: [
-      { id: 'alg-1', tool: 'circle', color: '#f9ab00', strokeWidth: 2, start: { x: 120, y: 100 }, end: { x: 260, y: 220 }, fill: false },
-      { id: 'alg-1t', tool: 'text', color: '#202124', strokeWidth: 16, start: { x: 155, y: 165 }, text: 'Node (u)', fontSize: 14 },
-      { id: 'alg-a1', tool: 'arrow', color: '#5f6368', strokeWidth: 2, start: { x: 260, y: 160 }, end: { x: 380, y: 160 } },
-      { id: 'alg-2', tool: 'circle', color: '#34a853', strokeWidth: 2, start: { x: 380, y: 100 }, end: { x: 520, y: 220 }, fill: false },
-      { id: 'alg-2t', tool: 'text', color: '#202124', strokeWidth: 16, start: { x: 415, y: 165 }, text: 'Node (v)', fontSize: 14 }
-    ],
-    stickies: [
-      {
-        id: 'alg-st-1',
-        x: 580,
-        y: 100,
-        width: 220,
-        height: 140,
-        text: '🏆 Kahn DAG Theorem:\nЕсли in-degree == 0, добавляем в очередь. Цикл найден, если посещено < N вершин.',
-        color: '#fed7aa',
-        author: 'Максим'
-      }
-    ],
-    lastModified: new Date().toISOString()
-  });
+  // No fake mock seeds: all groups are created and managed by real users
 }
 
 seedCommunityRooms();

@@ -15,38 +15,70 @@ export function parseWeeklyResource(rawInput?: string, totalCourseHours?: number
   let preferredDays = [1, 3, 5, 6]; // Mon, Wed, Fri, Sat
   let preferredTimeOfDay: 'morning' | 'day' | 'evening' | 'flexible' = 'evening';
   let intensity: 'light' | 'standard' | 'accelerated' | 'hardcore' = 'standard';
+  let isInputInvalid = false;
+  let validationMessage: string | undefined = undefined;
 
-  // Check composite patterns first before single regex match
-  if (text.includes('каждый день') || text.includes('ежедневно') || text.includes('7 дней')) {
-    preferredDays = [1, 2, 3, 4, 5, 6, 0];
-    sessionsPerWeek = 7;
-    hoursPerWeek = text.includes('2 час') ? 14 : text.includes('30 мин') ? 3.5 : 7;
-  } else if (text.includes('5 раз') || text.includes('будни')) {
+  // 1. Direct match for standard presets
+  if (text.includes('3 раза') && (text.includes('сб') || text.includes('суббот'))) {
+    // e.g. "3 раза в неделю по 45 мин + сб 2ч"
+    preferredDays = [1, 3, 5, 6];
+    sessionsPerWeek = 4;
+    hoursPerWeek = 4.25;
+  } else if ((text.includes('5 дней') || text.includes('5 раз') || text.includes('будни')) && (text.includes('1 час') || text.includes('1 ч') || text.includes('1ч'))) {
+    // e.g. "5 дней в неделю по 1 часу"
     preferredDays = [1, 2, 3, 4, 5];
     sessionsPerWeek = 5;
-    hoursPerWeek = text.includes('2 час') ? 10 : 6;
+    hoursPerWeek = 5;
+  } else if (text.includes('каждый день') || text.includes('ежедневно') || text.includes('7 дней')) {
+    preferredDays = [1, 2, 3, 4, 5, 6, 0];
+    sessionsPerWeek = 7;
+    hoursPerWeek = text.includes('2 час') ? 14 : text.includes('30 мин') ? 3.5 : text.includes('1.5') ? 10.5 : 7;
+  } else if (text.includes('5 раз') || text.includes('5 дней') || text.includes('будни')) {
+    preferredDays = [1, 2, 3, 4, 5];
+    sessionsPerWeek = 5;
+    hoursPerWeek = text.includes('2 час') ? 10 : text.includes('1.5') ? 7.5 : 5;
   } else if (text.includes('3 раза') || text.includes('3 дня')) {
     preferredDays = [1, 3, 5];
     sessionsPerWeek = 3;
-    if (text.includes('суббот')) {
-      preferredDays.push(6);
-      sessionsPerWeek = 4;
-      hoursPerWeek = text.includes('45 мин') ? (3 * 0.75 + 2) : 5.5; // ~4.25h
-    } else {
-      hoursPerWeek = text.includes('45 мин') ? 2.25 : 4;
-    }
-  } else if (text.includes('2 раза') || text.includes('выходны')) {
+    if (text.includes('45 мин')) hoursPerWeek = 2.25;
+    else if (text.includes('1.5') || text.includes('1,5')) hoursPerWeek = 4.5;
+    else if (text.includes('2 час')) hoursPerWeek = 6;
+    else hoursPerWeek = 3;
+  } else if (text.includes('выходны') || (text.includes('сб') && text.includes('вс'))) {
+    // e.g. "Выходные: сб и вс по 3 часа"
     preferredDays = [6, 0];
     sessionsPerWeek = 2;
-    hoursPerWeek = 4;
+    hoursPerWeek = text.includes('3 час') ? 6 : text.includes('2 час') ? 4 : text.includes('4 час') ? 8 : 6;
   } else {
-    // Extract hours if explicitly specified, e.g. "15 часов", "10 ч", "20 hours"
-    const hourMatch = text.match(/(\d+[\.,]?\d*)\s*(ч|час|hour|h)/i);
-    if (hourMatch && hourMatch[1]) {
-      const val = parseFloat(hourMatch[1].replace(',', '.'));
-      if (!isNaN(val) && val > 0 && val <= 60) {
-        hoursPerWeek = val;
+    // Try to extract numeric hours from strings like "4.25 ч/нед", "4,25ч/неделю", "10 часов в неделю", "20 hours"
+    const decimalHourMatch = text.match(/(\d+[\.,]?\d*)\s*(?:ч\/нед|ч\/неделю|часов|часа|час|ч|hour|h)/i);
+    const pureNumberMatch = text.match(/^(\d+[\.,]?\d*)$/);
+    const matchedNumber = decimalHourMatch?.[1] || pureNumberMatch?.[1];
+
+    if (matchedNumber) {
+      const val = parseFloat(matchedNumber.replace(',', '.'));
+      if (!isNaN(val) && val >= 1 && val <= 60) {
+        hoursPerWeek = Math.round(val * 100) / 100;
+        sessionsPerWeek = hoursPerWeek <= 3 ? 2 : hoursPerWeek <= 6 ? 4 : hoursPerWeek <= 12 ? 5 : 7;
+        if (sessionsPerWeek === 2) preferredDays = [6, 0];
+        else if (sessionsPerWeek === 4) preferredDays = [1, 3, 5, 6];
+        else if (sessionsPerWeek === 5) preferredDays = [1, 2, 3, 4, 5];
+        else preferredDays = [1, 2, 3, 4, 5, 6, 0];
+      } else {
+        // Value is out of bounds (<1 or >60)
+        isInputInvalid = true;
+        validationMessage = `Значение «${rawInput}» выходит за пределы допустимого диапазона (1–60 ч/нед). Установлен базовый темп: 6 ч/нед.`;
+        hoursPerWeek = 6;
+        sessionsPerWeek = 4;
+        preferredDays = [1, 3, 5, 6];
       }
+    } else if (text.length > 0) {
+      // User entered text that cannot be parsed as hours (e.g. letters, nonsense)
+      isInputInvalid = true;
+      validationMessage = `Не удалось распознать часы в строке «${rawInput}». Установлен рекомендуемый темп: 6 ч/нед.`;
+      hoursPerWeek = 6;
+      sessionsPerWeek = 4;
+      preferredDays = [1, 3, 5, 6];
     }
   }
 
@@ -57,8 +89,8 @@ export function parseWeeklyResource(rawInput?: string, totalCourseHours?: number
   else intensity = 'hardcore';
 
   // Target weeks calculation based on real course hours or fallback
-  const totalEstimatedHours = totalCourseHours && totalCourseHours > 0 ? totalCourseHours : 95;
-  const targetWeeksCount = Math.max(1, Math.ceil(totalEstimatedHours / Math.max(1, hoursPerWeek)));
+  const totalEstimatedHours = totalCourseHours && totalCourseHours > 0 ? totalCourseHours : 100;
+  const targetWeeksCount = Math.max(1, Math.ceil(totalEstimatedHours / Math.max(0.5, hoursPerWeek)));
 
   const finishDate = new Date();
   finishDate.setDate(finishDate.getDate() + targetWeeksCount * 7);
@@ -77,6 +109,8 @@ export function parseWeeklyResource(rawInput?: string, totalCourseHours?: number
     intensity,
     targetWeeksCount,
     targetCompletionDate,
+    isInputInvalid,
+    validationMessage,
   };
 }
 

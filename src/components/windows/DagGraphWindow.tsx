@@ -133,6 +133,44 @@ export const DagGraphWindow: React.FC<DagGraphWindowProps> = ({
     return unsub;
   }, [targetProfileUid]);
 
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      
+      const rect = container.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+
+      // Smooth exponential zoom factor based on wheel delta
+      const zoomFactor = e.deltaY < 0 ? 1.12 : 0.893;
+
+      setZoom((prevZoom) => {
+        const nextZoom = Math.min(2.5, Math.max(0.2, Math.round(prevZoom * zoomFactor * 100) / 100));
+        
+        // Pan so that the point under the cursor remains invariant during zooming
+        setPan((prevPan) => {
+          const graphX = (mouseX - prevPan.x) / prevZoom;
+          const graphY = (mouseY - prevPan.y) / prevZoom;
+          
+          return {
+            x: mouseX - graphX * nextZoom,
+            y: mouseY - graphY * nextZoom,
+          };
+        });
+
+        return nextZoom;
+      });
+    };
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+    return () => {
+      container.removeEventListener('wheel', handleWheel);
+    };
+  }, []);
+
   const refreshRetentions = () => {
     setRetentionsMap(spacedRepetition.getAllNodeRetentions());
   };
@@ -428,7 +466,7 @@ export const DagGraphWindow: React.FC<DagGraphWindowProps> = ({
             <button
               type="button"
               onClick={() => {
-                setZoom((z) => Math.min(1.5, z + 0.1));
+                setZoom((z) => Math.min(2.5, Math.round((z + 0.15) * 100) / 100));
                 playChime('click');
               }}
               className="p-1 hover:bg-white rounded transition text-slate-600 hover:text-slate-900 cursor-pointer"
@@ -440,7 +478,7 @@ export const DagGraphWindow: React.FC<DagGraphWindowProps> = ({
             <button
               type="button"
               onClick={() => {
-                setZoom((z) => Math.max(0.5, z - 0.1));
+                setZoom((z) => Math.max(0.2, Math.round((z - 0.15) * 100) / 100));
                 playChime('click');
               }}
               className="p-1 hover:bg-white rounded transition text-slate-600 hover:text-slate-900 cursor-pointer"

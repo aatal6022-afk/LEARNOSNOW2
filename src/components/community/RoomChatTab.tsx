@@ -43,7 +43,7 @@ import { BlockGraphicSnapshotCard } from '../learning/BlockGraphicSnapshotCard.t
 import { auth } from '../../firebase.ts';
 import { socialProfileService } from '../../services/socialProfileService.ts';
 import { StickerPickerPopover } from '../common/StickerPickerPopover.tsx';
-import { AdminSticker } from '../../services/stickerService.ts';
+import { AdminSticker, stickerService } from '../../services/stickerService.ts';
 
 export interface NoteAttachment {
   id: string;
@@ -185,9 +185,9 @@ export const RoomChatTab: React.FC<RoomChatTabProps> = ({
   const [pendingBlockSnapshot, setPendingBlockSnapshot] = useState<BlockGraphicSnapshot | null>(null);
   const [copiedMsgId, setCopiedMsgId] = useState<string | null>(null);
   
-  // Note / Block mention popover state
+  // Note / Block / Sticker mention popover state
   const [showMentionPopover, setShowMentionPopover] = useState(false);
-  const [mentionType, setMentionType] = useState<'note' | 'block' | 'all'>('all');
+  const [mentionType, setMentionType] = useState<'note' | 'block' | 'sticker' | 'all'>('all');
   const [mentionFilter, setMentionFilter] = useState('');
   
   const [isNotePickerModalOpen, setIsNotePickerModalOpen] = useState(false);
@@ -214,9 +214,17 @@ export const RoomChatTab: React.FC<RoomChatTabProps> = ({
   const [copiedNoteContent, setCopiedNoteContent] = useState(false);
   const [showParticipantsSidebar, setShowParticipantsSidebar] = useState(false);
   const [isStickerPickerOpen, setIsStickerPickerOpen] = useState(false);
+  const [allStickers, setAllStickers] = useState<AdminSticker[]>(() => stickerService.getAllStickers());
+
+  useEffect(() => {
+    const unsub = stickerService.subscribeStickers((list) => {
+      setAllStickers(list);
+    });
+    return () => unsub();
+  }, []);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
 
   const myUserId = currentUser?.uid || 'user-' + (localStorage.getItem('os_user_id') || 'guest');
   const myUserName = currentUser?.displayName || 'Студент';
@@ -704,6 +712,18 @@ export const RoomChatTab: React.FC<RoomChatTabProps> = ({
     );
   }, [userNotes, mentionFilter]);
 
+  // Filtered stickers for mention autocomplete
+  const filteredMentionStickers = useMemo(() => {
+    const q = mentionFilter.trim().toLowerCase();
+    const active = allStickers.filter((s) => s.isActive !== false);
+    if (!q) return active;
+    return active.filter(
+      (s) =>
+        s.name.toLowerCase().includes(q) ||
+        s.category.toLowerCase().includes(q)
+    );
+  }, [allStickers, mentionFilter]);
+
   // Realtime Firestore Chat Subscription
   useEffect(() => {
     const unsubscribeFirestore = communityRoomService.subscribeChatMessages(effectiveRoomId, (firestoreMsgs) => {
@@ -754,7 +774,7 @@ export const RoomChatTab: React.FC<RoomChatTabProps> = ({
     return () => unsub();
   }, [effectiveRoomId, room.id]);
 
-  // Detect "@" / "@note" / "@block" typing in input
+  // Detect "@" / "@note" / "@block" / "@sticker" typing in input
   const handleInputChange = (val: string) => {
     setInputMessage(val);
 
@@ -770,6 +790,9 @@ export const RoomChatTab: React.FC<RoomChatTabProps> = ({
         } else if (lower.startsWith('note') || lower.startsWith('конспект') || lower.startsWith('заметк')) {
           setMentionType('note');
           setMentionFilter(textAfterAt.replace(/^(note|конспект|заметк)[:\s]*/i, '').trim());
+        } else if (lower.startsWith('sticker') || lower.startsWith('стикер') || lower.startsWith('смайл')) {
+          setMentionType('sticker');
+          setMentionFilter(textAfterAt.replace(/^(sticker|стикер|смайл)[:\s]*/i, '').trim());
         } else {
           setMentionType('all');
           setMentionFilter(textAfterAt.trim());
@@ -777,6 +800,99 @@ export const RoomChatTab: React.FC<RoomChatTabProps> = ({
         return;
       }
     }
+    setShowMentionPopover(false);
+  };
+
+  const extractTextFromEditor = (element: HTMLElement | null): string => {
+    if (!element) return '';
+    let result = '';
+    
+    const traverse = (node: Node) => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        result += node.textContent || '';
+      } else if (node.nodeType === Node.ELEMENT_NODE) {
+        const el = node as HTMLElement;
+        if (el.tagName === 'IMG' && el.getAttribute('data-sticker-id')) {
+          const id = el.getAttribute('data-sticker-id');
+          const name = el.getAttribute('data-sticker-name') || '';
+          result += `[sticker:${id}:${name}]`;
+        } else if (el.tagName === 'BR') {
+          result += '\n';
+        } else if (el.tagName === 'DIV' || el.tagName === 'P') {
+          if (result.length > 0 && !result.endsWith('\n')) {
+            result += '\n';
+          }
+          el.childNodes.forEach(traverse);
+        } else {
+          el.childNodes.forEach(traverse);
+        }
+      }
+    };
+
+    element.childNodes.forEach(traverse);
+    return result;
+  };
+
+  const insertStickerIntoEditor = (sticker: AdminSticker) => {
+    const editor = editorRef.current;
+    if (!editor) return;
+
+    editor.focus();
+
+    const sel = window.getSelection();
+    let range: Range | null = null;
+    if (sel && sel.rangeCount > 0) {
+      const curRange = sel.getRangeAt(0);
+      if (editor.contains(curRange.commonAncestorContainer)) {
+        range = curRange;
+      }
+    }
+
+    if (!range) {
+      range = document.createRange();
+      range.selectNodeContents(editor);
+      range.collapse(false);
+    }
+
+    // Delete any active text selection
+    range.deleteContents();
+
+    // Create sticker image element rendered right inside the input field
+    const img = document.createElement('img');
+    img.src = sticker.imageUrl;
+    img.alt = `[sticker:${sticker.id}:${sticker.name}]`;
+    img.title = sticker.name;
+    img.setAttribute('data-sticker-id', sticker.id);
+    img.setAttribute('data-sticker-name', sticker.name);
+    img.className = 'inline-block w-12 h-12 sm:w-14 sm:h-14 max-w-[3.5rem] max-h-[3.5rem] align-middle mx-1.5 select-none cursor-default drop-shadow-sm object-contain sticker-render-crisp [image-rendering:-webkit-optimize-contrast] [image-rendering:crisp-edges]';
+    img.contentEditable = 'false';
+
+    const space = document.createTextNode('\u00A0');
+
+    range.insertNode(space);
+    range.insertNode(img);
+
+    // Move cursor after the space
+    range.setStartAfter(space);
+    range.setEndAfter(space);
+    if (sel) {
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+
+    const text = extractTextFromEditor(editor);
+    setInputMessage(text);
+    playChime('click');
+    setIsStickerPickerOpen(false);
+  };
+
+  const handleEditorInput = () => {
+    const text = extractTextFromEditor(editorRef.current);
+    handleInputChange(text);
+  };
+
+  const handleSelectMentionSticker = (sticker: AdminSticker) => {
+    insertStickerIntoEditor(sticker);
     setShowMentionPopover(false);
   };
 
@@ -797,14 +913,20 @@ export const RoomChatTab: React.FC<RoomChatTabProps> = ({
     if (lastAtIndex !== -1) {
       const beforeAt = inputMessage.substring(0, lastAtIndex);
       setInputMessage(`${beforeAt}@note: «${note.title}» `);
+      if (editorRef.current) {
+        editorRef.current.innerText = `${beforeAt}@note: «${note.title}» `;
+      }
     } else {
       setInputMessage((prev) => `${prev} @note: «${note.title}» `);
+      if (editorRef.current) {
+        editorRef.current.innerText = `${editorRef.current.innerText} @note: «${note.title}» `;
+      }
     }
 
     setShowMentionPopover(false);
     setIsNotePickerModalOpen(false);
     playChime('click');
-    textareaRef.current?.focus();
+    editorRef.current?.focus();
   };
 
   const handleAttachBlockSnapshot = (targetNode?: DAGNode, targetUnit?: LearningUnit) => {
@@ -819,16 +941,25 @@ export const RoomChatTab: React.FC<RoomChatTabProps> = ({
     if (lastAtIndex !== -1) {
       const beforeAt = inputMessage.substring(0, lastAtIndex);
       setInputMessage(`${beforeAt}@block[${snapshot.title}] `);
+      if (editorRef.current) {
+        editorRef.current.innerText = `${beforeAt}@block[${snapshot.title}] `;
+      }
     } else if (!inputMessage.trim()) {
       setInputMessage(`Посмотрите графический снимок блока: @block[${snapshot.title}] `);
+      if (editorRef.current) {
+        editorRef.current.innerText = `Посмотрите графический снимок блока: @block[${snapshot.title}] `;
+      }
     } else {
       setInputMessage((prev) => `${prev.trimEnd()} @block[${snapshot.title}] `);
+      if (editorRef.current) {
+        editorRef.current.innerText = `${editorRef.current.innerText.trimEnd()} @block[${snapshot.title}] `;
+      }
     }
 
     setShowMentionPopover(false);
     setIsBlockPickerModalOpen(false);
     playChime('success');
-    textareaRef.current?.focus();
+    editorRef.current?.focus();
   };
 
   const handleAttachCurrentBlockSnapshot = (unitToShare?: LearningUnit) => {
@@ -848,21 +979,50 @@ export const RoomChatTab: React.FC<RoomChatTabProps> = ({
   const renderMessageTextWithMentions = (text: string, isMe: boolean) => {
     if (!text) return null;
 
-    const mentionRegex = /(@block\[(.*?)\]|@block:\s*«(.*?)»|@note\[(.*?)\]|@note:\s*«(.*?)»)/g;
+    // Matches @block[...], @block: «...», @note[...], @note: «...», [sticker:id:name], [sticker:id], :[sticker:id]:
+    const tokenRegex = /(@block\[(.*?)\]|@block:\s*«(.*?)»|@note\[(.*?)\]|@note:\s*«(.*?)»|\[sticker:[^\]]+\]|:\[sticker:[^\]]+\]:)/g;
     const parts: React.ReactNode[] = [];
     let lastIndex = 0;
     let match: RegExpExecArray | null;
 
-    while ((match = mentionRegex.exec(text)) !== null) {
+    const stickerList = allStickers.length > 0 ? allStickers : stickerService.getAllStickers();
+
+    // Check if the message is ONLY a single sticker (standalone)
+    const singleStickerMatch = text.trim().match(/^\[sticker:([^:]+?)(?::([^\]]+?))?\]$/);
+    if (singleStickerMatch) {
+      const stkId = singleStickerMatch[1].trim();
+      const stkName = singleStickerMatch[2]?.trim() || '';
+      const foundStk = stickerList.find(
+        (s) => s.id === stkId || (stkName && s.name.toLowerCase() === stkName.toLowerCase()) || s.name.toLowerCase() === stkId.toLowerCase()
+      );
+      if (foundStk) {
+        return (
+          <div className="py-1.5">
+            <img
+              src={foundStk.imageUrl}
+              alt={foundStk.name}
+              title={foundStk.name}
+              className="max-w-[200px] max-h-[200px] sm:max-w-[240px] sm:max-h-[240px] object-contain drop-shadow-md hover:scale-105 transition-transform duration-150 cursor-pointer sticker-render-crisp [image-rendering:-webkit-optimize-contrast] [image-rendering:crisp-edges]"
+              loading="eager"
+              decoding="sync"
+              onClick={() => playChime('click')}
+            />
+          </div>
+        );
+      }
+    }
+
+    while ((match = tokenRegex.exec(text)) !== null) {
       if (match.index > lastIndex) {
         parts.push(text.substring(lastIndex, match.index));
       }
 
       const fullMatch = match[0];
-      const blockTitle = match[2] || match[3];
-      const noteTitle = match[5] || match[6];
 
-      if (blockTitle) {
+      if (fullMatch.startsWith('@block')) {
+        const blockMatch = fullMatch.match(/@block\[(.*?)\]|@block:\s*«(.*?)»/);
+        const blockTitle = blockMatch ? (blockMatch[1] || blockMatch[2] || '').trim() : '';
+
         const matchedNode = courseNodes.find(
           (n) => n.title.toLowerCase() === blockTitle.toLowerCase() ||
                  blockTitle.toLowerCase().includes(n.title.toLowerCase())
@@ -891,7 +1051,10 @@ export const RoomChatTab: React.FC<RoomChatTabProps> = ({
             <ExternalLink className="w-2.5 h-2.5 opacity-70 shrink-0" />
           </span>
         );
-      } else if (noteTitle) {
+      } else if (fullMatch.startsWith('@note')) {
+        const noteMatch = fullMatch.match(/@note\[(.*?)\]|@note:\s*«(.*?)»/);
+        const noteTitle = noteMatch ? (noteMatch[1] || noteMatch[2] || '').trim() : '';
+
         const matchedNote = userNotes.find(
           (n) => n.title.toLowerCase() === noteTitle.toLowerCase() ||
                  noteTitle.toLowerCase().includes(n.title.toLowerCase())
@@ -924,6 +1087,40 @@ export const RoomChatTab: React.FC<RoomChatTabProps> = ({
             <ExternalLink className="w-2.5 h-2.5 opacity-70 shrink-0" />
           </span>
         );
+      } else if (fullMatch.includes('[sticker:')) {
+        const stkMatch = fullMatch.match(/\[sticker:([^:]+?)(?::([^\]]+?))?\]/);
+        const stickerId = stkMatch ? stkMatch[1].trim() : '';
+        const stickerName = stkMatch && stkMatch[2] ? stkMatch[2].trim() : '';
+
+        const foundStk = stickerList.find(
+          (s) => s.id === stickerId || (stickerName && s.name.toLowerCase() === stickerName.toLowerCase()) || s.name.toLowerCase() === stickerId.toLowerCase()
+        );
+
+        if (foundStk) {
+          // Telegram-style prominent sticker in message
+          parts.push(
+            <img
+              key={`stk-inline-${match.index}`}
+              src={foundStk.imageUrl}
+              alt={foundStk.name}
+              title={foundStk.name}
+              className="inline-block w-12 h-12 sm:w-14 sm:h-14 max-w-[3.5rem] max-h-[3.5rem] align-middle mx-1.5 transition-transform duration-150 hover:scale-115 select-none shrink-0 drop-shadow-sm object-contain sticker-render-crisp [image-rendering:-webkit-optimize-contrast] [image-rendering:crisp-edges]"
+              loading="eager"
+              decoding="sync"
+            />
+          );
+        } else {
+          // If image is still resolving, render a clean fallback
+          parts.push(
+            <span
+              key={`stk-fallback-${match.index}`}
+              className="inline-block text-[1.4em] mx-[2px] select-none align-middle"
+              title={stickerName || stickerId}
+            >
+              🎨
+            </span>
+          );
+        }
       } else {
         parts.push(fullMatch);
       }
@@ -939,14 +1136,15 @@ export const RoomChatTab: React.FC<RoomChatTabProps> = ({
   };
 
   const handleSendMessage = async () => {
-    if (!inputMessage.trim() && pendingNotes.length === 0 && !pendingBlockSnapshot) return;
+    const rawText = (editorRef.current ? extractTextFromEditor(editorRef.current) : inputMessage).trim();
+    if (!rawText && pendingNotes.length === 0 && !pendingBlockSnapshot) return;
 
     const newMsg: RoomChatMessage = {
       id: 'msg-' + Date.now().toString(36) + '-' + Math.random().toString(36).substring(2, 6),
       senderId: myUserId,
       senderName: myUserName,
       senderAvatar: myUserAvatar,
-      text: inputMessage.trim(),
+      text: rawText,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       attachedNotes: pendingNotes.length > 0 ? [...pendingNotes] : undefined,
       attachedBlockSnapshot: pendingBlockSnapshot || undefined,
@@ -955,6 +1153,9 @@ export const RoomChatTab: React.FC<RoomChatTabProps> = ({
     // Optimistically add to UI
     setMessages((prev) => [...prev, newMsg]);
     setInputMessage('');
+    if (editorRef.current) {
+      editorRef.current.innerHTML = '';
+    }
     setPendingNotes([]);
     setPendingBlockSnapshot(null);
     setShowMentionPopover(false);
@@ -973,6 +1174,16 @@ export const RoomChatTab: React.FC<RoomChatTabProps> = ({
 
     // 2. Broadcast via WebRTC sync to active peers
     peerCollabSync.broadcastAction('room_chat_message', { message: newMsg, roomId: effectiveRoomId });
+  };
+
+  const handleSelectSticker = async (sticker: AdminSticker, mode: 'insert' | 'send' = 'insert') => {
+    if (mode === 'send') {
+      await handleSendSticker(sticker);
+      return;
+    }
+
+    // Insert directly into text inside the rich WYSIWYG editor
+    insertStickerIntoEditor(sticker);
   };
 
   const handleSendSticker = async (sticker: AdminSticker) => {
@@ -1238,7 +1449,7 @@ export const RoomChatTab: React.FC<RoomChatTabProps> = ({
 
                         {/* PNG Sticker */}
                         {msg.attachedSticker && (
-                          <div className="py-1">
+                          <div className="py-1.5">
                             <div 
                               className="inline-block relative group/stk"
                               title={`Стикер: ${msg.attachedSticker.name}`}
@@ -1246,7 +1457,9 @@ export const RoomChatTab: React.FC<RoomChatTabProps> = ({
                               <img
                                 src={msg.attachedSticker.imageUrl}
                                 alt={msg.attachedSticker.name}
-                                className="max-w-[130px] max-h-[130px] sm:max-w-[160px] sm:max-h-[160px] object-contain drop-shadow-md hover:scale-105 transition-transform duration-150 cursor-pointer"
+                                className="max-w-[200px] max-h-[200px] sm:max-w-[240px] sm:max-h-[240px] object-contain drop-shadow-md hover:scale-105 transition-transform duration-150 cursor-pointer sticker-render-crisp [image-rendering:-webkit-optimize-contrast] [image-rendering:crisp-edges]"
+                                loading="eager"
+                                decoding="sync"
                                 onClick={() => playChime('click')}
                               />
                               <div className={`text-[10px] font-medium mt-1 ${isMe ? 'text-blue-100' : 'text-slate-500'}`}>
@@ -1401,6 +1614,16 @@ export const RoomChatTab: React.FC<RoomChatTabProps> = ({
                       <BookOpen className="w-3 h-3" />
                       <span>Конспекты (@note)</span>
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => setMentionType('sticker')}
+                      className={`px-2 py-0.5 rounded-md font-medium transition cursor-pointer flex items-center space-x-1 ${
+                        mentionType === 'sticker' ? 'bg-rose-600 text-white shadow-2xs font-bold' : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <Smile className="w-3 h-3" />
+                      <span>Стикеры (@sticker)</span>
+                    </button>
                   </div>
 
                   <button
@@ -1413,6 +1636,50 @@ export const RoomChatTab: React.FC<RoomChatTabProps> = ({
                 </div>
 
                 <div className="overflow-y-auto max-h-56 divide-y divide-slate-100 p-1.5 custom-scrollbar space-y-0.5">
+                  {/* Stickers Section */}
+                  {(mentionType === 'all' || mentionType === 'sticker') && (
+                    <div className="space-y-1 pb-1">
+                      {mentionType === 'all' && (
+                        <div className="px-2 py-1 text-[10px] font-bold uppercase text-slate-400 flex items-center justify-between">
+                          <span className="flex items-center space-x-1">
+                            <Smile className="w-3 h-3 text-rose-600" />
+                            <span>PNG Стикеры (@sticker)</span>
+                          </span>
+                          <span className="text-[9px] font-normal lowercase">найдено: {filteredMentionStickers.length}</span>
+                        </div>
+                      )}
+
+                      {filteredMentionStickers.length === 0 ? (
+                        <div className="p-3 text-center text-xs text-slate-400">
+                          Стикеров по запросу не найдено
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-2 gap-1.5 p-1">
+                          {filteredMentionStickers.slice(0, 8).map((stk) => (
+                            <button
+                              key={`popover-sticker-${stk.id}`}
+                              type="button"
+                              onClick={() => handleSelectMentionSticker(stk)}
+                              className="w-full text-left p-2 rounded-xl bg-slate-50 hover:bg-rose-50 border border-slate-100 hover:border-rose-200 transition cursor-pointer flex items-center space-x-2 group"
+                            >
+                              <div className="w-8 h-8 rounded-lg bg-white p-1 border border-slate-200 flex items-center justify-center shrink-0">
+                                <img src={stk.imageUrl} alt={stk.name} className="max-w-full max-h-full object-contain" />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <span className="font-semibold text-xs text-slate-900 block truncate group-hover:text-rose-700">
+                                  {stk.name}
+                                </span>
+                                <span className="text-[9px] text-slate-400 truncate block">
+                                  {stk.price ? `${stk.price} XP` : 'Бесплатно'}
+                                </span>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {/* Blocks Section */}
                   {(mentionType === 'all' || mentionType === 'block') && (
                     <div className="space-y-1">
@@ -1525,8 +1792,9 @@ export const RoomChatTab: React.FC<RoomChatTabProps> = ({
               <StickerPickerPopover
                 isOpen={isStickerPickerOpen}
                 onClose={() => setIsStickerPickerOpen(false)}
-                onSelectSticker={handleSendSticker}
+                onSelectSticker={handleSelectSticker}
                 positionClassName="bottom-full mb-3 left-0 sm:left-2"
+                initialMode="insert"
               />
 
               <button
@@ -1535,7 +1803,7 @@ export const RoomChatTab: React.FC<RoomChatTabProps> = ({
                   setIsStickerPickerOpen((prev) => !prev);
                   playChime('click');
                 }}
-                title="Отправить PNG-стикер"
+                title="Вставить или отправить PNG-стикер"
                 className={`p-2 rounded-xl transition cursor-pointer shrink-0 ${
                   isStickerPickerOpen 
                     ? 'bg-rose-100 text-rose-600' 
@@ -1569,19 +1837,27 @@ export const RoomChatTab: React.FC<RoomChatTabProps> = ({
                 <AtSign className="w-4 h-4" />
               </button>
 
-              <textarea
-                ref={textareaRef}
-                rows={1}
-                placeholder={`Напишите в чат комнаты «${room.name}»... (@block / @note)`}
-                value={inputMessage}
-                onChange={(e) => handleInputChange(e.target.value)}
+              <div
+                ref={editorRef}
+                contentEditable
+                role="textbox"
+                aria-multiline="true"
+                suppressContentEditableWarning
+                data-placeholder={`Напишите в чат комнаты «${room.name}»... (@block / @note / @sticker)`}
+                onInput={handleEditorInput}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     handleSendMessage();
                   }
                 }}
-                className="flex-1 bg-transparent px-2 py-1.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-hidden resize-none min-h-[36px] max-h-32 leading-relaxed"
+                onPaste={(e) => {
+                  e.preventDefault();
+                  const text = e.clipboardData.getData('text/plain');
+                  document.execCommand('insertText', false, text);
+                  handleEditorInput();
+                }}
+                className="flex-1 bg-transparent px-2 py-1.5 text-xs text-slate-900 focus:outline-hidden resize-none min-h-[36px] max-h-32 overflow-y-auto leading-relaxed empty:before:content-[attr(data-placeholder)] empty:before:text-slate-400 empty:before:pointer-events-none whitespace-pre-wrap break-words"
               />
 
               <button

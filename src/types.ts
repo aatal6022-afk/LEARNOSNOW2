@@ -693,6 +693,8 @@ export interface WeeklyResourceConfig {
   intensity: 'light' | 'standard' | 'accelerated' | 'hardcore';
   targetWeeksCount: number;
   targetCompletionDate: string;
+  isInputInvalid?: boolean;
+  validationMessage?: string;
 }
 
 export type SphereLayerType = 'core' | 'mantle' | 'orbit';
@@ -968,6 +970,7 @@ export interface AdminSticker {
   name: string;
   category: string;
   imageUrl: string; // PNG base64 Data URL or public PNG URL
+  price: number; // 0 for Free, or amount in Karma / Coins
   width?: number;
   height?: number;
   fileSizeKb?: number;

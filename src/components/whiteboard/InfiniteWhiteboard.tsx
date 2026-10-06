@@ -1063,7 +1063,9 @@ export const InfiniteWhiteboard: React.FC<InfiniteWhiteboardProps> = ({
             <img
               src={stk.imageUrl}
               alt={stk.name}
-              className="max-w-full max-h-full object-contain drop-shadow-md transition-transform group-hover:scale-105 pointer-events-none"
+              className="max-w-full max-h-full object-contain drop-shadow-md transition-transform group-hover:scale-105 pointer-events-none sticker-render-crisp [image-rendering:-webkit-optimize-contrast] [image-rendering:crisp-edges]"
+              loading="eager"
+              decoding="sync"
             />
             <div className="absolute -bottom-4 left-0 right-0 text-center opacity-0 group-hover:opacity-100 transition-opacity">
               <span className="text-[9px] bg-black/70 backdrop-blur-xs text-white px-2 py-0.5 rounded-full font-medium shadow-xs">

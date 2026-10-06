@@ -548,6 +548,13 @@ export const FocusStudioWindow: React.FC<FocusStudioWindowProps> = ({
     setIsLoadingGroundedBlock(true);
     playChime('click');
 
+    const styleLabels: Record<string, string> = {
+      visual: '👁️ Визуальное (блок-схемы, ментальные модели и таблицы)',
+      engineering: '⚙️ Инженерное (инварианты, компромиссы и граничные случаи)',
+      conceptual: '💡 Концептуальное (первые принципы и метод Фейнмана)',
+      practical: '🛠️ Практическое (разбор продакшен-инцидентов и эксперименты)',
+    };
+
     try {
       const res = await fetch('/api/gemini/grounded-adapted-block', {
         method: 'POST',
@@ -559,6 +566,7 @@ export const FocusStudioWindow: React.FC<FocusStudioWindowProps> = ({
           blockIndex,
           userLevel: activeUserLevel,
           thinkingStyle: newStyle,
+          forceRefresh: true,
           targetRole: savedSurvey?.targetRole || 'Инженер-практик',
           targetGoal: savedSurvey?.targetGoal || 'Глубокое понимание архитектуры без заучивания',
           whyGoal: savedSurvey?.whyGoal || savedSurvey?.userPurpose || localStorage.getItem('learning_os_user_purpose') || '',
@@ -584,6 +592,8 @@ export const FocusStudioWindow: React.FC<FocusStudioWindowProps> = ({
         };
         setCurrentUnit(updated);
         if (onUpdateUnit) onUpdateUnit(updated);
+        setAdaptationSuccessNote(`Конспект адаптирован под ${styleLabels[newStyle] || newStyle}.`);
+        setTimeout(() => setAdaptationSuccessNote(null), 6000);
         playChime('success');
       }
     } catch (err) {

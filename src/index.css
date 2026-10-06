@@ -170,3 +170,14 @@ html, body {
 .tabular-nums {
   font-variant-numeric: tabular-nums;
 }
+
+/* High-resolution sharp rendering for stickers and custom emojis */
+img[data-sticker-id],
+.sticker-img,
+.sticker-render-crisp {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}

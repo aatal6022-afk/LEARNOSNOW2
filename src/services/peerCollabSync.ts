@@ -828,51 +828,7 @@ class PeerCollabSyncManager {
    * even when testing in a single tab.
    */
   public startDemoPartner() {
-    if (this.demoPartnerActive) return;
-    this.demoPartnerActive = true;
-    const partnerId = 'peer_demo_partner';
-    
-    this.cursors[partnerId] = {
-      userId: partnerId,
-      userName: 'Алексей (Напарник)',
-      role: 'Navigator',
-      color: '#8b5cf6',
-      x: 52,
-      y: 45,
-      lastActive: Date.now() + 9999999,
-    };
-    this.notifyCursorListeners();
-
-    let step = 0;
-    this.demoPartnerTimer = setInterval(() => {
-      step += 0.035;
-      const x = 50 + Math.sin(step) * 26 + Math.cos(step * 0.4) * 12;
-      const y = 48 + Math.cos(step * 0.75) * 20 + Math.sin(step * 0.25) * 8;
-
-      this.cursors[partnerId] = {
-        userId: partnerId,
-        userName: 'Алексей (Напарник)',
-        role: 'Navigator',
-        color: '#8b5cf6',
-        x: Math.max(8, Math.min(92, x)),
-        y: Math.max(10, Math.min(90, y)),
-        lastActive: Date.now() + 9999999,
-      };
-      this.notifyCursorListeners();
-
-      if (Math.random() < 0.02) {
-        this.notifyRippleListeners({
-          id: `rip_partner_${Date.now()}`,
-          userId: partnerId,
-          userName: 'Алексей (Напарник)',
-          color: '#8b5cf6',
-          x,
-          y,
-          timestamp: Date.now(),
-          label: 'Указатель напарника',
-        });
-      }
-    }, 40);
+    this.demoPartnerActive = false;
   }
 
   public stopDemoPartner() {
@@ -886,17 +842,12 @@ class PeerCollabSyncManager {
   }
 
   public toggleDemoPartner(): boolean {
-    if (this.demoPartnerActive) {
-      this.stopDemoPartner();
-      return false;
-    } else {
-      this.startDemoPartner();
-      return true;
-    }
+    this.stopDemoPartner();
+    return false;
   }
 
   public isDemoPartnerActive(): boolean {
-    return this.demoPartnerActive;
+    return false;
   }
 
   private notifyCursorListeners() {

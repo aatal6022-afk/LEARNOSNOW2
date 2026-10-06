@@ -18,7 +18,9 @@ import {
   Info,
   Smile,
   ShieldCheck,
-  RefreshCw
+  RefreshCw,
+  Coins,
+  Edit2
 } from 'lucide-react';
 import { AdminSticker, stickerService } from '../../services/stickerService.ts';
 import { playChime } from '../../utils/audio.ts';
@@ -33,6 +35,8 @@ const POPULAR_CATEGORIES = [
   'Статусы проекта'
 ];
 
+const PRICE_PRESETS = [0, 25, 50, 100, 200, 500];
+
 export const AdminStickersTab: React.FC = () => {
   const [stickers, setStickers] = useState<AdminSticker[]>(() => stickerService.getAllStickers());
   const [selectedCategory, setSelectedCategory] = useState<string>('Все категории');
@@ -46,10 +50,15 @@ export const AdminStickersTab: React.FC = () => {
   const [previewSizeKb, setPreviewSizeKb] = useState<number>(0);
   const [stickerName, setStickerName] = useState('');
   const [stickerCategory, setStickerCategory] = useState('Одобрение & Похвала');
+  const [stickerPrice, setStickerPrice] = useState<number>(0);
   const [isProcessingFile, setIsProcessingFile] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
+
+  // Inline price editing state
+  const [editingPriceId, setEditingPriceId] = useState<string | null>(null);
+  const [editingPriceValue, setEditingPriceValue] = useState<string>('0');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -106,13 +115,14 @@ export const AdminStickersTab: React.FC = () => {
         name: stickerName.trim(),
         category: stickerCategory.trim() || 'Общие',
         imageUrl: previewDataUrl,
+        price: Math.max(0, Math.floor(Number(stickerPrice) || 0)),
         width: previewDimensions.width,
         height: previewDimensions.height,
         fileSizeKb: previewSizeKb,
       });
 
       playChime('success');
-      setSuccessNotice(`Стикер «${stickerName.trim()}» успешно добавлен и готов к использованию!`);
+      setSuccessNotice(`Стикер «${stickerName.trim()}» (Цена: ${stickerPrice > 0 ? `${stickerPrice} XP` : 'Бесплатно'}) успешно добавлен!`);
       setTimeout(() => setSuccessNotice(null), 4000);
 
       // Reset modal
@@ -120,10 +130,23 @@ export const AdminStickersTab: React.FC = () => {
       setUploadedFile(null);
       setPreviewDataUrl('');
       setStickerName('');
+      setStickerPrice(0);
       setUploadError(null);
     } catch (err: any) {
       setUploadError(err.message || 'Ошибка сохранения стикера');
     }
+  };
+
+  const handleStartEditPrice = (sticker: AdminSticker) => {
+    setEditingPriceId(sticker.id);
+    setEditingPriceValue(String(sticker.price || 0));
+  };
+
+  const handleSaveEditedPrice = async (id: string) => {
+    const val = Math.max(0, Math.floor(Number(editingPriceValue) || 0));
+    await stickerService.updateStickerPrice(id, val);
+    setEditingPriceId(null);
+    playChime('success');
   };
 
   const handleDeleteSticker = async (id: string, name: string) => {
@@ -157,6 +180,7 @@ export const AdminStickersTab: React.FC = () => {
   const activeCount = stickers.filter((s) => s.isActive !== false).length;
   const categoriesList = Array.from(new Set(stickers.map((s) => s.category).filter(Boolean)));
   const totalKb = stickers.reduce((acc, curr) => acc + (curr.fileSizeKb || 0), 0);
+  const paidCount = stickers.filter((s) => (s.price || 0) > 0).length;
 
   return (
     <div className="space-y-6">
@@ -175,7 +199,7 @@ export const AdminStickersTab: React.FC = () => {
                 </span>
               </h2>
               <p className="text-xs text-slate-500">
-                Все тестовые стикеры удалены. Добавление стикеров производится исключительно через загрузку PNG-файлов администратором.
+                Загрузка PNG-стикеров администратором с возможностью настройки цены (XP / Кармы) и мгновенной синхронизацией.
               </p>
             </div>
           </div>
@@ -199,6 +223,7 @@ export const AdminStickersTab: React.FC = () => {
               setUploadedFile(null);
               setPreviewDataUrl('');
               setStickerName('');
+              setStickerPrice(0);
               setUploadError(null);
               setIsUploadModalOpen(true);
               playChime('click');
@@ -230,8 +255,8 @@ export const AdminStickersTab: React.FC = () => {
           <p className="text-xl font-bold text-emerald-600 mt-0.5">{activeCount}</p>
         </div>
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
-          <span className="text-[11px] font-medium text-slate-500">Категорий</span>
-          <p className="text-xl font-bold text-slate-900 mt-0.5">{categoriesList.length || 0}</p>
+          <span className="text-[11px] font-medium text-slate-500">С установленной ценой</span>
+          <p className="text-xl font-bold text-amber-600 mt-0.5">{paidCount}</p>
         </div>
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
           <span className="text-[11px] font-medium text-slate-500">Общий вес файлов</span>
@@ -291,14 +316,17 @@ export const AdminStickersTab: React.FC = () => {
             </h3>
             <p className="text-xs text-slate-500 leading-relaxed">
               {stickers.length === 0
-                ? 'На платформе пока нет стикеров. Загрузите первый PNG-файл с прозрачным фоном, чтобы он стал доступен студентам в чате, на доске Whiteboard и в комментариях.'
+                ? 'На платформе пока нет стикеров. Загрузите первый PNG-файл с прозрачным фоном и установите цену (или сделайте бесплатным).'
                 : 'Попробуйте изменить поисковый запрос или выбрать категорию «Все категории».'}
             </p>
           </div>
           {stickers.length === 0 && (
             <button
               type="button"
-              onClick={() => setIsUploadModalOpen(true)}
+              onClick={() => {
+                setStickerPrice(0);
+                setIsUploadModalOpen(true);
+              }}
               className="inline-flex items-center space-x-2 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition shadow-2xs cursor-pointer"
             >
               <Upload className="w-4 h-4" />
@@ -332,17 +360,32 @@ export const AdminStickersTab: React.FC = () => {
                 <img
                   src={sticker.imageUrl}
                   alt={sticker.name}
-                  className="max-w-full max-h-full object-contain drop-shadow-xs transition-transform duration-200 group-hover:scale-110"
+                  className="max-w-full max-h-full object-contain drop-shadow-xs transition-transform duration-200 group-hover:scale-110 sticker-render-crisp [image-rendering:-webkit-optimize-contrast] [image-rendering:crisp-edges]"
+                  loading="eager"
+                  decoding="sync"
                 />
                 <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded bg-black/60 backdrop-blur-xs text-white text-[9px] font-mono font-medium">
                   {sticker.fileSizeKb ? `${sticker.fileSizeKb} KB` : 'PNG'}
                 </span>
+                {/* Price tag on preview */}
+                <div className="absolute top-1.5 left-1.5">
+                  {sticker.price && sticker.price > 0 ? (
+                    <span className="px-2 py-0.5 rounded-full bg-amber-500/90 backdrop-blur-xs text-white text-[9px] font-bold shadow-xs flex items-center space-x-1">
+                      <Coins className="w-2.5 h-2.5" />
+                      <span>{sticker.price} XP</span>
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-600/90 backdrop-blur-xs text-white text-[9px] font-bold shadow-xs">
+                      Free
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Info */}
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-semibold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-100 truncate max-w-[120px]">
+                  <span className="text-[10px] font-semibold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-100 truncate max-w-[110px]">
                     {sticker.category}
                   </span>
                   <span className="text-[10px] text-slate-400 font-mono">
@@ -352,6 +395,62 @@ export const AdminStickersTab: React.FC = () => {
                 <h4 className="text-xs font-bold text-slate-800 truncate" title={sticker.name}>
                   {sticker.name}
                 </h4>
+
+                {/* Price Edit Row */}
+                <div className="pt-1 flex items-center justify-between text-[11px] bg-slate-50/80 p-1.5 rounded-xl border border-slate-100">
+                  <span className="text-[10px] text-slate-500 font-medium flex items-center space-x-1">
+                    <Coins className="w-3 h-3 text-amber-500" />
+                    <span>Цена:</span>
+                  </span>
+
+                  {editingPriceId === sticker.id ? (
+                    <div className="flex items-center space-x-1">
+                      <input
+                        type="number"
+                        min="0"
+                        max="99999"
+                        value={editingPriceValue}
+                        onChange={(e) => setEditingPriceValue(e.target.value)}
+                        className="w-16 px-1.5 py-0.5 text-[11px] font-bold bg-white border border-rose-300 rounded text-slate-900 focus:outline-hidden"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleSaveEditedPrice(sticker.id);
+                          if (e.key === 'Escape') setEditingPriceId(null);
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleSaveEditedPrice(sticker.id)}
+                        className="p-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded cursor-pointer"
+                        title="Сохранить цену"
+                      >
+                        <Check className="w-3 h-3" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingPriceId(null)}
+                        className="p-1 bg-slate-200 hover:bg-slate-300 text-slate-600 rounded cursor-pointer"
+                        title="Отмена"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center space-x-1.5">
+                      <span className={`font-bold ${sticker.price > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                        {sticker.price > 0 ? `${sticker.price} XP` : 'Бесплатно'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleStartEditPrice(sticker)}
+                        className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition cursor-pointer"
+                        title="Изменить цену стикера"
+                      >
+                        <Edit2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Actions */}
@@ -396,16 +495,16 @@ export const AdminStickersTab: React.FC = () => {
       {/* Upload Modal */}
       {isUploadModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full border border-slate-200 overflow-hidden animate-fade-in">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full border border-slate-200 overflow-hidden animate-fade-in max-h-[90vh] flex flex-col">
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-5 border-b border-slate-100 bg-slate-50/50">
+            <div className="flex items-center justify-between p-5 border-b border-slate-100 bg-slate-50/50 shrink-0">
               <div className="flex items-center space-x-2.5">
                 <div className="p-2 rounded-2xl bg-rose-100 text-rose-600">
                   <Upload className="w-4 h-4" />
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-slate-900">Загрузка PNG-стикера</h3>
-                  <p className="text-[11px] text-slate-500">Добавление в общий каталог платформы</p>
+                  <p className="text-[11px] text-slate-500">Установка названия, категории и цены (XP/Карма)</p>
                 </div>
               </div>
               <button
@@ -418,7 +517,7 @@ export const AdminStickersTab: React.FC = () => {
             </div>
 
             {/* Modal Body */}
-            <form onSubmit={handleSaveSticker} className="p-5 space-y-4">
+            <form onSubmit={handleSaveSticker} className="p-5 space-y-4 overflow-y-auto flex-1">
               {/* Dropzone */}
               <div
                 onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
@@ -517,6 +616,52 @@ export const AdminStickersTab: React.FC = () => {
                 />
               </div>
 
+              {/* Price Setting */}
+              <div className="space-y-1.5 p-3 rounded-2xl bg-amber-50/60 border border-amber-200/80">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-800 flex items-center space-x-1.5">
+                    <Coins className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Цена стикера (XP / PinkCoins)</span>
+                  </label>
+                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                    stickerPrice > 0 ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'
+                  }`}>
+                    {stickerPrice > 0 ? `Платный: ${stickerPrice} XP` : 'Бесплатный для всех (0 XP)'}
+                  </span>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="number"
+                    min="0"
+                    max="99999"
+                    value={stickerPrice}
+                    onChange={(e) => setStickerPrice(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                    className="w-32 px-3 py-1.5 text-xs font-bold rounded-xl bg-white border border-amber-300 focus:border-amber-500 focus:outline-hidden text-slate-900"
+                    placeholder="0"
+                  />
+                  <div className="flex flex-wrap gap-1">
+                    {PRICE_PRESETS.map((p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setStickerPrice(p)}
+                        className={`px-2 py-1 rounded-lg text-[10px] font-semibold transition cursor-pointer ${
+                          stickerPrice === p
+                            ? 'bg-amber-600 text-white shadow-2xs'
+                            : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        {p === 0 ? 'Бесплатно' : `${p} XP`}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <p className="text-[10px] text-slate-500">
+                  Укажите 0, чтобы стикер был сразу открыт всем пользователям, либо цену в XP кармы для платной разблокировки.
+                </p>
+              </div>
+
               {/* Category */}
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-700 block">
@@ -572,3 +717,4 @@ export const AdminStickersTab: React.FC = () => {
     </div>
   );
 };
+
