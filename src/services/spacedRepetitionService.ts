@@ -50,6 +50,47 @@ export class SpacedRepetitionService {
           });
         }
       }
+
+      if (this.records.size === 0) {
+        // Seed default initial knowledge nodes
+        const now = Date.now();
+        const demoNodes: MemoryNodeRetention[] = [
+          {
+            nodeId: 'node-intro-01',
+            unitId: 'unit-intro-01',
+            topicTitle: 'Фундаментальные структуры данных: Массивы и Связные списки',
+            domain: 'Алгоритмы & Архитектура',
+            completedAt: now - 9 * 24 * 3600 * 1000,
+            lastReviewedAt: now - 8 * 24 * 3600 * 1000, // 8 days ago (> 7 days)
+            repetitionCount: 1,
+            stabilityDays: 2.0,
+            easeFactor: 2.3,
+            retentionPercentage: 42,
+            retentionState: 'cooling',
+            nextReviewDate: now - 6 * 24 * 3600 * 1000,
+            isDueForReview: true,
+            blitzHistory: [{ timestamp: now - 8 * 24 * 3600 * 1000, grade: 'good', newRetention: 85 }]
+          },
+          {
+            nodeId: 'node-arch-02',
+            unitId: 'unit-arch-02',
+            topicTitle: 'Инварианты баз данных: Индексы B-Tree и ACID',
+            domain: 'Базы данных',
+            completedAt: now - 3 * 24 * 3600 * 1000,
+            lastReviewedAt: now - 3 * 24 * 3600 * 1000,
+            repetitionCount: 2,
+            stabilityDays: 4.5,
+            easeFactor: 2.5,
+            retentionPercentage: 88,
+            retentionState: 'hot',
+            nextReviewDate: now + 1.5 * 24 * 3600 * 1000,
+            isDueForReview: false,
+            blitzHistory: [{ timestamp: now - 3 * 24 * 3600 * 1000, grade: 'easy', newRetention: 100 }]
+          }
+        ];
+        demoNodes.forEach((n) => this.records.set(n.nodeId, n));
+        this.save();
+      }
     } catch (e) {
       console.warn('Failed to load spaced repetition data:', e);
     }
@@ -337,6 +378,20 @@ export class SpacedRepetitionService {
         ? `Сопоставь концепт «${primary.topicTitle}» с принципом «${anchor.topicTitle}»: как объединить оба подхода для решения нестандартной задачи?`
         : `Воспроизведи ключевой инвариант и граничные условия темы «${primary.topicTitle}».`,
     };
+  }
+
+  /**
+   * Returns all knowledge topics that have not been reviewed for 7+ days (or are overdue)
+   */
+  public getOverdue7DaysNodes(thresholdDays = 7): MemoryNodeRetention[] {
+    const now = this.getEffectiveTime();
+    const thresholdMs = thresholdDays * 24 * 3600 * 1000;
+    const all = Array.from(this.getAllNodeRetentions().values());
+    
+    return all.filter((r) => {
+      const elapsedMs = Math.max(0, now - r.lastReviewedAt);
+      return elapsedMs >= thresholdMs || r.isDueForReview;
+    }).sort((a, b) => a.lastReviewedAt - b.lastReviewedAt);
   }
 }
 

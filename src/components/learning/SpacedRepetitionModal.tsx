@@ -98,14 +98,43 @@ export const SpacedRepetitionModal: React.FC<SpacedRepetitionModalProps> = ({
 
   const generateQuestionsForTopic = (node: MemoryNodeRetention) => {
     const unitQuiz = units[node.unitId]?.quiz || [];
-    setQuestions(unitQuiz.map((question) => ({
-      id: question.id,
-      topicTitle: node.topicTitle,
-      question: question.question,
-      scenario: question.scenario,
-      options: question.options,
-      coreRuleSummary: question.explanation,
-    })));
+    if (unitQuiz.length > 0) {
+      setQuestions(unitQuiz.map((question) => ({
+        id: question.id,
+        topicTitle: node.topicTitle,
+        question: question.question,
+        scenario: question.scenario,
+        options: question.options,
+        coreRuleSummary: question.explanation,
+      })));
+    } else {
+      // Dynamic fallback quiz generation for any knowledge topic
+      setQuestions([
+        {
+          id: `gen-q1-${node.nodeId}`,
+          topicTitle: node.topicTitle,
+          question: `Каков ключевой инвариант и базовый принцип темы «${node.topicTitle}»?`,
+          scenario: `В реальном проекте требуется применить знания из темы «${node.topicTitle}» для предотвращения сбоев и деградации производительности.`,
+          options: [
+            { id: 'opt-1', text: 'Строгое соблюдение инвариантов состояния и минимизация неявных зависимостей', isCorrect: true, explanation: 'Абсолютно верно! Это фундаментальная основа для надежности.' },
+            { id: 'opt-2', text: 'Игнорирование граничных условий ради временного упрощения кода', isCorrect: false, explanation: 'Неверно. Граничные условия критически важны для стабильности системы.' },
+            { id: 'opt-3', text: 'Хаотичное переписывание логики без замера метрик', isCorrect: false, explanation: 'Неверно. Любая оптимизация должна опираться на точные замеры.' }
+          ],
+          coreRuleSummary: 'Фундаментальный закон темы заключается в сохранении структурных инвариантов и аккуратной изоляции состояния.',
+        },
+        {
+          id: `gen-q2-${node.nodeId}`,
+          topicTitle: node.topicTitle,
+          question: `Какой подход обеспечивает наилучшую долговременную устойчивость в теме «${node.topicTitle}»?`,
+          scenario: `Вы проводите код-ревью и проверяете соответствие архитектурным стандартам.`,
+          options: [
+            { id: 'opt-2a', text: 'Регулярная валидация контрактов и предикатов на каждом этапе исполнения', isCorrect: true, explanation: 'Правильно! Защитное программирование и контрактный подход гарантируют отсутствие регрессий.' },
+            { id: 'opt-2b', text: 'Отсутствие обработки ошибок в надежде на перезапуск сервера', isCorrect: false, explanation: 'Неверно. Ошибки должны обрабатываться предсказуемо.' }
+          ],
+          coreRuleSummary: 'Контрактное исполнение и проверка предикатов предотвращают каскадные сбои.',
+        }
+      ]);
+    }
   };
 
   const handleSelectOption = (optId: string) => {
@@ -155,6 +184,10 @@ export const SpacedRepetitionModal: React.FC<SpacedRepetitionModalProps> = ({
   const selectedOpt = currentQ?.options.find((o) => o.id === selectedOptionId);
   const retentionPct = selectedNode?.retentionPercentage ?? 0;
   const isCold = retentionPct < 50;
+  const daysSinceReview = selectedNode 
+    ? Math.max(0, Math.floor((Date.now() - (selectedNode.lastReviewedAt || selectedNode.completedAt)) / (24 * 3600 * 1000)))
+    : 0;
+  const isOverdue7Days = daysSinceReview >= 7 || selectedNode?.isDueForReview;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md animate-fade-in select-none">
@@ -188,6 +221,17 @@ export const SpacedRepetitionModal: React.FC<SpacedRepetitionModalProps> = ({
             <X className="w-4 h-4" />
           </button>
         </div>
+
+        {/* 7-Day Overdue Trigger Banner */}
+        {isOverdue7Days && (
+          <div className="px-6 py-2.5 bg-amber-50 border-b border-amber-200/80 text-amber-900 text-xs flex items-center space-x-2.5">
+            <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 animate-bounce" />
+            <div className="leading-snug">
+              <span className="font-bold">Автоматическое напоминание (7+ дней):</span>{' '}
+              <span>Тема не практиковалась <strong>{daysSinceReview} дн.</strong> Память падает по экспоненте — пройдите квиз, чтобы восстановить прочность нейронных связей!</span>
+            </div>
+          </div>
+        )}
 
         {/* Memory Health Metric Bar */}
         <div className="px-6 py-3 bg-slate-50/80 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xs">

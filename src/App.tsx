@@ -585,6 +585,31 @@ function LearningOSApp() {
     setTimeout(() => setNotification(null), 4000);
   };
 
+  // Automated Spaced Repetition trigger: if a knowledge topic has not been reviewed for 7+ days, automatically throw review quiz onto screen
+  useEffect(() => {
+    if (activeTab === 'landing' || isLocked) return;
+
+    // Check if we haven't prompted in the last 10 minutes
+    const lastPromptTime = Number(sessionStorage.getItem('pinkinau_7d_quiz_prompt_ts') || '0');
+    if (Date.now() - lastPromptTime < 10 * 60 * 1000) return;
+
+    const overdueTopics = spacedRepetition.getOverdue7DaysNodes(7);
+    if (overdueTopics.length > 0 && !isBlitzModalOpen) {
+      const topOverdue = overdueTopics[0];
+      const days = Math.max(7, Math.floor((Date.now() - (topOverdue.lastReviewedAt || topOverdue.completedAt)) / (24 * 3600 * 1000)));
+
+      const timer = setTimeout(() => {
+        sessionStorage.setItem('pinkinau_7d_quiz_prompt_ts', String(Date.now()));
+        setBlitzTargetNodeId(topOverdue.nodeId);
+        setIsBlitzModalOpen(true);
+        playChime('ring');
+        showNotification(`🧠 Пора повторить! Тема «${topOverdue.topicTitle}» не повторялась ${days} дн. Запущен автоматический блиц-квиз.`, 'warn');
+      }, 1500);
+
+      return () => clearTimeout(timer);
+    }
+  }, [activeTab, isLocked, isBlitzModalOpen]);
+
   // 7. Firestore Cloud Sync Status & Subscription
   const [firestoreSyncStatus, setFirestoreSyncStatus] = useState<SyncStatus>('synced');
   const [lastFirestoreSyncTime, setLastFirestoreSyncTime] = useState<Date | null>(new Date());

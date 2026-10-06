@@ -4,6 +4,7 @@ import { AdminUpdatesModal } from './AdminUpdatesModal.tsx';
 import { releaseUpdatesService } from '../../services/releaseUpdatesService.ts';
 import { LanguageSelector } from '../common/LanguageSelector.tsx';
 import { useI18n } from '../../services/i18nService.ts';
+import { playChime } from '../../utils/audio.ts';
 
 interface BitrixStyleLandingProps {
   onStartFree: () => void;
@@ -656,6 +657,16 @@ export const BitrixStyleLanding: React.FC<BitrixStyleLandingProps> = ({
         <symbol id="i-phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="7" y="2.500" width="10" height="19" rx="2.500"/><path d="M11 18.500h2"/></symbol>
         <symbol id="i-sync" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 8a8 8 0 0 0-14-2.500L4 8M4 4v4h4M4 16a8 8 0 0 0 14 2.500L20 16M20 20v-4h-4"/></symbol>
         <symbol id="i-key" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3"/></symbol>
+        <symbol id="i-blank" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></symbol>
+        <symbol id="i-sandbox" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></symbol>
+        <symbol id="i-ai" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="4"/></symbol>
+        <symbol id="i-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></symbol>
+        <symbol id="i-repeat" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></symbol>
+        <symbol id="i-library" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></symbol>
+        <symbol id="i-telemetry" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></symbol>
+        <symbol id="i-widgets" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></symbol>
+        <symbol id="i-community" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+        <symbol id="i-cosmos" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></symbol>
       </svg>
 
       {/* Sticky App Bar with Progress */}
@@ -830,26 +841,35 @@ export const BitrixStyleLanding: React.FC<BitrixStyleLandingProps> = ({
           </div>
         </div>
 
-        {/* FEATURES TAB SECTION */}
+        {/* ALL 16 MODULES FEATURES TAB SECTION */}
         <section id="features">
           <div className="wrap">
             <div className="center">
-              <p className="eyebrow">{t('landing.allInOneProduct', 'Всё в одном продукте')}</p>
-              <h2>{t('landing.sevenModules', 'Семь модулей, один рабочий стол')}</h2>
-              <p className="lead">{t('landing.sevenModulesLead', 'Граф, студия, спарринг и портфолио открываются как окна в одном окружении и делят общие данные.')}</p>
+              <p className="eyebrow">{t('landing.allInOneProduct', 'Полная архитектура операционной среды')}</p>
+              <h2>{t('landing.sixteenModulesTitle', '16 модулей, одна космическая Web OS')}</h2>
+              <p className="lead">{t('landing.sixteenModulesLead', 'Каждый инструмент открывается как окно на едином рабочем столе, делит общий эпистемический граф и автоматически синхронизируется в реальном времени.')}</p>
             </div>
 
             <div className="tabs" role="tablist" aria-label="Модули Pink Learn">
-              <button className="tab" role="tab" id="tab-graph" aria-controls="p-graph" aria-selected={selectedTab === 'graph'} onClick={() => setSelectedTab('graph')}>{t('landing.tabGraph', 'Граф')}</button>
-              <button className="tab" role="tab" id="tab-studio" aria-controls="p-studio" aria-selected={selectedTab === 'studio'} onClick={() => setSelectedTab('studio')}>{t('landing.tabStudio', 'Фокус-студия')}</button>
-              <button className="tab" role="tab" id="tab-sphere" aria-controls="p-sphere" aria-selected={selectedTab === 'sphere'} onClick={() => setSelectedTab('sphere')}>{t('landing.tabSphere', 'Сфера знаний')}</button>
-              <button className="tab" role="tab" id="tab-spar" aria-controls="p-spar" aria-selected={selectedTab === 'spar'} onClick={() => setSelectedTab('spar')}>{t('landing.tabSparring', 'Спарринг')}</button>
-              <button className="tab" role="tab" id="tab-git" aria-controls="p-git" aria-selected={selectedTab === 'git'} onClick={() => setSelectedTab('git')}>{t('landing.tabGit', 'Git знаний')}</button>
-              <button className="tab" role="tab" id="tab-folio" aria-controls="p-folio" aria-selected={selectedTab === 'folio'} onClick={() => setSelectedTab('folio')}>{t('landing.tabPortfolio', 'Портфолио')}</button>
-              <button className="tab" role="tab" id="tab-focus" aria-controls="p-focus" aria-selected={selectedTab === 'focus'} onClick={() => setSelectedTab('focus')}>{t('landing.tabProductivity', 'Продуктивность')}</button>
+              <button className="tab" role="tab" id="tab-graph" aria-controls="p-graph" aria-selected={selectedTab === 'graph'} onClick={() => { playChime('click'); setSelectedTab('graph'); }}><svg className="sym" style={{ width: '16px', height: '16px', display: 'inline-block', verticalAlign: '-2px', marginRight: '6px' }}><use href="#i-graph"/></svg>{t('landing.tabGraph', 'DAG Граф')}</button>
+              <button className="tab" role="tab" id="tab-studio" aria-controls="p-studio" aria-selected={selectedTab === 'studio'} onClick={() => { playChime('click'); setSelectedTab('studio'); }}><svg className="sym" style={{ width: '16px', height: '16px', display: 'inline-block', verticalAlign: '-2px', marginRight: '6px' }}><use href="#i-studio"/></svg>{t('landing.tabStudio', 'Фокус-студия')}</button>
+              <button className="tab" role="tab" id="tab-blank" aria-controls="p-blank" aria-selected={selectedTab === 'blank'} onClick={() => { playChime('click'); setSelectedTab('blank'); }}><svg className="sym" style={{ width: '16px', height: '16px', display: 'inline-block', verticalAlign: '-2px', marginRight: '6px' }}><use href="#i-blank"/></svg>{t('landing.tabBlank', 'Чистый лист')}</button>
+              <button className="tab" role="tab" id="tab-sandbox" aria-controls="p-sandbox" aria-selected={selectedTab === 'sandbox'} onClick={() => { playChime('click'); setSelectedTab('sandbox'); }}><svg className="sym" style={{ width: '16px', height: '16px', display: 'inline-block', verticalAlign: '-2px', marginRight: '6px' }}><use href="#i-sandbox"/></svg>{t('landing.tabSandbox', 'Песочница кода')}</button>
+              <button className="tab" role="tab" id="tab-sphere" aria-controls="p-sphere" aria-selected={selectedTab === 'sphere'} onClick={() => { playChime('click'); setSelectedTab('sphere'); }}><svg className="sym" style={{ width: '16px', height: '16px', display: 'inline-block', verticalAlign: '-2px', marginRight: '6px' }}><use href="#i-sphere"/></svg>{t('landing.tabSphere', 'Сфера знаний')}</button>
+              <button className="tab" role="tab" id="tab-spar" aria-controls="p-spar" aria-selected={selectedTab === 'spar'} onClick={() => { playChime('click'); setSelectedTab('spar'); }}><svg className="sym" style={{ width: '16px', height: '16px', display: 'inline-block', verticalAlign: '-2px', marginRight: '6px' }}><use href="#i-spar"/></svg>{t('landing.tabSparring', 'P2P Спарринг')}</button>
+              <button className="tab" role="tab" id="tab-ai" aria-controls="p-ai" aria-selected={selectedTab === 'ai'} onClick={() => { playChime('click'); setSelectedTab('ai'); }}><svg className="sym" style={{ width: '16px', height: '16px', display: 'inline-block', verticalAlign: '-2px', marginRight: '6px' }}><use href="#i-ai"/></svg>{t('landing.tabAi', 'AI Архитектор')}</button>
+              <button className="tab" role="tab" id="tab-calendar" aria-controls="p-calendar" aria-selected={selectedTab === 'calendar'} onClick={() => { playChime('click'); setSelectedTab('calendar'); }}><svg className="sym" style={{ width: '16px', height: '16px', display: 'inline-block', verticalAlign: '-2px', marginRight: '6px' }}><use href="#i-calendar"/></svg>{t('landing.tabCalendar', 'Календарь')}</button>
+              <button className="tab" role="tab" id="tab-repeat" aria-controls="p-repeat" aria-selected={selectedTab === 'repeat'} onClick={() => { playChime('click'); setSelectedTab('repeat'); }}><svg className="sym" style={{ width: '16px', height: '16px', display: 'inline-block', verticalAlign: '-2px', marginRight: '6px' }}><use href="#i-repeat"/></svg>{t('landing.tabRepeat', 'Интервалы SM-2')}</button>
+              <button className="tab" role="tab" id="tab-git" aria-controls="p-git" aria-selected={selectedTab === 'git'} onClick={() => { playChime('click'); setSelectedTab('git'); }}><svg className="sym" style={{ width: '16px', height: '16px', display: 'inline-block', verticalAlign: '-2px', marginRight: '6px' }}><use href="#i-git"/></svg>{t('landing.tabGit', 'Git знаний')}</button>
+              <button className="tab" role="tab" id="tab-library" aria-controls="p-library" aria-selected={selectedTab === 'library'} onClick={() => { playChime('click'); setSelectedTab('library'); }}><svg className="sym" style={{ width: '16px', height: '16px', display: 'inline-block', verticalAlign: '-2px', marginRight: '6px' }}><use href="#i-library"/></svg>{t('landing.tabLibrary', 'Учебники')}</button>
+              <button className="tab" role="tab" id="tab-telemetry" aria-controls="p-telemetry" aria-selected={selectedTab === 'telemetry'} onClick={() => { playChime('click'); setSelectedTab('telemetry'); }}><svg className="sym" style={{ width: '16px', height: '16px', display: 'inline-block', verticalAlign: '-2px', marginRight: '6px' }}><use href="#i-telemetry"/></svg>{t('landing.tabTelemetry', 'Телеметрия')}</button>
+              <button className="tab" role="tab" id="tab-folio" aria-controls="p-folio" aria-selected={selectedTab === 'folio'} onClick={() => { playChime('click'); setSelectedTab('folio'); }}><svg className="sym" style={{ width: '16px', height: '16px', display: 'inline-block', verticalAlign: '-2px', marginRight: '6px' }}><use href="#i-folio"/></svg>{t('landing.tabPortfolio', 'Портфолио')}</button>
+              <button className="tab" role="tab" id="tab-widgets" aria-controls="p-widgets" aria-selected={selectedTab === 'widgets'} onClick={() => { playChime('click'); setSelectedTab('widgets'); }}><svg className="sym" style={{ width: '16px', height: '16px', display: 'inline-block', verticalAlign: '-2px', marginRight: '6px' }}><use href="#i-widgets"/></svg>{t('landing.tabWidgets', 'Виджеты')}</button>
+              <button className="tab" role="tab" id="tab-community" aria-controls="p-community" aria-selected={selectedTab === 'community'} onClick={() => { playChime('click'); setSelectedTab('community'); }}><svg className="sym" style={{ width: '16px', height: '16px', display: 'inline-block', verticalAlign: '-2px', marginRight: '6px' }}><use href="#i-community"/></svg>{t('landing.tabCommunity', 'Сообщество')}</button>
+              <button className="tab" role="tab" id="tab-cosmos" aria-controls="p-cosmos" aria-selected={selectedTab === 'cosmos'} onClick={() => { playChime('click'); setSelectedTab('cosmos'); }}><svg className="sym" style={{ width: '16px', height: '16px', display: 'inline-block', verticalAlign: '-2px', marginRight: '6px' }}><use href="#i-cosmos"/></svg>{t('landing.tabCosmos', 'Космос OS')}</button>
             </div>
 
-            {/* graph */}
+            {/* 1. graph */}
             <div className="panel" role="tabpanel" id="p-graph" aria-labelledby="tab-graph" hidden={selectedTab !== 'graph'}>
               <div>
                 <h3>Тема выглядит как карта, а не как список</h3>
@@ -880,31 +900,83 @@ export const BitrixStyleLanding: React.FC<BitrixStyleLandingProps> = ({
               </div>
             </div>
 
-            {/* studio */}
+            {/* 2. studio */}
             <div className="panel" role="tabpanel" id="p-studio" aria-labelledby="tab-studio" hidden={selectedTab !== 'studio'}>
               <div>
                 <h3>Фокус-студия: учитесь без воды</h3>
                 <p className="d">Сжатая выжимка инвариантов, примеров и ментальных моделей. Дальше вы проверяете себя и делаете реальную работу.</p>
                 <ul className="ticks">
-                  <li><svg><use href="#i-check"/></svg><div><strong>«Чистый лист».</strong> <span>Вы воспроизводите тему по памяти без подсказок, ИИ находит пробелы и объясняет, чего не хватило.</span></div></li>
-                  <li><svg><use href="#i-check"/></svg><div><strong>Интерактивные песочницы.</strong> <span>Симуляторы, редакторы кода и диаграммы прямо внутри модуля.</span></div></li>
-                  <li><svg><use href="#i-check"/></svg><div><strong>Адаптивные квизы на Gemini.</strong> <span>Вопросы подстраиваются под ваш уровень.</span></div></li>
-                  <li><svg><use href="#i-check"/></svg><div><strong>Артефакт на выходе.</strong> <span>Код, схема, перевод или аналитический отчёт.</span></div></li>
+                  <li><svg><use href="#i-check"/></svg><div><strong>Правило 80/20.</strong> <span>Выделение 20% фундаментальных концепций, решающих 80% задач.</span></div></li>
+                  <li><svg><use href="#i-check"/></svg><div><strong>Интерактивные аннотации.</strong> <span>Формулы, схемы и код можно развернуть в детальное объяснение в один клик.</span></div></li>
+                  <li><svg><use href="#i-check"/></svg><div><strong>Адаптивные квизы на Gemini.</strong> <span>Вопросы подстраиваются под ваш текущий темп и уровень владения темой.</span></div></li>
+                  <li><svg><use href="#i-check"/></svg><div><strong>Артефакт на выходе.</strong> <span>Готовый рабочий код, архитектурная схема или аналитический отчёт.</span></div></li>
                 </ul>
               </div>
               <div className="art stack">
-                <p className="cap" style={{ margin: 0 }}>Чистый лист</p>
+                <p className="cap" style={{ margin: 0 }}>Аннотированная теория</p>
                 <div className="box stack" style={{ gap: '9px' }}><div className="skel w1"></div><div className="skel w2"></div><div className="skel w3"></div></div>
                 <div className="box stack" style={{ gap: '10px' }}>
-                  <div className="row"><span style={{ fontWeight: 500 }}>Анализ ИИ</span><span className="chip">Полнота 72%</span></div>
-                  <div className="bar-p"><span></span></div>
-                  <span style={{ fontSize: '14px', color: 'var(--muted)' }}>Пробелы: инварианты и граничный случай</span>
+                  <div className="row"><span style={{ fontWeight: 500 }}>Анализ инвариантов</span><span className="chip">Ключевой навык</span></div>
+                  <div className="bar-p"><span style={{ width: '85%' }}></span></div>
+                  <span style={{ fontSize: '14px', color: 'var(--muted)' }}>Сложность: O(log N) • Архитектурный инвариант зафиксирован</span>
                 </div>
-                <div className="opt ok"><i></i>Вопрос подобран под ваш уровень</div>
+                <div className="opt ok"><i></i>Изучено и готово к проверке практикой</div>
               </div>
             </div>
 
-            {/* sphere */}
+            {/* 3. blank (Blank Sheet Challenge) */}
+            <div className="panel" role="tabpanel" id="p-blank" aria-labelledby="tab-blank" hidden={selectedTab !== 'blank'}>
+              <div>
+                <h3>Метод «Чистый Лист»: активное извлечение</h3>
+                <p className="d">Уничтожает иллюзию компетентности. Вы пишете всё, что помните по теме, на чистом листе без подсказок.</p>
+                <ul className="ticks">
+                  <li><svg><use href="#i-check"/></svg><div><strong>Active Recall в действии.</strong> <span>Мозг формирует миелиновые оболочки только при самостоятельном извлечении данных.</span></div></li>
+                  <li><svg><use href="#i-check"/></svg><div><strong>Автоматическая оценка ИИ.</strong> <span>Нейросеть оценивает полноту терминологии, понимание связей и граничные условия.</span></div></li>
+                  <li><svg><use href="#i-check"/></svg><div><strong>Карта белых пятен.</strong> <span>Точный список пропущенных тезисов и формул для мгновенной доработки.</span></div></li>
+                  <li><svg><use href="#i-check"/></svg><div><strong>Защита от зубрёжки.</strong> <span>Проверяется не дословный пересказ, а глубинная логика концепта.</span></div></li>
+                </ul>
+              </div>
+              <div className="art stack">
+                <p className="cap" style={{ margin: 0 }}>Проверка методом чистого листа</p>
+                <div className="box mono" style={{ background: 'var(--surface)', minHeight: '60px', padding: '10px' }}>
+                  # B-Tree инварианты: корень имеет от 1 до 2t-1 ключей...
+                </div>
+                <div className="box stack" style={{ gap: '10px' }}>
+                  <div className="row"><strong style={{ fontWeight: 500 }}>ИИ-Вердикт</strong><span className="chip" style={{ background: '#dcfce7', color: '#15803d' }}>Полнота: 94%</span></div>
+                  <div className="bar-p"><span style={{ width: '94%', background: '#16a34a' }}></span></div>
+                  <div style={{ fontSize: '13px', color: 'var(--muted)' }}>Отлично раскрыты: балансировка, расщепление узлов и дисковый I/O</div>
+                </div>
+              </div>
+            </div>
+
+            {/* 4. sandbox */}
+            <div className="panel" role="tabpanel" id="p-sandbox" aria-labelledby="tab-sandbox" hidden={selectedTab !== 'sandbox'}>
+              <div>
+                <h3>Песочница кода: моментальная практика</h3>
+                <p className="d">Полноценная среда исполнения прямо в браузере с автоматическими юнит-тестами и визуализацией.</p>
+                <ul className="ticks">
+                  <li><svg><use href="#i-check"/></svg><div><strong>Поддержка языков.</strong> <span>TypeScript, JavaScript, Python и HTML/Canvas в реальном времени.</span></div></li>
+                  <li><svg><use href="#i-check"/></svg><div><strong>Интерактивные диаграммы.</strong> <span>Рендеринг структур данных, графов и алгоритмических шагов.</span></div></li>
+                  <li><svg><use href="#i-check"/></svg><div><strong>Мгновенная валидация.</strong> <span>Выполнение тестов за миллисекунды без переключения в сторонние IDE.</span></div></li>
+                  <li><svg><use href="#i-check"/></svg><div><strong>Экспорт артефакта.</strong> <span>Решение одним кликом прикрепляется к вашей ветке в Git знаний.</span></div></li>
+                </ul>
+              </div>
+              <div className="art stack">
+                <p className="cap" style={{ margin: 0 }}>Терминал & Визуальный холст</p>
+                <div className="box mono" style={{ background: '#1e1018', color: '#fbcfe8', padding: '12px' }}>
+                  <span style={{ color: '#f472b6' }}>const</span> balanceTree = (node) =&gt; &#123;<br/>
+                  &nbsp;&nbsp;<span style={{ color: '#38bdf8' }}>if</span> (!node) <span style={{ color: '#38bdf8' }}>return</span> null;<br/>
+                  &nbsp;&nbsp;<span style={{ color: '#4ade80' }}>// O(1) rotation</span><br/>
+                  &#125;;
+                </div>
+                <div className="box row">
+                  <div style={{ fontSize: '13px', fontWeight: 500 }}>✓ 4/4 теста пройдено успешно</div>
+                  <span className="chip" style={{ background: '#dbeafe', color: '#1e40af' }}>Время: 14ms</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 5. sphere */}
             <div className="panel" role="tabpanel" id="p-sphere" aria-labelledby="tab-sphere" hidden={selectedTab !== 'sphere'}>
               <div>
                 <h3>Сфера знаний: связи между дисциплинами</h3>
@@ -934,7 +1006,7 @@ export const BitrixStyleLanding: React.FC<BitrixStyleLandingProps> = ({
               </div>
             </div>
 
-            {/* spar */}
+            {/* 6. spar */}
             <div className="panel" role="tabpanel" id="p-spar" aria-labelledby="tab-spar" hidden={selectedTab !== 'spar'}>
               <div>
                 <h3>Спарринг: учиться вместе быстрее</h3>
@@ -961,7 +1033,96 @@ export const BitrixStyleLanding: React.FC<BitrixStyleLandingProps> = ({
               </div>
             </div>
 
-            {/* git */}
+            {/* 7. ai (AI Architect) */}
+            <div className="panel" role="tabpanel" id="p-ai" aria-labelledby="tab-ai" hidden={selectedTab !== 'ai'}>
+              <div>
+                <h3>AI Архитектор & Gemini 2.5 Flash</h3>
+                <p className="d">Ваш персональный методист, который строит программу под вашу цель, опыт и доступное время.</p>
+                <ul className="ticks">
+                  <li><svg><use href="#i-check"/></svg><div><strong>Динамический DAG-генератор.</strong> <span>Превращает любой запрос («хочу писать компиляторы») в строгий граф с зависимостями.</span></div></li>
+                  <li><svg><use href="#i-check"/></svg><div><strong>Дистилляция учебников.</strong> <span>Загрузите сложную научную книгу или PDF — ИИ выделит инварианты и создаст тесты.</span></div></li>
+                  <li><svg><use href="#i-check"/></svg><div><strong>Адаптивный тьютор.</strong> <span>Отвечает на вопросы, рисует диаграммы Mermaid и объясняет сложные места через аналогии.</span></div></li>
+                  <li><svg><use href="#i-check"/></svg><div><strong>Проверка кода и проектов.</strong> <span>Строгий аудит архитектуры и код-ревью с конкретными диффами.</span></div></li>
+                </ul>
+              </div>
+              <div className="art stack">
+                <p className="cap" style={{ margin: 0 }}>Диалог с AI Архитектором</p>
+                <div className="box stack" style={{ gap: '8px' }}>
+                  <div style={{ fontSize: '13px', color: 'var(--primary)', fontWeight: 600 }}>Вы: «Как быстро понять консенсус Raft?»</div>
+                  <div style={{ fontSize: '13px', color: 'var(--fg)', lineHeight: 1.5, background: 'var(--surface)', padding: '10px', borderRadius: '8px' }}>
+                    <strong>AI:</strong> Представь парламент из 3 серверов. 1 Лидер, 2 Последователя. Если Лидер замолкает на 150мс — запускаются выборы с тайм-аутом случайного шума...
+                  </div>
+                </div>
+                <div className="row">
+                  <span className="chip">Сгенерирован граф из 12 узлов</span>
+                  <span style={{ fontSize: '13px', color: 'var(--muted)' }}>Модель: Gemini 2.5 Flash</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 8. calendar */}
+            <div className="panel" role="tabpanel" id="p-calendar" aria-labelledby="tab-calendar" hidden={selectedTab !== 'calendar'}>
+              <div>
+                <h3>Умный Календарь & Адаптивный Каденс</h3>
+                <p className="d">Движок расписания, который защищает от выгорания и автоматически распределяет занятия по вашему биоритму.</p>
+                <ul className="ticks">
+                  <li><svg><use href="#i-check"/></svg><div><strong>Синхронизация по стандарту ICS.</strong> <span>Экспорт расписания в Google Calendar, Apple Calendar и Outlook.</span></div></li>
+                  <li><svg><use href="#i-check"/></svg><div><strong>Адаптивный перенос слотов.</strong> <span>Если вы пропустили день, система мягко скорректирует нагрузку без стресса.</span></div></li>
+                  <li><svg><use href="#i-check"/></svg><div><strong>Каденс повторений.</strong> <span>Слоты для повторения материала резервируются заранее с учётом кривой памяти.</span></div></li>
+                  <li><svg><use href="#i-check"/></svg><div><strong>Фокус-интервалы.</strong> <span>Интеграция с сессиями глубокой работы и перерывами на восстановление.</span></div></li>
+                </ul>
+              </div>
+              <div className="art stack">
+                <p className="cap" style={{ margin: 0 }}>Расписание на неделю</p>
+                <div className="box stack" style={{ gap: '6px' }}>
+                  <div className="row" style={{ padding: '6px 0', borderBottom: '1px solid var(--line)' }}>
+                    <span><strong>Пн, 19:00</strong> • B-Tree Индексы</span>
+                    <span className="chip" style={{ background: '#e0f2fe', color: '#0369a1' }}>Теория 45м</span>
+                  </div>
+                  <div className="row" style={{ padding: '6px 0', borderBottom: '1px solid var(--line)' }}>
+                    <span><strong>Ср, 20:00</strong> • P2P Спарринг с Алексом</span>
+                    <span className="chip" style={{ background: '#fce7f3', color: '#be185d' }}>Спарринг 30м</span>
+                  </div>
+                  <div className="row" style={{ padding: '6px 0' }}>
+                    <span><strong>Пт, 18:30</strong> • SM-2 Блиц-повторение</span>
+                    <span className="chip" style={{ background: '#dcfce7', color: '#15803d' }}>Память 15м</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 9. repeat (Spaced Repetition) */}
+            <div className="panel" role="tabpanel" id="p-repeat" aria-labelledby="tab-repeat" hidden={selectedTab !== 'repeat'}>
+              <div>
+                <h3>Интервальное повторение: алгоритм SM-2</h3>
+                <p className="d">Научная модель Германа Эббингауза и алгоритм SuperMemo SM-2 гарантируют долговременную память на годы.</p>
+                <ul className="ticks">
+                  <li><svg><use href="#i-check"/></svg><div><strong>Математический расчёт интервалов.</strong> <span>Каждый квант знаний получает персональный коэффициент стабильности (E-Factor).</span></div></li>
+                  <li><svg><use href="#i-check"/></svg><div><strong>Блиц-раунды за 3 минуты.</strong> <span>Удобные короткие сессии для закрепления терминов и формул.</span></div></li>
+                  <li><svg><use href="#i-check"/></svg><div><strong>Тепловая индикация на графе.</strong> <span>Узлы меняют цвет на жёлтый и красный, когда их пора освежить.</span></div></li>
+                  <li><svg><use href="#i-check"/></svg><div><strong>Бонус XP за пунктуальность.</strong> <span>Награды за своевременные повторения укрепляют привычку.</span></div></li>
+                </ul>
+              </div>
+              <div className="art stack">
+                <p className="cap" style={{ margin: 0 }}>Кривая забывания & SM-2 Карточка</p>
+                <div className="box stack" style={{ gap: '10px' }}>
+                  <div className="row">
+                    <span style={{ fontWeight: 600 }}>Вопрос: Что гарантирует свойство ACID?</span>
+                    <span className="chip">E-Factor: 2.5</span>
+                  </div>
+                  <div style={{ fontSize: '13.5px', color: 'var(--muted)', background: 'var(--surface)', padding: '8px 12px', borderRadius: '8px' }}>
+                    Atomicity, Consistency, Isolation, Durability
+                  </div>
+                  <div className="dots" style={{ justifyContent: 'center' }}>
+                    <button className="btn btn-tonal sm" style={{ padding: '6px 12px', fontSize: '12px' }}>Трудно (1д)</button>
+                    <button className="btn btn-tonal sm" style={{ padding: '6px 12px', fontSize: '12px' }}>Норма (4д)</button>
+                    <button className="btn btn-filled sm" style={{ padding: '6px 12px', fontSize: '12px' }}>Легко (10д)</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 10. git */}
             <div className="panel" role="tabpanel" id="p-git" aria-labelledby="tab-git" hidden={selectedTab !== 'git'}>
               <div>
                 <h3>Git знаний: версии вашего понимания</h3>
@@ -988,7 +1149,54 @@ export const BitrixStyleLanding: React.FC<BitrixStyleLandingProps> = ({
               </div>
             </div>
 
-            {/* folio */}
+            {/* 11. library */}
+            <div className="panel" role="tabpanel" id="p-library" aria-labelledby="tab-library" hidden={selectedTab !== 'library'}>
+              <div>
+                <h3>Библиотека Учебников & Дистилляция Знаний</h3>
+                <p className="d">Импортируйте PDF, научные монографии и учебники OpenStax — система превратит 600 страниц в компактный граф.</p>
+                <ul className="ticks">
+                  <li><svg><use href="#i-check"/></svg><div><strong>Автоматическая дистилляция.</strong> <span>Выделение ключевых теорем, определений и практических кейсов.</span></div></li>
+                  <li><svg><use href="#i-check"/></svg><div><strong>Академическая точность.</strong> <span>Все тезисы содержат точные цитаты и номера страниц первоисточника.</span></div></li>
+                  <li><svg><use href="#i-check"/></svg><div><strong>Генератор флеш-карт.</strong> <span>Автоматическое создание карточек для SM-2 на основе прочитанных глав.</span></div></li>
+                  <li><svg><use href="#i-check"/></svg><div><strong>Встроенный ридер.</strong> <span>Чтение без лишней рекламы с подсветкой ментальных моделей.</span></div></li>
+                </ul>
+              </div>
+              <div className="art stack">
+                <p className="cap" style={{ margin: 0 }}>Дистилляция учебника</p>
+                <div className="box stack" style={{ gap: '8px' }}>
+                  <div className="row">
+                    <strong>«Designing Data-Intensive Applications»</strong>
+                    <span className="chip">PDF • 560 стр</span>
+                  </div>
+                  <div className="bar-p"><span style={{ width: '100%', background: 'var(--primary)' }}></span></div>
+                  <div style={{ fontSize: '13px', color: 'var(--muted)' }}>Дистиллировано: 36 инвариантов, 14 Capstone-проектов, 82 карточки</div>
+                </div>
+              </div>
+            </div>
+
+            {/* 12. telemetry */}
+            <div className="panel" role="tabpanel" id="p-telemetry" aria-labelledby="tab-telemetry" hidden={selectedTab !== 'telemetry'}>
+              <div>
+                <h3>Нейротелеметрия & Фокус-Продуктивность</h3>
+                <p className="d">Отслеживание состояния потока, когнитивной нагрузки и командный Помодоро прямо во время учёбы.</p>
+                <ul className="ticks">
+                  <li><svg><use href="#i-check"/></svg><div><strong>Командный Помодоро.</strong> <span>Синхронный запуск сессий с напарником или учебной группой.</span></div></li>
+                  <li><svg><use href="#i-check"/></svg><div><strong>Трекинг состояния потока.</strong> <span>Анализ времени непрерывного решения задач без переключений.</span></div></li>
+                  <li><svg><use href="#i-check"/></svg><div><strong>Привычки и стрики.</strong> <span>Защита от сгорания серии дней и умные напоминания.</span></div></li>
+                  <li><svg><use href="#i-check"/></svg><div><strong>Карма & Рейтинг.</strong> <span>XP за закрытые проекты, победы в спаррингах и помощь новичкам.</span></div></li>
+                </ul>
+              </div>
+              <div className="art stack">
+                <div className="box row" style={{ flexWrap: 'nowrap' }}>
+                  <div><div className="cap" style={{ margin: '0 0 4px' }}>Помодоро</div><div id="pomo" style={{ font: '600 34px var(--font-display)', fontVariantNumeric: 'tabular-nums' }}>{formatPomoTime(pomoSeconds)}</div></div>
+                  <svg width="64" height="64" viewBox="0 0 72 72" style={{ flex: 'none', width: '64px', height: '64px' }} aria-hidden="true"><circle cx="36" cy="36" r="30" fill="none" stroke="var(--container)" strokeWidth="8"/><circle className="ringc" cx="36" cy="36" r="30" fill="none" stroke="var(--primary)" strokeWidth="8" strokeLinecap="round" strokeDasharray="188" strokeDashoffset="62" transform="rotate(-90 36 36)"/></svg>
+                </div>
+                <div className="box stack" style={{ gap: '10px' }}><div className="row"><span style={{ fontWeight: 500 }}>Серия практики</span><span className="chip">12 дней подряд</span></div><div className="dots"><i className="on"></i><i className="on"></i><i className="on"></i><i className="on"></i><i className="on"></i><i className="on"></i><i></i></div></div>
+                <div className="box stack" style={{ gap: '10px' }}><div className="row"><span style={{ fontWeight: 500 }}>Телеметрия потока</span><span className="chip">1 240 XP</span></div><div className="bar-p"><span style={{ width: '82%' }}></span></div></div>
+              </div>
+            </div>
+
+            {/* 13. folio */}
             <div className="panel" role="tabpanel" id="p-folio" aria-labelledby="tab-folio" hidden={selectedTab !== 'folio'}>
               <div>
                 <h3>Портфолио, которое собирается само</h3>
@@ -996,6 +1204,8 @@ export const BitrixStyleLanding: React.FC<BitrixStyleLandingProps> = ({
                 <ul className="ticks">
                   <li><svg><use href="#i-check"/></svg><div><strong>Одна ссылка.</strong> <span>Отправьте работодателю или коллегам доказанные работы.</span></div></li>
                   <li><svg><use href="#i-check"/></svg><div><strong>Социальный профиль и стена.</strong> <span>Смотрите чужие траектории, комментируйте артефакты, обменивайтесь опытом.</span></div></li>
+                  <li><svg><use href="#i-check"/></svg><div><strong>Криптографические снапшоты.</strong> <span>Доказательство авторства и даты сдачи проекта.</span></div></li>
+                  <li><svg><use href="#i-check"/></svg><div><strong>Capstone-галерея.</strong> <span>Витрина лучших инженерных решений и кейсов сообщества.</span></div></li>
                 </ul>
               </div>
               <div className="art stack">
@@ -1006,25 +1216,80 @@ export const BitrixStyleLanding: React.FC<BitrixStyleLandingProps> = ({
               </div>
             </div>
 
-            {/* focus */}
-            <div className="panel" role="tabpanel" id="p-focus" aria-labelledby="tab-focus" hidden={selectedTab !== 'focus'}>
+            {/* 14. widgets */}
+            <div className="panel" role="tabpanel" id="p-widgets" aria-labelledby="tab-widgets" hidden={selectedTab !== 'widgets'}>
               <div>
-                <h3>Продуктивность встроена в обучение</h3>
-                <p className="d">Таймер, привычки и задачи работают рядом с графом и знают о ваших этапах.</p>
+                <h3>Интерактивные Виджеты & Быстрые Утилиты</h3>
+                <p className="d">Рабочий стол оснащён набором легковесных инструментов для непрерывной концентрации.</p>
                 <ul className="ticks">
-                  <li><svg><use href="#i-check"/></svg><div><strong>Командный Помодоро.</strong> <span>Запускайте фокус-сессию вместе с группой или напарником.</span></div></li>
-                  <li><svg><use href="#i-check"/></svg><div><strong>Привычки и стрики.</strong> <span>Ежедневная серия с защитой от выгорания.</span></div></li>
-                  <li><svg><use href="#i-check"/></svg><div><strong>Задачи и заметки.</strong> <span>Планировщик спринтов с привязкой к этапам графа.</span></div></li>
-                  <li><svg><use href="#i-check"/></svg><div><strong>Карма и XP.</strong> <span>Очки за закрытые модули, победы в спаррингах и помощь другим.</span></div></li>
+                  <li><svg><use href="#i-check"/></svg><div><strong>Быстрые заметки (Notes).</strong> <span>Мгновенная фиксация инсайтов и формул с сохранением в облако.</span></div></li>
+                  <li><svg><use href="#i-check"/></svg><div><strong>Sticky Tasks.</strong> <span>Список задач с чек-листами и привязкой к узлам графа.</span></div></li>
+                  <li><svg><use href="#i-check"/></svg><div><strong>Фоновые звуковые ландшафты.</strong> <span>Космический эмбиент, бинауральные ритмы и белый шум.</span></div></li>
+                  <li><svg><use href="#i-check"/></svg><div><strong>Калькулятор сложности.</strong> <span>Быстрый расчёт асимптотики O(N) и объёма памяти.</span></div></li>
                 </ul>
               </div>
               <div className="art stack">
-                <div className="box row" style={{ flexWrap: 'nowrap' }}>
-                  <div><div className="cap" style={{ margin: '0 0 4px' }}>Помодоро</div><div id="pomo" style={{ font: '600 34px var(--font-display)', fontVariantNumeric: 'tabular-nums' }}>{formatPomoTime(pomoSeconds)}</div></div>
-                  <svg width="64" height="64" viewBox="0 0 72 72" style={{ flex: 'none', width: '64px', height: '64px' }} aria-hidden="true"><circle cx="36" cy="36" r="30" fill="none" stroke="var(--container)" strokeWidth="8"/><circle className="ringc" cx="36" cy="36" r="30" fill="none" stroke="var(--primary)" strokeWidth="8" strokeLinecap="round" strokeDasharray="188" strokeDashoffset="62" transform="rotate(-90 36 36)"/></svg>
+                <p className="cap" style={{ margin: 0 }}>Виджеты рабочего стола</p>
+                <div className="box stack" style={{ gap: '6px' }}>
+                  <div className="row"><span>📝 Заметка: Оптимизация хэш-таблиц</span><span className="chip">Облако</span></div>
+                  <div className="row"><span>✓ Реализовать LRU-кэш</span><span className="chip" style={{ background: '#dcfce7', color: '#166534' }}>Сделано</span></div>
+                  <div className="row"><span>🎵 Космический фокус-звук</span><span className="chip" style={{ background: '#f3e8ff', color: '#7e22ce' }}>432 Hz</span></div>
                 </div>
-                <div className="box stack" style={{ gap: '10px' }}><div className="row"><span style={{ fontWeight: 500 }}>Привычка: 25 минут практики</span><span className="chip">12 дней</span></div><div className="dots"><i className="on"></i><i className="on"></i><i className="on"></i><i className="on"></i><i className="on"></i><i className="on"></i><i></i></div></div>
-                <div className="box stack" style={{ gap: '10px' }}><div className="row"><span style={{ fontWeight: 500 }}>Карма</span><span className="chip">1 240 XP</span></div><div className="bar-p"><span style={{ width: '64%' }}></span></div></div>
+              </div>
+            </div>
+
+            {/* 15. community */}
+            <div className="panel" role="tabpanel" id="p-community" aria-labelledby="tab-community" hidden={selectedTab !== 'community'}>
+              <div>
+                <h3>Сообщество, Каналы & Комнаты Знаний</h3>
+                <p className="d">Единое пространство для обмена опытом, код-ревью и совместного решения сложных инженерных кейсов.</p>
+                <ul className="ticks">
+                  <li><svg><use href="#i-check"/></svg><div><strong>Тематические комнаты.</strong> <span>Каналы по алгоритмам, системам, AI, дизайну и науке.</span></div></li>
+                  <li><svg><use href="#i-check"/></svg><div><strong>P2P Код-ревью.</strong> <span>Возможность получить конструктивную обратную связь от коллег.</span></div></li>
+                  <li><svg><use href="#i-check"/></svg><div><strong>Лента обновлений.</strong> <span>Публикация завершённых Capstone-проектов в общее сообщество.</span></div></li>
+                  <li><svg><use href="#i-check"/></svg><div><strong>Совместные хакатоны.</strong> <span>Спарринг-сессии и командное закрытие сложных кластеров.</span></div></li>
+                </ul>
+              </div>
+              <div className="art stack">
+                <p className="cap" style={{ margin: 0 }}>Лента сообщества</p>
+                <div className="box stack" style={{ gap: '8px' }}>
+                  <div className="row">
+                    <strong>Алексей С.</strong>
+                    <span className="chip" style={{ background: '#fef3c7', color: '#92400e' }}>+120 XP</span>
+                  </div>
+                  <div style={{ fontSize: '13.5px', color: 'var(--fg)' }}>
+                    Защитил Capstone «Распределённый транзакционный лог на Rust». Код доступен в портфолио!
+                  </div>
+                  <div style={{ fontSize: '12px', color: 'var(--muted)' }}>💬 14 комментариев • 🌟 28 реакций</div>
+                </div>
+              </div>
+            </div>
+
+            {/* 16. cosmos */}
+            <div className="panel" role="tabpanel" id="p-cosmos" aria-labelledby="tab-cosmos" hidden={selectedTab !== 'cosmos'}>
+              <div>
+                <h3>Космическая Среда & Web OS Desktop</h3>
+                <p className="d">Эстетичная операционная среда с поддержкой оконного режима, кастомизацией обоев и глубоким погружением.</p>
+                <ul className="ticks">
+                  <li><svg><use href="#i-check"/></svg><div><strong>Плавающие окна.</strong> <span>Свободное перемещение, изменение размеров и сворачивание в док.</span></div></li>
+                  <li><svg><use href="#i-check"/></svg><div><strong>Галерея космических обоев.</strong> <span>Туманности, звёздные скопления и минималистичные градиенты.</span></div></li>
+                  <li><svg><use href="#i-check"/></svg><div><strong>Умный Lock Screen.</strong> <span>Автоматическая блокировка при бездействии с сохранением фокуса.</span></div></li>
+                  <li><svg><use href="#i-check"/></svg><div><strong>Горячие клавиши (Spotlight).</strong> <span>Быстрый поиск команд через ⌘K / Ctrl+K и навигация без мыши.</span></div></li>
+                </ul>
+              </div>
+              <div className="art stack">
+                <p className="cap" style={{ margin: 0 }}>Рабочий стол Web OS</p>
+                <div className="box stack" style={{ gap: '8px', background: '#090510', color: '#fff', border: '1px solid rgba(244,63,94,0.3)' }}>
+                  <div className="row">
+                    <span style={{ color: '#fb7185', fontWeight: 600 }}>PinkInAu OS • Spotlight</span>
+                    <span style={{ fontSize: '11px', background: 'rgba(255,255,255,0.15)', padding: '2px 8px', borderRadius: '4px' }}>⌘K</span>
+                  </div>
+                  <div style={{ fontSize: '12.5px', color: '#fda4af' }}>
+                    &gt; Открыть Сферу Знаний [Enter]<br/>
+                    &gt; Запустить Помодоро 25м [P]<br/>
+                    &gt; Сменить обои: Розовая Туманность [W]
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -1045,18 +1310,27 @@ export const BitrixStyleLanding: React.FC<BitrixStyleLandingProps> = ({
           </div>
         </section>
 
-        {/* PLATFORM CARDS */}
+        {/* FULL PLATFORM SUPERPOWERS CARDS */}
         <section style={{ paddingTop: 0 }}>
           <div className="wrap">
             <div className="center">
-              <p className="eyebrow">{t('landing.cardDesktopTitle', 'Платформа')}</p>
-              <h2>{t('landing.platformTitle', 'Работает там, где удобно вам')}</h2>
+              <p className="eyebrow">{t('landing.cardDesktopTitle', 'Платформа & Технологии')}</p>
+              <h2>{t('landing.platformTitle', 'Все суперсилы PinkInAu в одном стеке')}</h2>
+              <p className="lead">Бесшовная экосистема для индивидуального обучения, командных спаррингов и автоматической верификации компетенций.</p>
             </div>
-            <div className="cards">
-              <div className="cc"><div className="ic"><svg><use href="#i-desk"/></svg></div><h3>{t('landing.cardDesktopTitle', 'Рабочий стол в браузере')}</h3><p>{t('landing.cardDesktopDesc', 'Плавающие окна, док приложений, строка состояния и многозадачность.')}</p></div>
-              <div className="cc"><div className="ic"><svg><use href="#i-phone"/></svg></div><h3>{t('landing.cardMobileTitle', 'Блоки на телефоне')}</h3><p>{t('landing.cardMobileDesc', 'Интерфейс сам перестраивается в привычный мобильный формат с полным набором функций.')}</p></div>
+            <div className="cards" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 250px), 1fr))' }}>
+              <div className="cc"><div className="ic"><svg><use href="#i-desk"/></svg></div><h3>{t('landing.cardDesktopTitle', 'Web OS в браузере')}</h3><p>{t('landing.cardDesktopDesc', 'Плавающие окна, док приложений, строка состояния и многозадачность.')}</p></div>
+              <div className="cc"><div className="ic"><svg><use href="#i-phone"/></svg></div><h3>{t('landing.cardMobileTitle', 'Мобильный адаптив')}</h3><p>{t('landing.cardMobileDesc', 'Интерфейс сам перестраивается в привычный мобильный формат с полным набором функций.')}</p></div>
               <div className="cc"><div className="ic"><svg><use href="#i-sync"/></svg></div><h3>{t('landing.cardSyncTitle', 'Мгновенная синхронизация')}</h3><p>{t('landing.cardSyncDesc', 'Граф, заметки, задачи, XP и настройки сохраняются в облаке в реальном времени.')}</p></div>
-              <div className="cc"><div className="ic"><svg><use href="#i-key"/></svg></div><h3>{t('landing.cardAuthTitle', 'Безопасный вход')}</h3><p>{t('landing.cardAuthDesc', 'Google-аккаунт в один клик или гостевой режим без пароля.')}</p></div>
+              <div className="cc"><div className="ic"><svg><use href="#i-ai"/></svg></div><h3>Gemini 2.5 Flash</h3><p>Мгновенный анализ «Чистого листа», подбор квизов и автодистилляция учебников.</p></div>
+              <div className="cc"><div className="ic"><svg><use href="#i-spar"/></svg></div><h3>P2P Мультиплеер</h3><p>Курсоры в реальном времени, встроенная аудио/видеосвязь и совместная белая доска.</p></div>
+              <div className="cc"><div className="ic"><svg><use href="#i-repeat"/></svg></div><h3>Алгоритм SM-2</h3><p>Интервальные повторения по кривой Эббингауза для закрепления знаний на годы.</p></div>
+              <div className="cc"><div className="ic"><svg><use href="#i-calendar"/></svg></div><h3>Умный Календарь</h3><p>Адаптивный темп без выгорания с экспортом расписания в Google Calendar (.ICS).</p></div>
+              <div className="cc"><div className="ic"><svg><use href="#i-git"/></svg></div><h3>Git Компетенций</h3><p>Ветки гипотез, коммиты понимания и наглядные диффы ментальных моделей.</p></div>
+              <div className="cc"><div className="ic"><svg><use href="#i-library"/></svg></div><h3>Дистилляция PDF</h3><p>Превращение 500-страничных учебников в интерактивные DAG-графы за секунды.</p></div>
+              <div className="cc"><div className="ic"><svg><use href="#i-folio"/></svg></div><h3>Верифицированное Портфолио</h3><p>Публичная страница артефактов и кода для подтверждения навыков перед работодателями.</p></div>
+              <div className="cc"><div className="ic"><svg><use href="#i-telemetry"/></svg></div><h3>Нейротелеметрия</h3><p>Трекинг состояния потока, когнитивной нагрузки и командный Помодоро.</p></div>
+              <div className="cc"><div className="ic"><svg><use href="#i-key"/></svg></div><h3>Безопасный вход</h3><p>Google-аккаунт в один клик или гостевой режим без паролей и регистраций.</p></div>
             </div>
           </div>
         </section>
